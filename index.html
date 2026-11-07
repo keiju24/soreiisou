@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>それ、言いそう！</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@500;800&display=swap" rel="stylesheet">
+<!-- 通信ライブラリ（PeerJS / WebRTC）。ホストのブラウザがゲームサーバー役になります -->
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+:root{--ink:#2B2D42;--y:#FFD23F;--y2:#FFC21A;--pink:#FF5D8F;--cyan:#2EC4B6;--blue:#4D96FF;--purple:#9B5DE5;--orange:#FF8C42;--green:#6BCB77;--paper:#FFFDF5;--red:#FF3B3B;--gold:#FFC300}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%}
+body{font-family:'M PLUS Rounded 1c',system-ui,-apple-system,"Hiragino Maru Gothic ProN",sans-serif;color:var(--ink);background:var(--y);overflow-x:hidden;font-weight:800}
+#bg{position:fixed;top:50%;left:50%;width:260vmax;height:260vmax;margin:-130vmax 0 0 -130vmax;background:repeating-conic-gradient(var(--y) 0 9deg,var(--y2) 9deg 18deg);animation:spin 90s linear infinite;z-index:-2}
+body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(rgba(255,255,255,.35) 3px,transparent 4px);background-size:34px 34px;z-index:-1;pointer-events:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:60}
+header#top{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;gap:8px;max-width:900px;margin:0 auto}
+.mini-logo{font-family:'Dela Gothic One',sans-serif;font-size:18px;color:#fff;-webkit-text-stroke:1.5px var(--ink);paint-order:stroke fill;text-shadow:2px 2px 0 var(--ink);white-space:nowrap}
+#roomBadge{font-size:14px;background:var(--ink);color:#fff;border-radius:999px;padding:4px 12px;letter-spacing:2px}
+#roomBadge:empty{display:none}
+.snd{display:flex;gap:6px}
+.snd button{width:42px;height:42px;border-radius:50%;border:3px solid var(--ink);background:#fff;font-size:18px;box-shadow:0 3px 0 var(--ink);cursor:pointer;padding:0}
+.snd button.off{background:#bbb;filter:grayscale(1);opacity:.7}
+main#app{max-width:780px;margin:0 auto;padding:4px 14px 70px}
+.panel{background:var(--paper);border:4px solid var(--ink);border-radius:24px;box-shadow:8px 8px 0 var(--ink);padding:22px;margin:16px 0}
+.hidden{display:none!important}
+.center{text-align:center}
+.logo{font-family:'Dela Gothic One',sans-serif;text-align:center;font-size:clamp(44px,12vw,86px);line-height:1.08;margin:4px 0;font-weight:400}
+.logo.small{font-size:clamp(34px,9vw,60px)}
+.logo span{display:inline-block;color:var(--pink);-webkit-text-stroke:3px var(--ink);paint-order:stroke fill;text-shadow:5px 5px 0 var(--ink);animation:wobble 1.6s ease-in-out infinite}
+.logo span:nth-child(2){color:var(--cyan);animation-delay:-.8s}
+@keyframes wobble{0%,100%{transform:rotate(-4deg) scale(1)}50%{transform:rotate(4deg) scale(1.06)}}
+.tagline{text-align:center;font-size:18px;margin:6px 0 18px}
+.lbl{display:block;font-size:15px;margin:10px 0 6px}
+input,textarea,select{font-family:inherit;font-weight:800;font-size:20px;border:4px solid var(--ink);border-radius:16px;padding:12px 14px;width:100%;background:#fff;color:var(--ink);outline:none}
+textarea{resize:none;line-height:1.5}
+input:focus,textarea:focus{box-shadow:0 0 0 5px rgba(255,93,143,.45)}
+.btn{font-family:inherit;font-weight:800;font-size:18px;border:4px solid var(--ink);border-radius:999px;padding:12px 22px;background:#fff;color:var(--ink);box-shadow:0 6px 0 var(--ink);cursor:pointer;transition:transform .08s,box-shadow .08s;position:relative}
+.btn:hover:not(:disabled){transform:translateY(-2px) rotate(-1.5deg)}
+.btn:active:not(:disabled){transform:translateY(5px);box-shadow:0 1px 0 var(--ink)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.pink{background:var(--pink);color:#fff}.btn.cyan{background:var(--cyan);color:#fff}.btn.blue{background:var(--blue);color:#fff}.btn.purple{background:var(--purple);color:#fff}.btn.orange{background:var(--orange);color:#fff}
+.btn.big{font-size:24px;padding:16px 28px;width:100%}
+.btn.small{font-size:14px;padding:8px 14px;box-shadow:0 4px 0 var(--ink)}
+.btn.ghost{background:transparent;box-shadow:none;border-style:dashed}
+.btn.pulse:not(:disabled){animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+.home-actions{margin-top:18px;display:flex;flex-direction:column;gap:12px}
+.or{text-align:center;font-size:14px;opacity:.7}
+.join-row{display:flex;gap:10px}
+.join-row input{text-transform:uppercase;letter-spacing:6px;text-align:center;font-family:'Dela Gothic One',sans-serif}
+.join-row .btn{flex:0 0 auto}
+.err{background:var(--red);color:#fff;border:3px solid var(--ink);border-radius:14px;padding:10px 14px;margin-top:14px;animation:shakeX .5s}
+.foot-links{display:flex;justify-content:center;margin-top:18px}
+.room-label{text-align:center;font-size:16px}
+.room-code{font-family:'Dela Gothic One',sans-serif;text-align:center;font-size:clamp(56px,16vw,96px);letter-spacing:10px;color:#fff;-webkit-text-stroke:3px var(--ink);paint-order:stroke fill;text-shadow:6px 6px 0 var(--ink);line-height:1.1}
+.h2{font-family:'Dela Gothic One',sans-serif;font-weight:400;font-size:24px;margin:20px 0 10px}
+.plist{display:flex;flex-wrap:wrap;gap:10px}
+.pchip{display:flex;align-items:center;gap:8px;background:#fff;border:3px solid var(--ink);border-radius:999px;padding:6px 14px 6px 6px;box-shadow:0 4px 0 var(--ink);animation:chipIn .5s cubic-bezier(.2,1.8,.4,1) both}
+.pchip.off{opacity:.4}
+.pchip .you{font-size:11px;background:var(--pink);color:#fff;border-radius:999px;padding:1px 7px}
+.pchip.done{background:var(--green);color:#fff}
+@keyframes chipIn{0%{transform:scale(0) rotate(-20deg)}100%{transform:none}}
+.av{display:inline-grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--c,#ccc);border:3px solid var(--ink);font-size:22px;flex:0 0 auto;line-height:1}
+.av.sm{width:28px;height:28px;font-size:15px;border-width:2px;margin-right:2px}
+.av.huge{width:150px;height:150px;font-size:90px;border-width:6px;box-shadow:8px 8px 0 var(--ink)}
+.lobby-ctl{margin-top:22px;display:flex;flex-direction:column;gap:12px}
+.setting-row{display:flex;align-items:center;gap:10px;font-size:16px}
+.setting-row select{width:auto;font-size:16px;padding:6px 10px}
+.wait-msg{text-align:center;font-size:18px;padding:14px;border:3px dashed var(--ink);border-radius:16px;animation:breathe 1.6s ease-in-out infinite}
+@keyframes breathe{50%{opacity:.55}}
+.hint{font-size:14px;opacity:.75;text-align:center}
+/* intro */
+.intro{text-align:center;padding-top:20px;position:relative}
+.round-badge{display:inline-block;font-family:'Dela Gothic One',sans-serif;background:var(--ink);color:var(--y);border-radius:999px;padding:6px 20px;font-size:20px;animation:bigPop .5s both}
+.intro-sub{font-family:'Dela Gothic One',sans-serif;font-size:clamp(28px,8vw,48px);margin:26px 0 10px;animation:shiver .12s linear infinite}
+@keyframes shiver{0%{transform:translate(1px,0)}50%{transform:translate(-1px,1px)}100%{transform:translate(0,-1px)}}
+.intro-target{display:flex;flex-direction:column;align-items:center;gap:14px;animation:bigPop .8s cubic-bezier(.2,1.8,.4,1) 1.95s both}
+.intro-name{font-family:'Dela Gothic One',sans-serif;font-size:clamp(44px,13vw,80px);color:#fff;-webkit-text-stroke:3px var(--ink);paint-order:stroke fill;text-shadow:6px 6px 0 var(--ink)}
+.itsyou{font-size:26px;background:var(--pink);color:#fff;border:4px solid var(--ink);border-radius:999px;padding:6px 22px;animation:wobble .6s infinite}
+.spot{position:fixed;inset:0;background:radial-gradient(circle at 50% 45%,transparent 0 180px,rgba(43,45,66,.55) 260px);pointer-events:none;z-index:-1;animation:fadeIn .4s both}
+@keyframes bigPop{0%{opacity:0;transform:scale(.2) rotate(-15deg)}100%{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}}
+/* answer */
+.row-between{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px}
+.who{display:flex;align-items:center;gap:8px;font-size:18px;background:#fff;border:3px solid var(--ink);border-radius:999px;padding:4px 16px 4px 4px;box-shadow:0 4px 0 var(--ink)}
+.timer{--p:1;position:relative;width:74px;height:74px;border-radius:50%;border:4px solid var(--ink);background:conic-gradient(var(--cyan) calc(var(--p)*360deg),#fff 0);display:grid;place-items:center;flex:0 0 auto;box-shadow:0 4px 0 var(--ink)}
+.timer b{display:grid;place-items:center;width:52px;height:52px;border-radius:50%;background:var(--paper);border:3px solid var(--ink);font-family:'Dela Gothic One',sans-serif;font-weight:400;font-size:22px}
+.timer.hurry{background:conic-gradient(var(--red) calc(var(--p)*360deg),#fff 0);animation:shakeX .4s infinite}
+.timer.small{width:56px;height:56px}.timer.small b{width:38px;height:38px;font-size:16px}
+@keyframes shakeX{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px) rotate(-3deg)}75%{transform:translateX(4px) rotate(3deg)}}
+.bubble{position:relative;background:#fff;border:4px solid var(--ink);border-radius:28px;padding:22px 20px;margin:20px 0 24px;font-family:'Dela Gothic One',sans-serif;font-weight:400;font-size:clamp(22px,5.6vw,32px);line-height:1.4;text-align:center;box-shadow:8px 8px 0 var(--ink);animation:bigPop .6s cubic-bezier(.2,1.6,.4,1) both}
+.bubble::after{content:"";position:absolute;left:50%;bottom:-26px;margin-left:-14px;border:14px solid transparent;border-top:14px solid var(--ink)}
+.bubble.small{font-size:clamp(17px,4.4vw,22px);padding:14px 16px;margin:12px 0 18px}
+.hl{color:var(--pink);-webkit-text-stroke:1px var(--ink)}
+.role-msg{font-size:19px;margin-bottom:12px}
+.cnt{text-align:right;font-size:14px;opacity:.7;margin:4px 4px 12px}
+.done-msg{text-align:center;font-size:22px;padding:18px;animation:bigPop .5s both}
+.done-msg .mine-ans{display:block;font-size:17px;opacity:.75;margin-top:8px}
+.progress{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px}
+/* cards */
+.phase-title{font-family:'Dela Gothic One',sans-serif;font-weight:400;font-size:clamp(22px,6vw,34px);color:#fff;-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;text-shadow:4px 4px 0 var(--ink);line-height:1.3}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:20px;margin:18px 0}
+.card{position:relative;background:#fff;border:4px solid var(--ink);border-radius:22px;padding:18px 16px;font-size:20px;line-height:1.5;box-shadow:6px 6px 0 var(--ink);transform:rotate(var(--r,0deg));text-align:left;font-family:inherit;font-weight:800;color:var(--ink);word-break:break-word;width:100%}
+.card.reveal{animation:dropIn .7s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes dropIn{0%{opacity:0;transform:translateY(-140px) rotate(-35deg) scale(.3)}100%{opacity:1;transform:rotate(var(--r,0deg))}}
+.card .qmark{position:absolute;top:-16px;right:-12px;width:38px;height:38px;border-radius:50%;background:var(--pink);color:#fff;border:3px solid var(--ink);display:grid;place-items:center;font-family:'Dela Gothic One',sans-serif;font-size:20px}
+.card.votable{cursor:pointer;transition:transform .15s,background .15s}
+.card.votable:hover:not(:disabled){transform:rotate(0) scale(1.04);background:#FFF3B0}
+.card.votable:disabled{cursor:default}
+.card.mine{background:#e9e9e9;opacity:.7}
+.cards.locked .card:not(.chosen){opacity:.45}
+.card.chosen{background:var(--pink)!important;color:#fff;transform:scale(1.06) rotate(0);animation:chosen .4s cubic-bezier(.2,1.8,.4,1)}
+@keyframes chosen{0%{transform:scale(.8)}100%{transform:scale(1.06)}}
+.tag{display:inline-block;font-size:12px;background:var(--ink);color:#fff;border-radius:999px;padding:2px 10px;margin-bottom:6px}
+/* result */
+.res .ctext{margin:4px 0 10px}
+.badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.badge{font-size:14px;border:3px solid var(--ink);border-radius:999px;padding:3px 10px;background:#fff}
+.badge.gold{background:var(--gold)}.badge.pink{background:var(--pink);color:#fff}.badge.cyan{background:var(--cyan);color:#fff}.badge.purple{background:var(--purple);color:#fff}
+.owner{display:flex;align-items:center;gap:6px;font-size:16px;border-top:3px dashed var(--ink);padding-top:10px}
+.voters{display:flex;flex-wrap:wrap;align-items:center;gap:2px;font-size:13px;margin-top:8px;min-height:4px}
+.stage-real,.stage-owner,.stage-pick,.stage-score{opacity:0;transform:scale(.3);transition:opacity .35s,transform .5s cubic-bezier(.2,1.8,.4,1)}
+#resWrap.show-real .stage-real,#resWrap.show-owner .stage-owner,#resWrap.show-pick .stage-pick,#resWrap.show-score .stage-score{opacity:1;transform:none}
+#resWrap.show-real .real-card{background:var(--gold);transform:scale(1.07) rotate(0);z-index:2;transition:transform .5s cubic-bezier(.2,1.8,.4,1),background .3s;box-shadow:0 0 0 6px #fff,10px 10px 0 var(--ink)}
+.res-head{text-align:center;margin-top:10px}
+.mydelta{text-align:center;font-family:'Dela Gothic One',sans-serif;font-size:clamp(34px,10vw,54px);color:var(--pink);-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;text-shadow:4px 4px 0 var(--ink);margin:10px 0}
+.mydelta.zero{color:#aaa}
+.srow{display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:3px dashed rgba(43,45,66,.25);flex-wrap:wrap}
+.srow.me{background:#FFF3B0;border-radius:14px}
+.srow .rank{font-family:'Dela Gothic One',sans-serif;width:30px;text-align:center;font-size:20px}
+.srow .sname{font-size:18px}
+.srow .sname{flex:1 1 auto}
+.srow .reasons{order:9;flex-basis:100%;padding-left:92px;font-size:12px;opacity:.7;margin-top:-6px}
+.srow .reasons:empty{display:none}
+.srow .delta{color:var(--pink);font-size:18px}
+.srow .delta.zero{color:#aaa}
+.srow .score{font-family:'Dela Gothic One',sans-serif;font-size:24px;min-width:46px;text-align:right}
+.ctl{display:flex;flex-direction:column;gap:12px;margin-top:16px}
+/* final */
+.podium{display:flex;justify-content:center;align-items:flex-end;gap:10px;margin:26px 0 0;min-height:300px}
+.pod{display:flex;flex-direction:column;align-items:center;gap:6px;width:31%;max-width:180px;transform:translateY(130%);opacity:0;transition:transform .8s cubic-bezier(.2,1.5,.4,1),opacity .3s}
+.pod.up{transform:none;opacity:1}
+.pod .pname{font-size:17px;text-align:center;word-break:break-all}
+.pod .block{width:100%;border:4px solid var(--ink);border-bottom:none;border-radius:16px 16px 0 0;display:grid;place-items:center;font-family:'Dela Gothic One',sans-serif;font-size:40px;color:#fff;-webkit-text-stroke:2px var(--ink);paint-order:stroke fill}
+.pod.p1 .block{height:170px;background:var(--gold)}.pod.p2 .block{height:120px;background:#C9D1D9}.pod.p3 .block{height:85px;background:#E0A370}
+.pod .pscore{font-size:16px;background:#fff;border:3px solid var(--ink);border-radius:999px;padding:2px 12px}
+.pod.p1 .av{width:76px;height:76px;font-size:44px}
+.pod .crown{font-size:44px;animation:wobble 1s infinite}
+.award{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:3px dashed rgba(43,45,66,.25)}
+.award .em{font-size:38px}
+.award .at{font-size:19px}
+.award .ad{font-size:13px;opacity:.7}
+.award .an{margin-left:auto;display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;font-size:15px;align-items:center}
+/* overlays */
+#overlay{position:fixed;inset:0;background:rgba(43,45,66,.6);display:none;align-items:center;justify-content:center;z-index:70;padding:16px}
+#overlay.show{display:flex}
+#overlay .panel{max-width:560px;width:100%;max-height:88vh;overflow:auto;animation:bigPop .4s cubic-bezier(.2,1.6,.4,1) both}
+.spinner{font-size:60px;text-align:center;animation:spin 1s linear infinite}
+.rules h3{font-family:'Dela Gothic One',sans-serif;font-weight:400;margin:16px 0 6px}
+.rules ol,.rules ul{padding-left:22px;line-height:1.7;font-weight:500}
+.rules table{border-collapse:collapse;width:100%;font-weight:500}
+.rules td{border-bottom:2px dashed #ccc;padding:6px}
+.rules td:last-child{text-align:right;font-weight:800;color:var(--pink);white-space:nowrap}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(140%);background:var(--ink);color:#fff;border-radius:999px;padding:12px 22px;z-index:80;transition:transform .35s cubic-bezier(.2,1.6,.4,1),opacity .2s;max-width:90vw;text-align:center;opacity:0;pointer-events:none}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+body.shake main{animation:shakeBig .5s}
+@keyframes shakeBig{0%,100%{transform:none}20%{transform:translate(-10px,4px) rotate(-1deg)}40%{transform:translate(10px,-4px) rotate(1deg)}60%{transform:translate(-6px,2px)}80%{transform:translate(6px,-2px)}}
+@media (max-width:480px){.panel{padding:16px;box-shadow:6px 6px 0 var(--ink)}.card{font-size:18px}.mini-logo{font-size:15px}}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<canvas id="confetti"></canvas>
+<header id="top">
+  <div class="mini-logo">それ、言いそう！</div>
+  <div id="roomBadge"></div>
+  <div class="snd">
+    <button id="bgmBtn" title="BGM">🎵</button>
+    <button id="sfxBtn" title="効果音">🔔</button>
+    <button id="ttsBtn" title="読み上げ">🗣️</button>
+  </div>
+</header>
+<main id="app"></main>
+<div id="overlay"></div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* =========================================================
+   設定（ここを書きかえると遊び方を調整できます）
+   ========================================================= */
+const CONFIG = {
+  ANSWER_TIME_DEFAULT: 60,  // 回答の制限時間（秒）。ロビーでホストが変更可
+  VOTE_TIME: 30,            // 投票の制限時間（秒）
+  RESULT_TIME: 25,          // 結果画面から自動で次へ進むまで（秒）
+  INTRO_TIME: 4.8,          // 主役発表の演出時間（秒）
+  REVEAL_PER_CARD: 3.6,     // 回答カード1枚あたりの発表時間（秒）
+  MIN_PLAYERS: 3,
+  MAX_PLAYERS: 8,
+  MAX_ANSWER: 60,
+  PEER_PREFIX: 'soreiisou-game-v1-',
+  // つながりにくい場合は TURN サーバーをここに追加してください
+  PEER_OPTIONS: {
+    config: {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+        // ,{ urls: 'turn:YOUR_TURN_SERVER:3478', username: 'USER', credential: 'PASS' }
+      ]
+    }
+  }
+};
+
+const TOPICS = [
+  '{name}が朝起きて最初に言いそうなことは？','{name}が宝くじで1億円当たった時の第一声は？','{name}が遅刻した時に使いそうな言い訳は？',
+  '{name}が嫌いな食べ物を出された時のひとことは？','{name}がコンビニのレジで言いそうなことは？','{name}が寝る前にひとりでつぶやきそうなことは？',
+  '{name}がテストで0点を取った時のひとことは？','{name}が好きな人に告白する時のセリフは？','{name}がゲームで負けた時に言いそうなことは？',
+  '{name}が無人島に流れ着いて最初に言うことは？','{name}がSNSに投稿しそうな一文は？','{name}が初対面の人にする自己紹介は？',
+  '{name}が怒られている時に心の中で思っていそうなことは？','{name}が旅行先で絶対に言いそうなことは？','{name}がサプライズパーティーをされた時の反応は？',
+  '{name}が宇宙人に出会った時の第一声は？','{name}が誕生日プレゼントにほしいと言いそうなものは？','{name}が大雨の日に言いそうなことは？',
+  '{name}が1日だけ透明人間になったらやりそうなことは？','{name}が社長になったら最初に言いそうなことは？','{name}が財布を落としたと気づいた時のひとことは？',
+  '{name}が高級レストランで言いそうなことは？','{name}が街頭インタビューを受けた時に言いそうなことは？','{name}がカラオケの部屋に入って最初に言うことは？',
+  '{name}が月曜日の朝に言いそうなことは？','{name}がタイムマシンに乗ったら最初に言いそうなことは？','{name}が推しに会えた時の第一声は？',
+  '{name}がダイエット中にお菓子を見つけた時のひとことは？','{name}が電車で寝過ごした時のひとことは？','{name}が100歳になった時に言いそうなことは？',
+  '{name}が魔法をひとつだけ使えるとしたら唱える呪文は？','{name}が迷子になった時に言いそうなことは？','{name}がヒーローインタビューで言いそうなことは？',
+  '{name}がお化け屋敷で叫びそうなことは？','{name}が猫に話しかける時のセリフは？','{name}がLINEの返信でよく使っていそうな言葉は？',
+  '{name}が夏休み最終日に言いそうなことは？','{name}が人生最後の晩餐に選びそうなものは？','{name}の口ぐせっぽい言葉は？',
+  '{name}がゾンビに囲まれた時のひとことは？','{name}が世界一周旅行に当選した時の第一声は？','{name}が冷蔵庫のプリンを食べられた時のひとことは？',
+  '{name}が有名人になったら言いそうな決めゼリフは？','{name}がバイトの面接で言いそうな志望動機は？','{name}が寝坊して飛び起きた瞬間のひとことは？',
+  '{name}が占い師に言われたら喜びそうなことは？','{name}がロボットを作ったら最初に覚えさせる言葉は？','{name}が10年後の自分に送りそうなメッセージは？'
+];
+const AVATARS = ['🐶','🐱','🐸','🐵','🐼','🐷','🦊','🐙','🦄','🐔','🐧','🦖'];
+const PCOLORS = ['#FF5D8F','#2EC4B6','#4D96FF','#9B5DE5','#FF8C42','#6BCB77','#F15BB5','#00BBF9'];
+
+/* ===================== ユーティリティ ===================== */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const shuffle = a => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const rid = (n = 8) => Array.from(crypto.getRandomValues(new Uint8Array(n)), b => 'abcdefghijkmnpqrstuvwxyz23456789'[b % 32]).join('');
+const genCode = () => Array.from(crypto.getRandomValues(new Uint8Array(4)), b => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[b % 32]).join('');
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('sii_' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('sii_' + k, JSON.stringify(v)); } catch {} }
+};
+const ss = {
+  get(k) { try { return sessionStorage.getItem('sii_' + k); } catch { return null; } },
+  set(k, v) { try { sessionStorage.setItem('sii_' + k, v); } catch {} },
+  del(k) { try { sessionStorage.removeItem('sii_' + k); } catch {} }
+};
+function getPid() { let p = ss.get('pid'); if (!p) { p = rid(10); ss.set('pid', p); } return p; }
+function norm(s) {
+  return String(s || '').toLowerCase()
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+    .replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60))
+    .replace(/[\s、。，．,.!！?？・…〜~「」『』（）()"'”“’‘ｗw笑]/g, '');
+}
+function rot(cid) { let h = 0; for (const ch of String(cid)) h = (h * 31 + ch.charCodeAt(0)) | 0; return (Math.abs(h) % 7) - 3; }
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2600); }
+function shake() { document.body.classList.remove('shake'); void document.body.offsetWidth; document.body.classList.add('shake'); setTimeout(() => document.body.classList.remove('shake'), 550); }
+
+/* ===================== サウンド（すべてコードで生成） ===================== */
+const Sound = (() => {
+  let ctx = null, master, bgmGain, sfxGain, noiseBuf;
+  let bgmOn = store.get('bgmOn', true), sfxOn = store.get('sfxOn', true);
+  let curSong = null, pendingSong = null, step = 0, nextTime = 0, seqTimer = null;
+  const mf = m => 440 * Math.pow(2, (m - 69) / 12);
+
+  function init() {
+    if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    ctx = new AC();
+    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4; comp.connect(ctx.destination);
+    master = ctx.createGain(); master.gain.value = 0.9; master.connect(comp);
+    bgmGain = ctx.createGain(); bgmGain.gain.value = bgmOn ? 0.5 : 0; bgmGain.connect(master);
+    sfxGain = ctx.createGain(); sfxGain.gain.value = sfxOn ? 1 : 0; sfxGain.connect(master);
+    noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+    const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    if (pendingSong) { const s = pendingSong; pendingSong = null; song(s); }
+  }
+  function tone({ type = 'square', f = 440, f2, t = 0, at, d = 0.15, v = 0.3, dest, attack = 0.005, vib }) {
+    if (!ctx) return;
+    const now = at ?? (ctx.currentTime + t);
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, now);
+    if (f2) o.frequency.exponentialRampToValueAtTime(Math.max(1, f2), now + d);
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(v, now + attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + d);
+    o.connect(g); g.connect(dest || sfxGain);
+    if (vib) { const l = ctx.createOscillator(), lg = ctx.createGain(); l.frequency.value = vib.rate; lg.gain.value = vib.depth; l.connect(lg); lg.connect(o.frequency); l.start(now); l.stop(now + d + 0.05); }
+    o.start(now); o.stop(now + d + 0.05);
+  }
+  function noise({ t = 0, at, d = 0.2, v = 0.3, filter = 'bandpass', freq = 1000, freq2, q = 1, dest }) {
+    if (!ctx) return;
+    const now = at ?? (ctx.currentTime + t);
+    const src = ctx.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
+    const fl = ctx.createBiquadFilter(); fl.type = filter; fl.frequency.setValueAtTime(freq, now); fl.Q.value = q;
+    if (freq2) fl.frequency.exponentialRampToValueAtTime(freq2, now + d);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(v, now + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, now + d);
+    src.connect(fl); fl.connect(g); g.connect(dest || sfxGain);
+    src.start(now, Math.random() * 0.5); src.stop(now + d + 0.05);
+  }
+  const FX = {
+    click() { tone({ type: 'square', f: 900, d: 0.05, v: 0.12 }); },
+    pop() { tone({ type: 'sine', f: 280 + Math.random() * 120, f2: 1300, d: 0.13, v: 0.45 }); },
+    join() { [523, 659, 784, 1047].forEach((f, i) => tone({ type: 'square', f, t: i * 0.07, d: 0.11, v: 0.17 })); },
+    leave() { [784, 523, 392].forEach((f, i) => tone({ type: 'triangle', f, t: i * 0.1, d: 0.16, v: 0.35 })); },
+    coin() { tone({ type: 'square', f: 988, d: 0.08, v: 0.2 }); tone({ type: 'square', f: 1319, t: 0.08, d: 0.4, v: 0.2 }); },
+    submit() { tone({ type: 'sine', f: 600, f2: 1000, d: 0.1, v: 0.3 }); },
+    vote() { tone({ type: 'square', f: 660, d: 0.06, v: 0.16 }); tone({ type: 'square', f: 990, t: 0.06, d: 0.12, v: 0.16 }); },
+    boing() { tone({ type: 'sine', f: 520, f2: 90, d: 0.65, v: 0.55, vib: { rate: 18, depth: 50 } }); },
+    whoosh() { noise({ d: 0.5, v: 0.5, filter: 'bandpass', freq: 300, freq2: 5000, q: 2 }); },
+    slideUp() { tone({ type: 'sine', f: 250, f2: 1900, d: 0.55, v: 0.4 }); },
+    slideDown() { tone({ type: 'sine', f: 1900, f2: 180, d: 0.7, v: 0.4 }); },
+    tick() { tone({ type: 'square', f: 1700, d: 0.04, v: 0.22 }); tone({ type: 'sine', f: 120, d: 0.08, v: 0.3 }); },
+    crash(t = 0) { noise({ t, d: 1.6, v: 0.55, filter: 'highpass', freq: 2500 }); tone({ type: 'sine', f: 130, f2: 40, t, d: 0.45, v: 0.9 }); },
+    drumroll() { for (let i = 0; i < 40; i++) noise({ t: i * 0.05, d: 0.06, v: 0.08 + i * 0.012, filter: 'bandpass', freq: 1800, q: 0.8 }); FX.crash(2.0); },
+    tada() {
+      [523, 659, 784].forEach((f, i) => tone({ type: 'square', f, t: i * 0.08, d: 0.12, v: 0.18 }));
+      [523, 659, 784, 1047].forEach(f => tone({ type: 'sawtooth', f, t: 0.26, d: 1.0, v: 0.08 }));
+      FX.crash(0.26);
+    },
+    buzzer() { [0, 0.25].forEach(t => { tone({ type: 'square', f: 180, t, d: 0.2, v: 0.25 }); tone({ type: 'sawtooth', f: 186, t, d: 0.2, v: 0.15 }); }); },
+    airhorn() { [[0, 0.18], [0.22, 0.18], [0.44, 0.75]].forEach(([t, d]) => [466, 470, 233, 349].forEach(f => tone({ type: 'sawtooth', f, t, d, v: 0.09, attack: 0.02, f2: f * 0.96 }))); },
+    pinpon() { tone({ type: 'sine', f: 1319, d: 0.35, v: 0.45 }); tone({ type: 'sine', f: 1047, t: 0.3, d: 0.7, v: 0.45 }); },
+    applause() { for (let i = 0; i < 90; i++) noise({ t: Math.random() * 2.4, d: 0.03 + Math.random() * 0.03, v: 0.12 + Math.random() * 0.2, filter: 'bandpass', freq: 900 + Math.random() * 3000, q: 1 }); },
+    kirakira() { for (let i = 0; i < 10; i++) tone({ type: 'sine', f: 1500 + Math.random() * 2200, t: i * 0.06, d: 0.25, v: 0.15 }); },
+    fanfare() {
+      const n = [[67, 0, .13], [67, .14, .13], [67, .28, .13], [72, .42, .9], [76, .42, .9], [79, .42, .9]];
+      n.forEach(([m, t, d]) => { tone({ type: 'square', f: mf(m), t, d, v: 0.14 }); tone({ type: 'sawtooth', f: mf(m) * 1.003, t, d, v: 0.06 }); });
+      FX.crash(0.42);
+    }
+  };
+  function sfx(name) { init(); if (!ctx || !sfxOn) return; try { (FX[name] || FX.click)(); } catch (e) {} }
+
+  // ---- BGM シーケンサー（16分音符単位, -1 = 前の音をのばす） ----
+  const R = (a, n) => Array.from({ length: n }, () => a).flat();
+  const SONGS = {
+    lobby: { bpm: 150,
+      lead: [72,0,76,0,79,0,76,0,81,-1,79,0,76,0,72,0, 74,0,77,0,81,0,77,0,79,-1,-1,0,0,0,0,0,
+             76,0,79,0,84,0,79,0,81,-1,79,0,77,0,76,0, 74,0,76,0,77,0,74,0,72,-1,-1,-1,0,0,67,71],
+      bass: [...R([48,0,55,0],4), ...R([41,0,48,0],4), ...R([48,0,55,0],4), ...R([43,0,50,0],4)],
+      drums: R('k.h.s.hkk.h.s.h.'.split(''), 4) },
+    think: { bpm: 168,
+      lead: [69,0,72,0,76,0,72,0,69,0,72,0,76,0,77,0, 76,0,74,0,72,0,71,0,69,0,0,0,64,0,0,0,
+             69,0,72,0,76,0,72,0,69,0,72,0,76,0,79,0, 77,0,76,0,74,0,71,0,69,-1,-1,0,0,0,0,0],
+      bass: [45,0,0,45,57,0,45,0,45,0,0,45,57,0,52,0, 40,0,0,40,52,0,40,0,40,0,0,40,52,0,47,0,
+             45,0,0,45,57,0,45,0,45,0,0,45,57,0,52,0, 40,0,0,40,52,0,40,0,44,0,0,44,56,0,44,0],
+      drums: R('k.hhs.hhk.hhs.hh'.split(''), 4) },
+    final: { bpm: 132,
+      lead: [72,0,72,0,72,0,72,-1,-1,-1,-1,-1,0,0,0,0, 68,-1,-1,-1,70,-1,-1,-1,72,0,70,0,72,-1,-1,-1,
+             79,0,79,0,81,0,79,0,77,0,76,0,74,0,76,0, 77,-1,76,-1,74,-1,72,-1,72,-1,-1,-1,0,0,0,0],
+      bass: [...R([48,0,48,0],4), 44,0,44,0,46,0,46,0,48,0,48,0,48,0,48,0, ...R([43,0,50,0],4), 41,0,48,0,43,0,50,0,48,0,55,0,48,0,0,0],
+      drums: R('k.h.s.h.k.k.s.hs'.split(''), 4) }
+  };
+  function playStep(s, i, at, sp) {
+    const L = s.lead.length, m = s.lead[i % L];
+    if (m > 0) { let len = 1; while (s.lead[(i + len) % L] === -1 && len < 16) len++;
+      tone({ type: 'square', f: mf(m), at, d: sp * len * 0.92, v: 0.11, dest: bgmGain });
+      tone({ type: 'square', f: mf(m) * 1.006, at, d: sp * len * 0.92, v: 0.04, dest: bgmGain }); }
+    const b = s.bass[i % s.bass.length];
+    if (b > 0) tone({ type: 'triangle', f: mf(b), at, d: sp * 1.6, v: 0.38, dest: bgmGain });
+    const dr = s.drums[i % s.drums.length];
+    if (dr === 'k') tone({ type: 'sine', f: 160, f2: 40, at, d: 0.16, v: 0.75, dest: bgmGain });
+    if (dr === 's') { noise({ at, d: 0.12, v: 0.32, filter: 'highpass', freq: 1500, dest: bgmGain }); tone({ type: 'triangle', f: 220, f2: 120, at, d: 0.08, v: 0.25, dest: bgmGain }); }
+    if (dr === 'h' || dr === 'k' || dr === 's') noise({ at, d: 0.03, v: 0.09, filter: 'highpass', freq: 7000, dest: bgmGain });
+  }
+  function schedule() {
+    if (!curSong || !ctx) return;
+    const s = SONGS[curSong], sp = 60 / s.bpm / 4;
+    if (nextTime < ctx.currentTime - 0.2) nextTime = ctx.currentTime + 0.02;
+    while (nextTime < ctx.currentTime + 0.12) { playStep(s, step, nextTime, sp); nextTime += sp; step = (step + 1) % s.lead.length; }
+  }
+  function song(name) {
+    if (!ctx) { pendingSong = name; return; }
+    if (curSong === name) return;
+    curSong = name; step = 0; nextTime = ctx.currentTime + 0.05;
+    if (!seqTimer) seqTimer = setInterval(schedule, 25);
+  }
+  function stop() { curSong = null; pendingSong = null; }
+  function setBgm(on) { bgmOn = on; store.set('bgmOn', on); if (bgmGain) bgmGain.gain.setTargetAtTime(on ? 0.5 : 0, ctx.currentTime, 0.05); }
+  function setSfx(on) { sfxOn = on; store.set('sfxOn', on); if (sfxGain) sfxGain.gain.setTargetAtTime(on ? 1 : 0, ctx.currentTime, 0.02); }
+  return { init, sfx, song, stop, setBgm, setSfx, get bgmOn() { return bgmOn; }, get sfxOn() { return sfxOn; } };
+})();
+
+/* ===================== 読み上げ ===================== */
+let ttsOn = store.get('tts', null);
+function setTtsDefault(isHost) { if (ttsOn === null) ttsOn = isHost; refreshToggles(); }
+function speak(text) {
+  if (!ttsOn || !('speechSynthesis' in window)) return;
+  try {
+    const u = new SpeechSynthesisUtterance(String(text).replace(/[（）()「」]/g, ' '));
+    u.lang = 'ja-JP'; u.rate = 1.15; u.pitch = 0.5 + Math.random() * 1.5;
+    const v = speechSynthesis.getVoices().find(v => /^ja/i.test(v.lang)); if (v) u.voice = v;
+    speechSynthesis.speak(u);
+  } catch {}
+}
+function stopSpeak() { try { speechSynthesis.cancel(); } catch {} }
+
+/* ===================== 紙吹雪 ===================== */
+const Confetti = (() => {
+  const cv = $('#confetti'), cx = cv.getContext('2d'); let parts = [], raf = null, W = 0, H = 0;
+  const cols = ['#FF5D8F', '#2EC4B6', '#4D96FF', '#9B5DE5', '#FF8C42', '#6BCB77', '#FFD23F', '#fff'];
+  function resize() { const r = devicePixelRatio || 1; W = innerWidth; H = innerHeight; cv.width = W * r; cv.height = H * r; cx.setTransform(r, 0, 0, r, 0, 0); }
+  addEventListener('resize', resize); resize();
+  function add(x, y, vx, vy) { parts.push({ x, y, vx, vy, s: 6 + Math.random() * 9, r: Math.random() * 6, vr: (Math.random() - .5) * .35, c: cols[(Math.random() * cols.length) | 0], sh: Math.random() < .3 ? 1 : 0 }); }
+  function burst(n = 120, px = .5, py = .35) { for (let i = 0; i < n; i++) add(px * W, py * H, (Math.random() - .5) * 18, -Math.random() * 16 - 4); go(); }
+  function rain(n = 150) { for (let i = 0; i < n; i++) add(Math.random() * W, -20 - Math.random() * H * .8, (Math.random() - .5) * 3, Math.random() * 3); go(); }
+  function go() { if (!raf) raf = requestAnimationFrame(tick); }
+  function tick() {
+    cx.clearRect(0, 0, W, H);
+    for (const p of parts) { p.vy += .32; p.vx *= .99; p.vy = Math.min(p.vy, 7); p.x += p.vx; p.y += p.vy; p.r += p.vr;
+      cx.save(); cx.translate(p.x, p.y); cx.rotate(p.r); cx.fillStyle = p.c;
+      if (p.sh) { cx.beginPath(); cx.arc(0, 0, p.s / 2, 0, 7); cx.fill(); } else cx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2);
+      cx.restore(); }
+    parts = parts.filter(p => p.y < H + 30);
+    raf = parts.length ? requestAnimationFrame(tick) : null;
+    if (!raf) cx.clearRect(0, 0, W, H);
+  }
+  return { burst, rain };
+})();
+
+/* ===================== 状態 ===================== */
+const me = { pid: getPid(), name: store.get('name', ''), isHost: false };
+let view = null, screenKey = '', localDeadline = 0, roomCode = '', lastError = '';
+let screenTimers = [], mySubmittedRound = -1, myVoteLocal = null;
+const app = $('#app');
+function later(fn, ms) { screenTimers.push(setTimeout(fn, ms)); }
+function clearScreenTimers() { screenTimers.forEach(clearTimeout); screenTimers = []; }
+function updateRoomBadge() { $('#roomBadge').textContent = roomCode ? 'ROOM ' + roomCode : ''; }
+
+/* ===================== ホスト（ゲームサーバー役） ===================== */
+const newStats = () => ({ picked: 0, fooled: 0, correct: 0, guessedBy: 0, sync: 0 });
+const Host = {
+  s: null, timer: null, deck: [], owner: {}, conns: new Map(),
+  init() {
+    this.s = { phase: 'lobby', players: [], order: [], round: 0, topic: '', deadline: 0, answers: {}, cards: [], votes: {}, pick: null, result: null, answerTime: CONFIG.ANSWER_TIME_DEFAULT };
+    this.owner = {}; this.conns = new Map();
+  },
+  player(id) { return this.s.players.find(p => p.id === id); },
+  inGame() { return this.s.players.filter(p => p.connected && this.s.order.includes(p.id)); },
+  addPlayer(id, name) {
+    const s = this.s; let nm = String(name || '').trim().slice(0, 10) || 'ななし';
+    const base = nm; let k = 2; while (s.players.some(p => p.name === nm)) nm = base.slice(0, 8) + k++;
+    const usedA = new Set(s.players.map(p => p.avatar)), usedC = new Set(s.players.map(p => p.color));
+    const avatar = shuffle(AVATARS).find(a => !usedA.has(a)) || '🐣';
+    const color = PCOLORS.find(c => !usedC.has(c)) || '#999';
+    s.players.push({ id, name: nm, avatar, color, score: 0, connected: true, stats: newStats() });
+  },
+  fx(n) { this.conns.forEach(c => { try { if (c.open) c.send({ t: 'fx', n }); } catch {} }); Sound.sfx(n); },
+  setTimer(sec, fn) { clearTimeout(this.timer); this.s.deadline = Date.now() + sec * 1000; this.timer = setTimeout(fn, sec * 1000); },
+  viewFor(pid) {
+    const s = this.s, target = s.order[s.round];
+    const showCards = ['reveal', 'vote', 'result'].includes(s.phase);
+    let myCid = null; if (showCards) for (const c of s.cards) if (this.owner[c.cid] === pid) myCid = c.cid;
+    return {
+      phase: s.phase, hostId: me.pid,
+      players: s.players.map(p => ({ id: p.id, name: p.name, avatar: p.avatar, color: p.color, score: p.score, connected: p.connected, stats: p.stats })),
+      order: s.order, round: s.round, total: s.order.length, target, topic: s.topic,
+      remain: s.deadline ? Math.max(0, s.deadline - Date.now()) : 0,
+      submitted: Object.keys(s.answers), voted: Object.keys(s.votes), picked: !!s.pick,
+      cards: showCards ? s.cards : [], myCid, myVote: pid === target ? s.pick : (s.votes[pid] || null),
+      myAnswer: s.answers[pid] || null, result: s.phase === 'result' ? s.result : null, answerTime: s.answerTime
+    };
+  },
+  broadcast() {
+    if (!this.s) return;
+    for (const p of this.s.players) {
+      const v = this.viewFor(p.id);
+      if (p.id === me.pid) onState(v);
+      else { const c = this.conns.get(p.id); if (c && c.open) try { c.send({ t: 'state', v }); } catch {} }
+    }
+  },
+  onMessage(conn, d) {
+    if (!this.s || !d || typeof d !== 'object') return;
+    if (d.t === 'join') return this.onJoin(conn, d);
+    if (!conn._pid || this.conns.get(conn._pid) !== conn) return;
+    this.onAction(conn._pid, d);
+  },
+  onJoin(conn, d) {
+    const s = this.s, pid = String(d.pid || '').slice(0, 24); if (!pid || pid === me.pid) return;
+    const p = this.player(pid);
+    if (p) { const old = this.conns.get(pid); if (old && old !== conn) try { old.close(); } catch {}
+      conn._pid = pid; this.conns.set(pid, conn); p.connected = true; this.fx('join'); this.broadcast(); return; }
+    const refuse = msg => { try { conn.send({ t: 'error', msg }); } catch {} setTimeout(() => { try { conn.close(); } catch {} }, 600); };
+    if (s.phase !== 'lobby') return refuse('ゲームはもう始まっています。次のゲームまで待ってね！');
+    if (s.players.length >= CONFIG.MAX_PLAYERS) return refuse('満員です（最大' + CONFIG.MAX_PLAYERS + '人）');
+    conn._pid = pid; this.conns.set(pid, conn); this.addPlayer(pid, d.name); this.fx('join'); this.broadcast();
+  },
+  onClose(conn) {
+    if (!this.s) return; const pid = conn._pid; if (!pid || this.conns.get(pid) !== conn) return;
+    this.conns.delete(pid); const p = this.player(pid); if (!p) return;
+    if (this.s.phase === 'lobby') this.s.players = this.s.players.filter(x => x.id !== pid); else p.connected = false;
+    this.fx('leave'); this.broadcast(); this.checkAnswers(); this.checkVotes();
+  },
+  onAction(pid, a) {
+    const s = this.s; if (!s || !a) return; const isHost = pid === me.pid;
+    switch (a.t) {
+      case 'start': if (isHost && s.phase === 'lobby') this.startGame(); break;
+      case 'setting': if (isHost && s.phase === 'lobby') { const v = +a.answerTime; if ([30, 45, 60, 90].includes(v)) { s.answerTime = v; this.broadcast(); } } break;
+      case 'answer': {
+        if (s.phase !== 'answer' || s.answers[pid] || !s.order.includes(pid)) break;
+        const txt = String(a.text || '').replace(/\s+/g, ' ').trim().slice(0, CONFIG.MAX_ANSWER); if (!txt) break;
+        s.answers[pid] = txt; this.fx('submit'); this.broadcast(); this.checkAnswers(); break;
+      }
+      case 'vote': {
+        if (s.phase !== 'vote') break; const cid = String(a.cid || '');
+        if (!this.owner[cid] || this.owner[cid] === pid || !s.order.includes(pid)) break;
+        if (pid === s.order[s.round]) { if (s.pick) break; s.pick = cid; } else { if (s.votes[pid]) break; s.votes[pid] = cid; }
+        this.fx('vote'); this.broadcast(); this.checkVotes(); break;
+      }
+      case 'next': if (isHost && s.phase === 'result') this.next(); break;
+      case 'again': if (isHost && s.phase === 'final') this.again(); break;
+    }
+  },
+  startGame() {
+    const s = this.s; if (s.players.filter(p => p.connected).length < CONFIG.MIN_PLAYERS) return;
+    s.players = s.players.filter(p => p.connected);
+    s.players.forEach(p => { p.score = 0; p.stats = newStats(); });
+    s.order = shuffle(s.players.map(p => p.id)); s.round = 0; this.deck = shuffle(TOPICS);
+    this.startRound();
+  },
+  startRound() {
+    const s = this.s;
+    while (s.round < s.order.length && !this.player(s.order[s.round])?.connected) s.round++;
+    if (s.round >= s.order.length) return this.finish();
+    const t = this.player(s.order[s.round]);
+    if (!this.deck.length) this.deck = shuffle(TOPICS);
+    s.topic = this.deck.pop().replace('{name}', t.name);
+    s.answers = {}; s.votes = {}; s.pick = null; s.cards = []; s.result = null; this.owner = {};
+    s.phase = 'intro'; this.setTimer(CONFIG.INTRO_TIME, () => this.beginAnswer()); this.broadcast();
+  },
+  beginAnswer() { const s = this.s; s.phase = 'answer'; this.setTimer(s.answerTime, () => this.endAnswer()); this.broadcast(); },
+  checkAnswers() { const s = this.s; if (s.phase === 'answer' && this.inGame().every(p => s.answers[p.id])) this.endAnswer(); },
+  endAnswer() {
+    const s = this.s; if (s.phase !== 'answer') return; clearTimeout(this.timer);
+    const target = s.order[s.round];
+    if (!s.answers[target]) s.answers[target] = '……（ノーコメント）';
+    s.cards = shuffle(Object.entries(s.answers).map(([pid, text]) => { const cid = rid(6); this.owner[cid] = pid; return { cid, text }; }));
+    s.phase = 'reveal'; this.setTimer(s.cards.length * CONFIG.REVEAL_PER_CARD + 1.5, () => this.beginVote()); this.broadcast();
+  },
+  beginVote() { const s = this.s; s.phase = 'vote'; this.setTimer(CONFIG.VOTE_TIME, () => this.endVote()); this.broadcast(); this.checkVotes(); },
+  checkVotes() {
+    const s = this.s; if (s.phase !== 'vote') return; const target = s.order[s.round];
+    const voters = this.inGame().filter(p => p.id !== target);
+    const tp = this.player(target); const tNeeds = tp && tp.connected && s.cards.some(c => this.owner[c.cid] !== target);
+    if (voters.every(p => s.votes[p.id]) && (!tNeeds || s.pick)) { clearTimeout(this.timer); this.timer = setTimeout(() => this.endVote(), 700); }
+  },
+  endVote() {
+    const s = this.s; if (s.phase !== 'vote') return; clearTimeout(this.timer);
+    const target = s.order[s.round], P = id => this.player(id);
+    const real = s.cards.find(c => this.owner[c.cid] === target).cid;
+    const votesBy = {}; s.cards.forEach(c => votesBy[c.cid] = []);
+    for (const [v, cid] of Object.entries(s.votes)) votesBy[cid]?.push(v);
+    const deltas = {}; s.players.forEach(p => deltas[p.id] = { total: 0, items: [] });
+    const add = (id, pts, label) => { const d = deltas[id]; if (!d) return; d.total += pts; const it = d.items.find(i => i.label === label); if (it) { it.pts += pts; it.n++; } else d.items.push({ label, pts, n: 1 }); };
+    for (const [v, cid] of Object.entries(s.votes)) {
+      if (cid === real) { add(v, 2, '本物を見抜いた'); add(target, 1, '見抜かれた'); P(v) && P(v).stats.correct++; P(target) && P(target).stats.guessedBy++; }
+      else { const o = this.owner[cid]; add(o, 1, 'だまし成功'); P(o) && P(o).stats.fooled++; }
+    }
+    if (s.pick) { const o = this.owner[s.pick]; add(o, 3, '言いそう大賞'); P(o) && P(o).stats.picked++; }
+    const rn = norm(s.answers[target]); const syncs = [];
+    if (rn) for (const [pid, txt] of Object.entries(s.answers)) if (pid !== target && norm(txt) === rn) { add(pid, 3, 'シンクロ'); P(pid) && P(pid).stats.sync++; syncs.push(pid); }
+    for (const id in deltas) { const p = P(id); if (p) p.score += deltas[id].total; }
+    s.result = { real, pick: s.pick, owners: Object.fromEntries(s.cards.map(c => [c.cid, this.owner[c.cid]])), votesBy, deltas, syncs };
+    s.phase = 'result'; this.setTimer(CONFIG.RESULT_TIME, () => this.next()); this.broadcast();
+  },
+  next() { const s = this.s; if (s.phase !== 'result') return; clearTimeout(this.timer); s.round++; if (s.round >= s.order.length) this.finish(); else this.startRound(); },
+  finish() { const s = this.s; clearTimeout(this.timer); s.phase = 'final'; s.deadline = 0; this.broadcast(); },
+  again() {
+    const s = this.s; clearTimeout(this.timer);
+    s.players = s.players.filter(p => p.connected); s.players.forEach(p => { p.score = 0; p.stats = newStats(); });
+    s.phase = 'lobby'; s.order = []; s.round = 0; s.deadline = 0; s.answers = {}; s.votes = {}; s.cards = []; s.pick = null; s.result = null;
+    this.broadcast();
+  }
+};
+
+/* ===================== 通信 ===================== */
+const Net = { peer: null, hostConn: null, joinTimer: null };
+function peerOk() {
+  if (typeof window.Peer !== 'function') { hideOverlay(); renderHome('通信ライブラリ（PeerJS）を読み込めませんでした。インターネット接続を確認してね。'); return false; }
+  return true;
+}
+function leaveNet() {
+  clearTimeout(Net.joinTimer); clearTimeout(Host.timer);
+  const p = Net.peer; Net.peer = null; Net.hostConn = null;
+  try { p && p.destroy(); } catch {}
+  me.isHost = false; Host.s = null; view = null; roomCode = ''; updateRoomBadge();
+}
+function createRoom() {
+  if (!peerOk()) return;
+  showOverlay('<div class="spinner">🎲</div><p class="center">部屋をつくっています…</p>');
+  const code = genCode();
+  const peer = new window.Peer(CONFIG.PEER_PREFIX + code, CONFIG.PEER_OPTIONS); Net.peer = peer;
+  peer.on('open', () => {
+    if (Net.peer !== peer) return;
+    me.isHost = true; roomCode = code; setTtsDefault(true); updateRoomBadge(); ss.del('room');
+    Host.init(); Host.addPlayer(me.pid, me.name); hideOverlay(); Host.broadcast();
+  });
+  peer.on('connection', conn => {
+    conn.on('data', d => Host.onMessage(conn, d));
+    conn.on('close', () => Host.onClose(conn));
+    conn.on('error', () => Host.onClose(conn));
+  });
+  peer.on('disconnected', () => { if (Net.peer === peer) try { peer.reconnect(); } catch {} });
+  peer.on('error', e => {
+    if (Net.peer !== peer) return;
+    if (e.type === 'unavailable-id') { Net.peer = null; try { peer.destroy(); } catch {} createRoom(); return; }
+    if (!roomCode) { leaveNet(); hideOverlay(); renderHome('部屋をつくれませんでした（' + e.type + '）。もう一度ためしてね。'); }
+    else toast('通信エラー: ' + e.type);
+  });
+}
+function joinRoom(code) {
+  if (!peerOk()) return;
+  showOverlay('<div class="spinner">🚪</div><p class="center">部屋「' + esc(code) + '」に入っています…</p>');
+  const peer = new window.Peer(CONFIG.PEER_OPTIONS); Net.peer = peer; let got = false;
+  const fail = msg => { if (Net.peer !== peer) return; leaveNet(); hideOverlay(); ss.del('room'); renderHome(msg); };
+  Net.joinTimer = setTimeout(() => { if (!got) fail('つながりませんでした。部屋コードやネット接続を確認してね。'); }, 15000);
+  peer.on('open', () => {
+    if (Net.peer !== peer) return;
+    const conn = peer.connect(CONFIG.PEER_PREFIX + code, { reliable: true }); Net.hostConn = conn;
+    conn.on('open', () => conn.send({ t: 'join', pid: me.pid, name: me.name }));
+    conn.on('data', d => {
+      if (Net.hostConn !== conn) return;
+      if (d && d.t === 'state' && !got) { got = true; clearTimeout(Net.joinTimer); roomCode = code; setTtsDefault(false); updateRoomBadge(); hideOverlay(); ss.set('room', code); }
+      onHostMsg(d);
+    });
+    conn.on('close', () => { if (Net.hostConn === conn) { const m = lastError || 'ホストとの接続が切れました。'; lastError = ''; fail(m); } });
+  });
+  peer.on('disconnected', () => { if (Net.peer === peer) try { peer.reconnect(); } catch {} });
+  peer.on('error', e => {
+    if (Net.peer !== peer) return;
+    if (e.type === 'peer-unavailable') fail('部屋「' + code + '」が見つかりません。');
+    else if (!got) fail('つながりませんでした（' + e.type + '）');
+  });
+}
+function onHostMsg(d) {
+  if (!d || typeof d !== 'object') return;
+  if (d.t === 'state') onState(d.v);
+  else if (d.t === 'fx') Sound.sfx(d.n);
+  else if (d.t === 'error') lastError = d.msg;
+}
+function send(a) {
+  if (me.isHost) Host.onAction(me.pid, a);
+  else if (Net.hostConn && Net.hostConn.open) Net.hostConn.send(a);
+  else toast('接続が切れています…');
+}
+function exitToTop() { ss.del('room'); leaveNet(); stopSpeak(); renderHome(); }
+
+/* ===================== 画面描画 ===================== */
+const P = id => (view && view.players.find(p => p.id === id)) || { id, name: '???', avatar: '❓', color: '#999', score: 0, stats: newStats() };
+const avatarHtml = (p, cls = '') => `<span class="av ${cls}" style="--c:${esc(p.color)}">${esc(p.avatar)}</span>`;
+const chip = (p, extra = '') => `<div class="pchip ${p.connected === false ? 'off' : ''} ${extra}">${avatarHtml(p)}<span>${esc(p.name)}</span>${view && p.id === view.hostId ? '👑' : ''}${p.id === me.pid ? '<span class="you">YOU</span>' : ''}</div>`;
+const timerHtml = (cls = '') => `<div class="timer ${cls}" id="timer"><b>--</b></div>`;
+function topicHtml(topic, name) { const e = esc(topic), n = esc(name); return n && e.includes(n) ? e.replace(n, `<span class="hl">${n}</span>`) : e; }
+
+function onState(v) {
+  const prev = view; view = v; localDeadline = Date.now() + (v.remain || 0);
+  const key = v.phase + ':' + v.round + ':' + v.total;
+  if (key !== screenKey) { screenKey = key; clearScreenTimers(); stopSpeak(); buildScreen(prev); }
+  else updateScreen(prev);
+}
+function buildScreen(prev) {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  switch (view.phase) {
+    case 'lobby': Sound.song('lobby'); buildLobby(); break;
+    case 'intro': Sound.stop(); Sound.sfx('drumroll'); buildIntro(); break;
+    case 'answer': Sound.song('think'); Sound.sfx('whoosh'); buildAnswer(); break;
+    case 'reveal': Sound.stop(); Sound.sfx('slideUp'); buildReveal(); break;
+    case 'vote': Sound.song('think'); Sound.sfx('boing'); buildVote(); break;
+    case 'result': Sound.stop(); buildResult(); break;
+    case 'final': Sound.stop(); buildFinal(); break;
+  }
+}
+function updateScreen(prev) {
+  switch (view.phase) {
+    case 'lobby': updateLobby(); break;
+    case 'answer': updateAnswer(); break;
+    case 'vote': updateVote(); break;
+  }
+}
+
+// ---------- ホーム ----------
+function renderHome(msg) {
+  screenKey = 'home'; clearScreenTimers(); view = null; Sound.song('lobby');
+  const urlRoom = (new URLSearchParams(location.search).get('room') || '').toUpperCase().slice(0, 4);
+  app.innerHTML = `
+  <div class="panel">
+    <h1 class="logo"><span>それ、</span><span>言いそう！</span></h1>
+    <p class="tagline">あの人が言いそうなこと、なりきって当てろ！</p>
+    <label class="lbl" for="nameIn">あなたのなまえ</label>
+    <input id="nameIn" maxlength="10" placeholder="ニックネーム（10文字まで）" value="${esc(me.name)}" autocomplete="off">
+    <div class="home-actions">
+      <button class="btn pink big" id="createBtn">🎉 部屋をつくる</button>
+      <div class="or">— または招待コードで —</div>
+      <div class="join-row"><input id="codeIn" maxlength="4" placeholder="ABCD" value="${esc(urlRoom)}" autocomplete="off"><button class="btn cyan" id="joinBtn">入る！</button></div>
+    </div>
+    ${msg ? `<div class="err">⚠️ ${esc(msg)}</div>` : ''}
+    <div class="foot-links"><button class="btn small ghost" id="rulesBtn">📖 あそびかた</button></div>
+  </div>`;
+  const nameIn = $('#nameIn'), codeIn = $('#codeIn');
+  const getName = () => { const n = nameIn.value.trim().slice(0, 10); if (!n) { Sound.sfx('buzzer'); nameIn.focus(); nameIn.style.animation = 'shakeX .4s'; setTimeout(() => nameIn.style.animation = '', 450); toast('なまえを入れてね！'); return null; } me.name = n; store.set('name', n); return n; };
+  $('#createBtn').onclick = () => { if (getName()) { Sound.sfx('coin'); createRoom(); } };
+  const doJoin = () => { if (!getName()) return; const c = codeIn.value.trim().toUpperCase(); if (c.length !== 4) { Sound.sfx('buzzer'); toast('4文字の部屋コードを入れてね'); codeIn.focus(); return; } Sound.sfx('coin'); joinRoom(c); };
+  $('#joinBtn').onclick = doJoin;
+  codeIn.oninput = () => { codeIn.value = codeIn.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); };
+  codeIn.onkeydown = e => { if (e.key === 'Enter' && !e.isComposing) doJoin(); };
+  $('#rulesBtn').onclick = showRules;
+  if (urlRoom && me.name) codeIn.focus();
+}
+function showRules() {
+  showOverlay(`<div class="rules">
+    <h1 class="logo small"><span>あそびかた</span></h1>
+    <ol>
+      <li>みんなが1回ずつ<b>「主役」</b>になります。全員が主役をやったらゲーム終了！</li>
+      <li>お題が出たら、主役は<b>本音の回答</b>を、ほかの人は<b>主役が言いそうなセリフ</b>を書きます。</li>
+      <li>回答が名前なしでシャッフルされて発表されます（読み上げもあるよ）。</li>
+      <li>主役以外は<b>「本物はどれ？」</b>に投票。主役は<b>「いちばん自分が言いそう！」</b>を選びます。</li>
+    </ol>
+    <h3>🎯 得点</h3>
+    <table>
+      <tr><td>🏆 主役に「言いそう大賞」に選ばれた</td><td>+3</td></tr>
+      <tr><td>🎭 自分の回答が本物とまちがえられた（1票ごと）</td><td>+1</td></tr>
+      <tr><td>🔍 本物の回答を見抜いた</td><td>+2</td></tr>
+      <tr><td>📖 主役：本物を見抜いてもらえた（1人ごと）</td><td>+1</td></tr>
+      <tr><td>🌀 主役の本音と完全一致（シンクロ）</td><td>+3</td></tr>
+    </table>
+    <p>累計ポイントがいちばん多い人の優勝！（${CONFIG.MIN_PLAYERS}〜${CONFIG.MAX_PLAYERS}人）</p>
+    <button class="btn pink big" id="closeRules">わかった！</button></div>`);
+  $('#closeRules').onclick = () => { Sound.sfx('pop'); hideOverlay(); };
+}
+function showOverlay(html) { const o = $('#overlay'); o.innerHTML = `<div class="panel">${html}</div>`; o.classList.add('show'); }
+function hideOverlay() { $('#overlay').classList.remove('show'); }
+
+// ---------- ロビー ----------
+function buildLobby() {
+  const isHost = me.isHost;
+  app.innerHTML = `
+  <div class="panel">
+    <div class="room-label">部屋コード</div>
+    <div class="room-code">${esc(roomCode)}</div>
+    <div class="center"><button class="btn small orange" id="copyBtn">🔗 招待リンクをコピー</button></div>
+    <h2 class="h2">参加者 <span id="pcount"></span></h2>
+    <div id="plist" class="plist"></div>
+    <div class="lobby-ctl">
+      ${isHost ? `
+        <div class="setting-row">⏱️ 回答時間
+          <select id="timeSel">${[30, 45, 60, 90].map(t => `<option value="${t}" ${t === view.answerTime ? 'selected' : ''}>${t}秒</option>`).join('')}</select></div>
+        <button class="btn pink big pulse" id="startBtn">🚀 ゲームスタート！</button>
+        <div class="hint" id="startHint"></div>`
+      : `<div class="wait-msg">ホストがスタートするのを待っています…</div><div class="hint" id="timeInfo"></div>`}
+      <button class="btn small ghost" id="rulesBtn2">📖 あそびかた</button>
+      <button class="btn small ghost" id="leaveBtn">🚪 退出する</button>
+    </div>
+  </div>`;
+  $('#copyBtn').onclick = copyInvite;
+  $('#rulesBtn2').onclick = showRules;
+  $('#leaveBtn').onclick = () => { if (!me.isHost || confirmLeave()) exitToTop(); };
+  if (isHost) {
+    $('#timeSel').onchange = e => send({ t: 'setting', answerTime: +e.target.value });
+    $('#startBtn').onclick = () => send({ t: 'start' });
+  }
+  updateLobby();
+}
+function confirmLeave() { return window.confirm('ホストが退出すると部屋がなくなります。退出しますか？'); }
+function updateLobby() {
+  const ps = view.players;
+  $('#plist').innerHTML = ps.map(p => chip(p)).join('');
+  $('#pcount').textContent = `(${ps.length}/${CONFIG.MAX_PLAYERS})`;
+  if (me.isHost) {
+    const ok = ps.filter(p => p.connected).length >= CONFIG.MIN_PLAYERS;
+    $('#startBtn').disabled = !ok;
+    $('#startHint').textContent = ok ? '全員そろったらスタート！' : `あと${CONFIG.MIN_PLAYERS - ps.length}人以上集まるとスタートできます`;
+  } else { const ti = $('#timeInfo'); if (ti) ti.textContent = `回答時間：${view.answerTime}秒`; }
+}
+async function copyInvite() {
+  const url = location.href.split(/[?#]/)[0] + '?room=' + roomCode;
+  let ok = false;
+  try { await navigator.clipboard.writeText(url); ok = true; } catch {
+    try { const t = document.createElement('textarea'); t.value = url; document.body.appendChild(t); t.select(); ok = document.execCommand('copy'); t.remove(); } catch {}
+  }
+  Sound.sfx(ok ? 'kirakira' : 'buzzer'); toast(ok ? 'コピーしました！友だちに送ってね' : url);
+}
+
+// ---------- 主役発表 ----------
+function buildIntro() {
+  const t = P(view.target), isMe = t.id === me.pid;
+  app.innerHTML = `
+  <div class="intro">
+    <div class="spot"></div>
+    <div class="round-badge">ROUND ${view.round + 1} / ${view.total}</div>
+    <div class="intro-sub">今回の主役は…</div>
+    <div class="intro-target">
+      ${avatarHtml(t, 'huge')}
+      <div class="intro-name">${esc(t.name)}</div>
+      ${isMe ? '<div class="itsyou">あなたです！！</div>' : `<div class="hint" style="font-size:18px;opacity:1">${esc(t.name)}になりきる準備はいい？</div>`}
+    </div>
+  </div>`;
+  later(() => { Confetti.burst(140); shake(); Sound.sfx('airhorn'); }, 2000);
+}
+
+// ---------- 回答 ----------
+function buildAnswer() {
+  const t = P(view.target), isT = t.id === me.pid;
+  myVoteLocal = null;
+  app.innerHTML = `
+  <div class="row-between"><div class="who">${avatarHtml(t)} 主役：<b>${esc(t.name)}</b></div>${timerHtml()}</div>
+  <div class="bubble">${topicHtml(view.topic, t.name)}</div>
+  <div class="panel">
+    <div class="role-msg">${isT ? '🤫 <b>本音で</b>答えてね！みんながあなたのマネをしてくるよ' : `🎭 <b>${esc(t.name)}</b>になりきって書け！`}</div>
+    <div id="answerBox">
+      <textarea id="ansIn" maxlength="${CONFIG.MAX_ANSWER}" rows="3" placeholder="${isT ? 'あなたの本音は…？' : esc(t.name) + 'が言いそうなセリフ…'}"></textarea>
+      <div class="cnt"><span id="cnt">0</span>/${CONFIG.MAX_ANSWER}</div>
+      <button class="btn pink big" id="ansBtn">これで決まり！</button>
+    </div>
+    <div id="answerDone" class="done-msg hidden"></div>
+  </div>
+  <div class="progress" id="progress"></div>`;
+  const ta = $('#ansIn');
+  ta.oninput = () => { $('#cnt').textContent = ta.value.length; };
+  ta.onkeydown = e => { if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); submitAnswer(); } };
+  $('#ansBtn').onclick = submitAnswer;
+  if (!view.myAnswer) setTimeout(() => ta.focus(), 300);
+  updateAnswer();
+}
+function submitAnswer() {
+  const ta = $('#ansIn'); const txt = ta.value.replace(/\s+/g, ' ').trim();
+  if (!txt) { Sound.sfx('buzzer'); toast('なにか書いてね！'); ta.focus(); return; }
+  mySubmittedRound = view.round; send({ t: 'answer', text: txt }); Sound.sfx('coin'); Confetti.burst(40, .5, .6);
+  showAnswerDone(txt);
+}
+function showAnswerDone(txt) {
+  $('#answerBox').classList.add('hidden');
+  const d = $('#answerDone'); d.classList.remove('hidden');
+  d.innerHTML = `✅ 提出完了！みんなを待ってるよ…<span class="mine-ans">「${esc(txt)}」</span>`;
+}
+function updateAnswer() {
+  if (view.myAnswer && !$('#answerBox').classList.contains('hidden')) showAnswerDone(view.myAnswer);
+  const ps = view.players.filter(p => view.order.includes(p.id));
+  $('#progress').innerHTML = ps.map(p => chip(p, view.submitted.includes(p.id) ? 'done' : '')).join('');
+}
+
+// ---------- 発表 ----------
+function buildReveal() {
+  const t = P(view.target), per = CONFIG.REVEAL_PER_CARD;
+  app.innerHTML = `
+  <div class="phase-title center">📢 回答はっぴょう！</div>
+  <div class="bubble small">${topicHtml(view.topic, t.name)}</div>
+  <div class="cards">${view.cards.map((c, i) => `<div class="card reveal" style="--r:${rot(c.cid)}deg;animation-delay:${(i * per).toFixed(2)}s"><span class="qmark">?</span>${esc(c.text)}</div>`).join('')}</div>
+  <p class="hint">このなかに${esc(t.name)}の本物の回答がまぎれています…！</p>`;
+  view.cards.forEach((c, i) => later(() => { Sound.sfx(i % 2 ? 'boing' : 'pop'); speak(c.text); }, i * per * 1000 + 250));
+}
+
+// ---------- 投票 ----------
+function buildVote() {
+  const t = P(view.target), isT = t.id === me.pid;
+  app.innerHTML = `
+  <div class="row-between"><div class="phase-title">${isT ? '🏆 いちばん自分が言いそうなのは？' : `🕵️ 本物の${esc(t.name)}の回答はどれ？`}</div>${timerHtml()}</div>
+  <div class="bubble small">${topicHtml(view.topic, t.name)}</div>
+  <div class="cards" id="cards">${view.cards.map(c => { const mine = c.cid === view.myCid;
+    return `<button class="card votable ${mine ? 'mine' : ''}" data-cid="${esc(c.cid)}" ${mine ? 'disabled' : ''} style="--r:${rot(c.cid)}deg">${mine ? `<span class="tag">${isT ? 'あなたの本音' : 'あなたの回答'}</span><br>` : ''}${esc(c.text)}</button>`; }).join('')}</div>
+  <div class="center hint" id="voteMsg">${isT ? '自分以外の回答から「言いそう大賞」を1つ選んでね（+3点をあげられる！）' : 'タップして投票！自分の回答には投票できません'}</div>
+  <div class="progress" id="progress"></div>`;
+  $('#cards').onclick = e => {
+    const b = e.target.closest('.card.votable'); if (!b || b.disabled) return;
+    if (view.myVote || myVoteLocal) return;
+    myVoteLocal = b.dataset.cid; send({ t: 'vote', cid: myVoteLocal }); Sound.sfx('pinpon'); Confetti.burst(30, .5, .5);
+    markVote(myVoteLocal);
+  };
+  updateVote();
+}
+function markVote(cid) {
+  const cards = $('#cards'); if (!cards) return;
+  cards.classList.add('locked');
+  cards.querySelectorAll('.card').forEach(c => { c.disabled = true; c.classList.toggle('chosen', c.dataset.cid === cid); });
+  $('#voteMsg').textContent = '✅ 投票完了！みんなを待ってるよ…';
+}
+function updateVote() {
+  const v = view.myVote || myVoteLocal; if (v) markVote(v);
+  const ps = view.players.filter(p => view.order.includes(p.id));
+  $('#progress').innerHTML = ps.map(p => { const done = p.id === view.target ? view.picked : view.voted.includes(p.id); return chip(p, done ? 'done' : ''); }).join('');
+}
+
+// ---------- 結果 ----------
+function buildResult() {
+  const r = view.result, t = P(view.target), isLast = view.round + 1 >= view.total;
+  const myD = (r.deltas[me.pid] || { total: 0 }).total;
+  const cardsHtml = view.cards.map(c => {
+    const ownerId = r.owners[c.cid], owner = P(ownerId), isReal = c.cid === r.real, voters = r.votesBy[c.cid] || [];
+    const fooled = !isReal && voters.length > 0, isPick = c.cid === r.pick, sync = r.syncs.includes(ownerId);
+    return `<div class="card res ${isReal ? 'real-card' : ''}" style="--r:${rot(c.cid)}deg">
+      <div class="badges">${isReal ? '<span class="badge gold stage-real">👑 本物！</span>' : ''}${isPick ? '<span class="badge pink stage-pick">🏆 言いそう大賞</span>' : ''}${fooled ? `<span class="badge cyan stage-owner">🎭 だまし成功×${voters.length}</span>` : ''}${sync ? '<span class="badge purple stage-owner">🌀 シンクロ！</span>' : ''}</div>
+      <div class="ctext">${esc(c.text)}</div>
+      <div class="owner ${isReal ? 'stage-real' : 'stage-owner'}">✍️ ${avatarHtml(owner, 'sm')} ${esc(owner.name)}</div>
+      <div class="voters stage-owner">${voters.length ? '🗳️ ' + voters.map(v => avatarHtml(P(v), 'sm')).join('') : ''}</div>
+    </div>`; }).join('');
+  const rows = view.players.filter(p => view.order.includes(p.id)).sort((a, b) => b.score - a.score).map((p, i) => {
+    const d = r.deltas[p.id] || { total: 0, items: [] };
+    return `<div class="srow ${p.id === me.pid ? 'me' : ''}"><span class="rank">${i + 1}</span>${avatarHtml(p)}<span class="sname">${esc(p.name)}</span>
+      <span class="reasons">${d.items.map(it => `${esc(it.label)}${it.n > 1 ? '×' + it.n : ''} +${it.pts}`).join(' / ')}</span>
+      <span class="delta ${d.total ? '' : 'zero'}">+${d.total}</span><span class="score">${p.score}</span></div>`; }).join('');
+  app.innerHTML = `
+  <div id="resWrap">
+    <div class="res-head"><div class="phase-title">🎊 結果はっぴょう！</div></div>
+    <div class="bubble small">${topicHtml(view.topic, t.name)}</div>
+    <div class="cards">${cardsHtml}</div>
+    <div class="stage-score">
+      <div class="mydelta ${myD ? '' : 'zero'}">あなた +${myD}</div>
+      <div class="panel"><h2 class="h2" style="margin-top:0">📊 スコア（ROUND ${view.round + 1}/${view.total}）</h2>${rows}</div>
+    </div>
+    <div class="ctl">
+      ${me.isHost ? `<button class="btn pink big" id="nextBtn">${isLast ? '🏁 最終結果へ！' : '▶ 次のラウンドへ'}</button>` : '<div class="wait-msg">ホストが次へ進むのを待っています…</div>'}
+      <div class="center hint" style="display:flex;align-items:center;justify-content:center;gap:8px">自動で次へ ${timerHtml('small')}</div>
+    </div>
+  </div>`;
+  if (me.isHost) $('#nextBtn').onclick = () => send({ t: 'next' });
+  const W = $('#resWrap');
+  Sound.sfx('drumroll');
+  later(() => { W.classList.add('show-real'); Sound.sfx('tada'); Confetti.burst(120, .5, .4); shake(); }, 2100);
+  later(() => { W.classList.add('show-owner'); Sound.sfx(Object.values(r.votesBy).some((v, i) => v.length && Object.keys(r.votesBy)[i] !== r.real) ? 'boing' : 'slideDown'); }, 3500);
+  if (r.pick) later(() => { W.classList.add('show-pick'); Sound.sfx('airhorn'); Confetti.burst(80, .5, .5); }, 4700);
+  later(() => { W.classList.add('show-score'); Sound.sfx(myD ? 'coin' : 'buzzer'); if (myD >= 3) { Sound.sfx('applause'); Confetti.rain(100); } }, r.pick ? 5900 : 4900);
+  later(() => Sound.song('lobby'), 7000);
+}
+
+// ---------- 最終結果 ----------
+function calcAwards(ps) {
+  const out = [];
+  const best = (key, emoji, title, desc) => { const m = Math.max(...ps.map(p => p.stats[key] || 0)); if (m > 0) out.push({ emoji, title, desc: desc.replace('N', m), names: ps.filter(p => (p.stats[key] || 0) === m) }); };
+  best('picked', '🏆', '言いそうマスター', '言いそう大賞 N回');
+  best('fooled', '🎭', 'ペテン師賞', 'N回だました');
+  best('correct', '🔍', '名探偵賞', 'N回本物を見抜いた');
+  best('guessedBy', '📖', 'わかりやすい人賞', 'のべN人に見抜かれた');
+  best('sync', '🌀', 'シンクロ賞', 'N回完全一致');
+  const vals = ps.map(p => p.stats.guessedBy), mn = Math.min(...vals);
+  if (ps.length >= 3 && Math.max(...vals) !== mn) out.push({ emoji: '🕶️', title: 'ミステリアス賞', desc: `見抜かれたのは${mn}人だけ`, names: ps.filter(p => p.stats.guessedBy === mn) });
+  return out;
+}
+function buildFinal() {
+  const ps = view.players.filter(p => view.order.includes(p.id)).sort((a, b) => b.score - a.score || b.stats.picked - a.stats.picked);
+  let rank = 0; const ranks = ps.map((p, i) => { if (i === 0 || p.score !== ps[i - 1].score || p.stats.picked !== ps[i - 1].stats.picked) rank = i + 1; return rank; });
+  const pod = (i) => { const p = ps[i]; if (!p) return '<div class="pod"></div>'; const n = ranks[i];
+    return `<div class="pod p${Math.min(n, 3)}" id="pod${i}">${n === 1 ? '<div class="crown">👑</div>' : ''}${avatarHtml(p)}<div class="pname">${esc(p.name)}</div><div class="pscore">${p.score}点</div><div class="block">${n}</div></div>`; };
+  const awards = calcAwards(ps);
+  const winners = ps.filter((p, i) => ranks[i] === 1);
+  app.innerHTML = `
+  <div class="center"><h1 class="logo small"><span>最終</span><span>結果！</span></h1></div>
+  <div class="podium">${pod(1)}${pod(0)}${pod(2)}</div>
+  <div class="panel stage-final" id="winBox" style="opacity:0;transition:opacity .4s">
+    <div class="mydelta">🎉 優勝 ${winners.map(w => esc(w.name)).join('・')} 🎉</div>
+    <h2 class="h2">ランキング</h2>
+    ${ps.map((p, i) => `<div class="srow ${p.id === me.pid ? 'me' : ''}"><span class="rank">${ranks[i]}</span>${avatarHtml(p)}<span class="sname">${esc(p.name)}</span><span class="reasons"></span><span class="score">${p.score}</span></div>`).join('')}
+    ${awards.length ? `<h2 class="h2">🏅 表彰</h2>${awards.map(a => `<div class="award"><span class="em">${a.emoji}</span><div><div class="at">${a.title}</div><div class="ad">${esc(a.desc)}</div></div><div class="an">${a.names.map(n => avatarHtml(n, 'sm') + esc(n.name)).join(' ')}</div></div>`).join('')}` : ''}
+  </div>
+  <div class="ctl">
+    ${me.isHost ? '<button class="btn pink big pulse" id="againBtn">🔁 もう一回あそぶ！</button>' : '<div class="wait-msg">ホストが次のゲームを始めるのを待っています…</div>'}
+    <button class="btn small ghost" id="exitBtn">🏠 トップへもどる</button>
+  </div>`;
+  if (me.isHost) $('#againBtn').onclick = () => send({ t: 'again' });
+  $('#exitBtn').onclick = () => { if (!me.isHost || confirmLeave()) exitToTop(); };
+  Sound.sfx('drumroll');
+  const up = (i, sfx, at) => later(() => { const el = $('#pod' + i); if (el) { el.classList.add('up'); Sound.sfx(sfx); } }, at);
+  up(2, 'slideUp', 1200); up(1, 'slideUp', 2200);
+  later(() => { const el = $('#pod0'); if (el) el.classList.add('up'); Sound.sfx('fanfare'); Sound.sfx('applause'); Confetti.rain(220); Confetti.burst(160); shake(); }, 3300);
+  later(() => { $('#winBox').style.opacity = 1; Sound.sfx('airhorn'); }, 4300);
+  later(() => Sound.song('final'), 5200);
+  later(() => Confetti.rain(150), 7000);
+}
+
+/* ===================== タイマー表示 ===================== */
+let lastTick = -1;
+setInterval(() => {
+  const el = $('#timer'); if (!el || !view) return;
+  const ms = Math.max(0, localDeadline - Date.now()), sec = Math.ceil(ms / 1000);
+  el.querySelector('b').textContent = sec;
+  const tot = view.phase === 'answer' ? view.answerTime : view.phase === 'vote' ? CONFIG.VOTE_TIME : CONFIG.RESULT_TIME;
+  el.style.setProperty('--p', Math.min(1, ms / 1000 / tot).toFixed(3));
+  const tense = view.phase === 'answer' || view.phase === 'vote';
+  el.classList.toggle('hurry', tense && sec <= 10);
+  if (tense && sec <= 5 && sec > 0 && sec !== lastTick) { lastTick = sec; Sound.sfx('tick'); }
+}, 100);
+
+/* ===================== サウンド切り替えボタン ===================== */
+function refreshToggles() {
+  $('#bgmBtn').classList.toggle('off', !Sound.bgmOn);
+  $('#sfxBtn').classList.toggle('off', !Sound.sfxOn);
+  $('#ttsBtn').classList.toggle('off', !ttsOn);
+}
+$('#bgmBtn').onclick = () => { Sound.init(); Sound.setBgm(!Sound.bgmOn); refreshToggles(); toast(Sound.bgmOn ? 'BGM オン🎵' : 'BGM オフ'); };
+$('#sfxBtn').onclick = () => { Sound.init(); Sound.setSfx(!Sound.sfxOn); refreshToggles(); Sound.sfx('pop'); toast(Sound.sfxOn ? '効果音 オン🔔' : '効果音 オフ'); };
+$('#ttsBtn').onclick = () => { ttsOn = !ttsOn; store.set('tts', ttsOn); refreshToggles(); toast(ttsOn ? '読み上げ オン🗣️（同じ部屋で遊ぶなら1台だけオンがおすすめ）' : '読み上げ オフ'); if (ttsOn) speak('読み上げ、オン！'); };
+refreshToggles();
+
+// 最初のタップで音を解禁 & ボタンのクリック音
+document.addEventListener('pointerdown', e => { Sound.init(); if (e.target.closest('.btn')) Sound.sfx('click'); }, true);
+document.addEventListener('keydown', () => Sound.init(), { once: true });
+window.addEventListener('beforeunload', e => { if (me.isHost && Host.s && Host.s.players.length > 1) { e.preventDefault(); e.returnValue = ''; } });
+if ('speechSynthesis' in window) try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices(); } catch {}
+
+/* ===================== 起動 ===================== */
+(() => {
+  const saved = ss.get('room');
+  if (saved && me.name) joinRoom(saved); // リロード時は自動で再参加
+  else renderHome();
+})();
+</script>
+</body>
+</html>
