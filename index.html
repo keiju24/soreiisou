@@ -170,6 +170,51 @@ input:focus,textarea:focus{box-shadow:0 0 0 5px rgba(255,93,143,.45)}
 #toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 body.shake main{animation:shakeBig .5s}
 @keyframes shakeBig{0%,100%{transform:none}20%{transform:translate(-10px,4px) rotate(-1deg)}40%{transform:translate(10px,-4px) rotate(1deg)}60%{transform:translate(-6px,2px)}80%{transform:translate(6px,-2px)}}
+/* アイコン */
+.av.img{background-size:cover;background-position:center;font-size:0}
+.icon-row{display:flex;align-items:center;gap:12px}
+.icon-row .av{width:64px;height:64px;font-size:36px}
+.picker-prev{display:flex;justify-content:center;margin:6px 0 14px}
+.picker-prev .av{width:110px;height:110px;font-size:64px;border-width:5px;box-shadow:6px 6px 0 var(--ink)}
+.emoji-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:8px;margin:10px 0 16px}
+.emoji-grid button{font-size:28px;height:52px;border:3px solid var(--ink);border-radius:14px;background:#fff;cursor:pointer;box-shadow:0 3px 0 var(--ink);padding:0}
+.emoji-grid button.sel{background:var(--pink);transform:scale(1.1)}
+.upload-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:8px 0}
+#abortBtn{background:var(--red);color:#fff;font-size:13px;padding:6px 12px;white-space:nowrap}
+/* ===== パチンコ大当たり演出 ===== */
+#fever{position:fixed;inset:0;z-index:65;pointer-events:none;display:none;place-items:center;padding:12px}
+#fever.show{display:grid}
+#fever.dark{background:radial-gradient(circle,rgba(60,0,90,.65),rgba(0,0,0,.9))}
+.ftext{font-family:'Dela Gothic One',sans-serif;font-weight:400;font-size:clamp(64px,19vw,160px);line-height:1.05;text-align:center;color:transparent;-webkit-background-clip:text;background-clip:text;-webkit-text-stroke:3px #fff;filter:drop-shadow(0 0 10px #fff) drop-shadow(0 0 28px rgba(255,255,0,.9));animation:feverIn .6s cubic-bezier(.2,1.8,.4,1) both,rainbowSlide .6s linear infinite}
+.ftext.rainbow{background-image:linear-gradient(90deg,#ff0040,#ff9900,#ffee00,#33ff66,#00e5ff,#3366ff,#cc33ff,#ff0040);background-size:200% 100%}
+.ftext.red{background-image:linear-gradient(180deg,#fff 0%,#ffe600 30%,#ff2a00 65%,#9a0000 100%);background-size:100% 100%;filter:drop-shadow(0 0 12px #ff0) drop-shadow(0 0 32px #f00);animation:feverIn .5s cubic-bezier(.2,1.8,.4,1) both,shiver .08s linear infinite}
+.ftext.small{font-size:clamp(40px,12vw,90px)}
+.ftext.mid{font-size:clamp(46px,13vw,110px)}
+@keyframes rainbowSlide{to{background-position:200% 0}}
+@keyframes feverIn{0%{transform:scale(4) rotate(-12deg);opacity:0}60%{transform:scale(.9) rotate(2deg);opacity:1}100%{transform:none;opacity:1}}
+#flash{position:fixed;inset:0;background:#fff;z-index:66;pointer-events:none;opacity:0}
+#flash.go{animation:flashA .7s ease-out}
+@keyframes flashA{0%,20%{opacity:1}100%{opacity:0}}
+body.fever #bg{background:repeating-conic-gradient(#ff0040 0 12deg,#ff9900 12deg 24deg,#ffee00 24deg 36deg,#33ff66 36deg 48deg,#00e5ff 48deg 60deg,#3366ff 60deg 72deg,#cc33ff 72deg 84deg);animation:spin 2.2s linear infinite,hue 1s linear infinite}
+body.fever::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:64;background:linear-gradient(120deg,rgba(255,0,0,.35),rgba(255,255,0,.35),rgba(0,255,0,.35),rgba(0,255,255,.35),rgba(0,0,255,.35),rgba(255,0,255,.35),rgba(255,0,0,.35));background-size:300% 300%;mix-blend-mode:screen;animation:strobe .14s steps(2) infinite,rainbowSlide 1s linear infinite}
+body.fever .mini-logo,body.fever .phase-title,body.fever .logo span{animation:hue .5s linear infinite}
+@keyframes hue{to{filter:hue-rotate(360deg)}}
+@keyframes strobe{50%{opacity:.1}}
+@keyframes rglow{0%{box-shadow:0 0 0 5px #fff,0 0 34px 12px #ff0040}17%{box-shadow:0 0 0 5px #fff,0 0 34px 12px #ff9900}33%{box-shadow:0 0 0 5px #fff,0 0 34px 12px #ffee00}50%{box-shadow:0 0 0 5px #fff,0 0 34px 12px #33ff66}67%{box-shadow:0 0 0 5px #fff,0 0 34px 12px #00e5ff}83%{box-shadow:0 0 0 5px #fff,0 0 34px 12px #cc33ff}100%{box-shadow:0 0 0 5px #fff,0 0 34px 12px #ff0040}}
+#resWrap.show-real .real-card,#resWrap.show-pick .pick-card{animation:rglow .5s linear infinite}
+.fever-wrap{display:flex;flex-direction:column;align-items:center;gap:20px}
+.reels{display:flex;gap:12px;padding:18px;border:6px solid #fff;border-radius:28px;background:linear-gradient(#222,#000);animation:rglow .5s linear infinite}
+.reel{width:clamp(84px,25vw,130px);height:clamp(112px,33vw,170px);background:linear-gradient(#fff,#d8d8d8 50%,#fff);border:4px solid var(--ink);border-radius:16px;display:grid;place-items:center;overflow:hidden}
+.reel .av{width:78%;height:auto;aspect-ratio:1;font-size:clamp(44px,13vw,78px)}
+.reel.spin .av{filter:blur(2px);transform:scaleY(1.3)}
+.reel.stopped{animation:reelStop .4s cubic-bezier(.2,1.8,.4,1)}
+@keyframes reelStop{0%{transform:translateY(-18px)}100%{transform:none}}
+header#top{flex-wrap:wrap;row-gap:6px}
+@media (max-width:520px){
+  .mini-logo{display:none}
+  .snd button{width:36px;height:36px;font-size:16px}
+  #roomBadge{font-size:12px;padding:4px 9px;letter-spacing:1px}
+}
 @media (max-width:480px){.panel{padding:16px;box-shadow:6px 6px 0 var(--ink)}.card{font-size:18px}.mini-logo{font-size:15px}}
 </style>
 </head>
@@ -179,13 +224,17 @@ body.shake main{animation:shakeBig .5s}
 <header id="top">
   <div class="mini-logo">それ、言いそう！</div>
   <div id="roomBadge"></div>
+  <button id="abortBtn" class="btn small hidden">⏹ 強制終了</button>
   <div class="snd">
+    <button id="fxBtn" title="派手演出（虹色の点滅）">✨</button>
     <button id="bgmBtn" title="BGM">🎵</button>
     <button id="sfxBtn" title="効果音">🔔</button>
     <button id="ttsBtn" title="読み上げ">🗣️</button>
   </div>
 </header>
 <main id="app"></main>
+<div id="fever"></div>
+<div id="flash"></div>
 <div id="overlay"></div>
 <div id="toast"></div>
 
@@ -200,6 +249,19 @@ const CONFIG = {
   RESULT_TIME: 25,          // 結果画面から自動で次へ進むまで（秒）
   INTRO_TIME: 4.8,          // 主役発表の演出時間（秒）
   REVEAL_PER_CARD: 3.6,     // 回答カード1枚あたりの発表時間（秒）
+  REVEAL_INTRO: 1.4,        // 「回答オープン!!」演出の時間（秒）
+  // 自分で用意した音声ファイルを使う場合は、index.html と同じ場所に置いてファイル名を書く
+  // （空欄のままなら、コードで作った音が鳴ります）
+  SOUND_FILES: {
+    kyuin: '',        // 例: 'kyuin.mp3'  キュイン音
+    reach: '',        // リーチ音
+    gekiatsu: '',     // 激アツ音
+    pachiFanfare: '', // 大当たりファンファーレ
+    jara: ''          // 玉のジャラジャラ音
+  },
+  BGM_FILES: {
+    lobby: '', think: '', kakuhen: '', final: ''  // 例: kakuhen: 'kakuhen.mp3'
+  },
   MIN_PLAYERS: 3,
   MAX_PLAYERS: 8,
   MAX_ANSWER: 60,
@@ -234,7 +296,8 @@ const TOPICS = [
   '{name}が有名人になったら言いそうな決めゼリフは？','{name}がバイトの面接で言いそうな志望動機は？','{name}が寝坊して飛び起きた瞬間のひとことは？',
   '{name}が占い師に言われたら喜びそうなことは？','{name}がロボットを作ったら最初に覚えさせる言葉は？','{name}が10年後の自分に送りそうなメッセージは？'
 ];
-const AVATARS = ['🐶','🐱','🐸','🐵','🐼','🐷','🦊','🐙','🦄','🐔','🐧','🦖'];
+const AVATARS = ['🐶','🐱','🐸','🐵','🐼','🐷','🦊','🐙','🦄','🐔','🐧','🦖','🐻','🐰','🐯','🐨','👻','🤖','👽','💩','🍣','🍙','⭐','🔥'];
+const isValidImg = s => typeof s === 'string' && s.length <= 60000 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(s);
 const PCOLORS = ['#FF5D8F','#2EC4B6','#4D96FF','#9B5DE5','#FF8C42','#6BCB77','#F15BB5','#00BBF9'];
 
 /* ===================== ユーティリティ ===================== */
@@ -260,7 +323,8 @@ function norm(s) {
     .replace(/[\s、。，．,.!！?？・…〜~「」『』（）()"'”“’‘ｗw笑]/g, '');
 }
 function rot(cid) { let h = 0; for (const ch of String(cid)) h = (h * 31 + ch.charCodeAt(0)) | 0; return (Math.abs(h) % 7) - 3; }
-function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2600); }
+function toast(msg, ms = 2600) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), ms); }
+function showNotice(msg) { Sound.sfx('buzzer'); toast('📢 ' + msg, 5000); }
 function shake() { document.body.classList.remove('shake'); void document.body.offsetWidth; document.body.classList.add('shake'); setTimeout(() => document.body.classList.remove('shake'), 550); }
 
 /* ===================== サウンド（すべてコードで生成） ===================== */
@@ -334,9 +398,53 @@ const Sound = (() => {
       const n = [[67, 0, .13], [67, .14, .13], [67, .28, .13], [72, .42, .9], [76, .42, .9], [79, .42, .9]];
       n.forEach(([m, t, d]) => { tone({ type: 'square', f: mf(m), t, d, v: 0.14 }); tone({ type: 'sawtooth', f: mf(m) * 1.003, t, d, v: 0.06 }); });
       FX.crash(0.42);
+    },
+    // ---- パチンコ風 ----
+    kyuin() { // キュイン！
+      tone({ type: 'sawtooth', f: 500, f2: 2800, d: 0.32, v: 0.22, vib: { rate: 32, depth: 90 } });
+      tone({ type: 'square', f: 1100, f2: 3400, d: 0.32, v: 0.12 });
+      tone({ type: 'sine', f: 2700, t: 0.28, d: 1.1, v: 0.32, vib: { rate: 13, depth: 70 } });
+      tone({ type: 'square', f: 3300, t: 0.28, d: 0.9, v: 0.07, vib: { rate: 26, depth: 140 } });
+      tone({ type: 'sine', f: 1350, t: 0.28, d: 1.0, v: 0.18, vib: { rate: 13, depth: 35 } });
+    },
+    reach() { // リーチ！
+      for (let i = 0; i < 24; i++) tone({ type: 'square', f: mf(60 + [0, 4, 7, 12][i % 4] + Math.floor(i / 4) * 2), t: i * 0.045, d: 0.05, v: 0.12 });
+      tone({ type: 'sawtooth', f: 140, f2: 1100, d: 1.1, v: 0.12, vib: { rate: 14, depth: 30 } });
+      noise({ d: 1.1, v: 0.25, filter: 'bandpass', freq: 400, freq2: 7000, q: 3 });
+    },
+    gekiatsu() { // ドーン（激アツ）
+      [0, 0.28].forEach(t => {
+        [45, 52, 57, 60, 64].forEach(m => tone({ type: 'sawtooth', f: mf(m), t, d: 0.6, v: 0.09, attack: 0.01 }));
+        tone({ type: 'sine', f: 95, f2: 38, t, d: 0.55, v: 0.95 });
+        noise({ t, d: 0.5, v: 0.4, filter: 'lowpass', freq: 900 });
+      });
+    },
+    jara() { // 玉のジャラジャラ
+      for (let i = 0; i < 160; i++) { const t = Math.random() * 2.8;
+        tone({ type: 'sine', f: 3200 + Math.random() * 3800, t, d: 0.04, v: 0.05 + Math.random() * 0.06 });
+        if (i % 2) noise({ t, d: 0.025, v: 0.09, filter: 'bandpass', freq: 6000, q: 4 }); }
+    },
+    reelTick() { tone({ type: 'square', f: 2400, d: 0.015, v: 0.05 }); },
+    reelStop() { tone({ type: 'sine', f: 220, f2: 60, d: 0.18, v: 0.85 }); tone({ type: 'square', f: 1250, d: 0.05, v: 0.12 }); },
+    pachiFanfare() { // 大当たりファンファーレ
+      [72, 76, 79, 84, 79, 84, 88, 91].forEach((m, i) => { tone({ type: 'square', f: mf(m), t: i * 0.075, d: 0.09, v: 0.15 }); tone({ type: 'sawtooth', f: mf(m - 12), t: i * 0.075, d: 0.09, v: 0.06 }); });
+      const t0 = 0.65;
+      [60, 64, 67, 72, 76].forEach(m => { tone({ type: 'sawtooth', f: mf(m), t: t0, d: 1.5, v: 0.07, vib: { rate: 6, depth: 4 } }); tone({ type: 'square', f: mf(m) * 1.004, t: t0, d: 1.5, v: 0.035 }); });
+      [[84, 2.2, .12], [84, 2.35, .12], [84, 2.5, .12], [88, 2.65, .25], [86, 2.95, .12], [88, 3.1, .12], [91, 3.25, 1.2]].forEach(([m, t, d]) => { tone({ type: 'square', f: mf(m), t, d, v: 0.13 }); tone({ type: 'sawtooth', f: mf(m - 24), t, d, v: 0.08 }); });
+      [55, 60, 64, 67].forEach(m => tone({ type: 'sawtooth', f: mf(m), t: 3.25, d: 1.2, v: 0.06 }));
+      FX.crash(t0); FX.crash(3.25);
     }
   };
-  function sfx(name) { init(); if (!ctx || !sfxOn) return; try { (FX[name] || FX.click)(); } catch (e) {} }
+  const fileCache = {};
+  function playFile(path, vol = 0.9) {
+    try { const a = (fileCache[path] ||= new Audio(path)).cloneNode(); a.volume = vol; return a.play(); } catch (e) { return Promise.reject(e); }
+  }
+  function sfx(name) {
+    init(); if (!sfxOn) return;
+    const file = CONFIG.SOUND_FILES && CONFIG.SOUND_FILES[name];
+    if (file) { playFile(file).catch(() => { if (ctx) try { (FX[name] || FX.click)(); } catch {} }); return; }
+    if (!ctx) return; try { (FX[name] || FX.click)(); } catch (e) {}
+  }
 
   // ---- BGM シーケンサー（16分音符単位, -1 = 前の音をのばす） ----
   const R = (a, n) => Array.from({ length: n }, () => a).flat();
@@ -356,8 +464,14 @@ const Sound = (() => {
       lead: [72,0,72,0,72,0,72,-1,-1,-1,-1,-1,0,0,0,0, 68,-1,-1,-1,70,-1,-1,-1,72,0,70,0,72,-1,-1,-1,
              79,0,79,0,81,0,79,0,77,0,76,0,74,0,76,0, 77,-1,76,-1,74,-1,72,-1,72,-1,-1,-1,0,0,0,0],
       bass: [...R([48,0,48,0],4), 44,0,44,0,46,0,46,0,48,0,48,0,48,0,48,0, ...R([43,0,50,0],4), 41,0,48,0,43,0,50,0,48,0,55,0,48,0,0,0],
-      drums: R('k.h.s.h.k.k.s.hs'.split(''), 4) }
+      drums: R('k.h.s.h.k.k.s.hs'.split(''), 4) },
+    kakuhen: { bpm: 176, // 確変BGM（大当たり中）
+      lead: [79,0,79,81,79,0,76,0,79,0,84,0,83,0,79,0, 81,0,81,83,81,0,77,0,81,-1,-1,0,0,0,0,0,
+             84,0,83,0,81,0,79,0,81,0,79,0,76,0,74,0, 76,0,77,0,79,0,81,0,84,-1,-1,-1,0,0,0,0],
+      bass: [...R([48,0,60,0],4), ...R([41,0,53,0],4), ...R([43,0,55,0],4), ...R([48,0,60,0],4)],
+      drums: R('k.hsk.h.k.hsk.hs'.split(''), 4) }
   };
+  let bgmAudio = null;
   function playStep(s, i, at, sp) {
     const L = s.lead.length, m = s.lead[i % L];
     if (m > 0) { let len = 1; while (s.lead[(i + len) % L] === -1 && len < 16) len++;
@@ -372,18 +486,26 @@ const Sound = (() => {
   }
   function schedule() {
     if (!curSong || !ctx) return;
-    const s = SONGS[curSong], sp = 60 / s.bpm / 4;
+    const s = SONGS[curSong]; if (!s) return; const sp = 60 / s.bpm / 4;
     if (nextTime < ctx.currentTime - 0.2) nextTime = ctx.currentTime + 0.02;
     while (nextTime < ctx.currentTime + 0.12) { playStep(s, step, nextTime, sp); nextTime += sp; step = (step + 1) % s.lead.length; }
   }
+  function stopFile() { if (bgmAudio) { try { bgmAudio.pause(); } catch {} bgmAudio = null; } }
   function song(name) {
     if (!ctx) { pendingSong = name; return; }
     if (curSong === name) return;
+    stopFile();
+    const file = CONFIG.BGM_FILES && CONFIG.BGM_FILES[name];
+    if (file) {
+      curSong = name + '#file';
+      try { bgmAudio = new Audio(file); bgmAudio.loop = true; bgmAudio.volume = bgmOn ? 0.6 : 0; bgmAudio.play().catch(() => {}); } catch {}
+      return;
+    }
     curSong = name; step = 0; nextTime = ctx.currentTime + 0.05;
     if (!seqTimer) seqTimer = setInterval(schedule, 25);
   }
-  function stop() { curSong = null; pendingSong = null; }
-  function setBgm(on) { bgmOn = on; store.set('bgmOn', on); if (bgmGain) bgmGain.gain.setTargetAtTime(on ? 0.5 : 0, ctx.currentTime, 0.05); }
+  function stop() { curSong = null; pendingSong = null; stopFile(); }
+  function setBgm(on) { bgmOn = on; store.set('bgmOn', on); if (bgmGain) bgmGain.gain.setTargetAtTime(on ? 0.5 : 0, ctx.currentTime, 0.05); if (bgmAudio) bgmAudio.volume = on ? 0.6 : 0; }
   function setSfx(on) { sfxOn = on; store.set('sfxOn', on); if (sfxGain) sfxGain.gain.setTargetAtTime(on ? 1 : 0, ctx.currentTime, 0.02); }
   return { init, sfx, song, stop, setBgm, setSfx, get bgmOn() { return bgmOn; }, get sfxOn() { return sfxOn; } };
 })();
@@ -426,7 +548,38 @@ const Confetti = (() => {
 })();
 
 /* ===================== 状態 ===================== */
-const me = { pid: getPid(), name: store.get('name', ''), isHost: false };
+const me = { pid: getPid(), name: store.get('name', ''), isHost: false,
+  avatar: AVATARS.includes(store.get('avatar', '')) ? store.get('avatar', '') : AVATARS[(Math.random() * 12) | 0],
+  img: isValidImg(store.get('img', null)) ? store.get('img', null) : null };
+let avatarImgs = {};
+let effectsOn = store.get('effects', !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches));
+
+/* ===================== パチンコ演出 ===================== */
+const Fever = (() => {
+  const el = $('#fever'); let tmr = null, reelTimers = [];
+  function hide() { clearTimeout(tmr); el.className = ''; el.innerHTML = ''; }
+  function reset() { hide(); reelTimers.forEach(clearInterval); reelTimers = []; document.body.classList.remove('fever'); }
+  function on() { if (effectsOn) document.body.classList.add('fever'); }
+  function off() { document.body.classList.remove('fever'); }
+  function flash() { if (!effectsOn) return; const f = $('#flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
+  function text(html, { ms = 1500, dark = false, cls = 'rainbow' } = {}) {
+    clearTimeout(tmr); el.className = 'show' + (dark ? ' dark' : '');
+    el.innerHTML = `<div class="ftext ${cls}">${html}</div>`;
+    tmr = setTimeout(hide, ms);
+  }
+  function reels(ps, winner) {
+    reset(); el.className = 'show dark';
+    el.innerHTML = `<div class="fever-wrap"><div class="ftext red small" id="reelMsg">結果発表!!</div><div class="reels">${[0, 1, 2].map(i => `<div class="reel spin" id="reel${i}"></div>`).join('')}</div></div>`;
+    const spin = (i, ms) => { clearInterval(reelTimers[i]); reelTimers[i] = setInterval(() => { const r = $('#reel' + i); if (!r) return; r.innerHTML = avatarHtml(ps[(Math.random() * ps.length) | 0]); if (i === 2 || ms > 100) Sound.sfx('reelTick'); }, ms); };
+    [0, 1, 2].forEach(i => spin(i, 70));
+    return {
+      slow(i) { spin(i, 190); },
+      stop(i) { clearInterval(reelTimers[i]); const r = $('#reel' + i); if (!r) return; r.classList.remove('spin'); r.classList.add('stopped'); r.innerHTML = avatarHtml(winner); Sound.sfx('reelStop'); },
+      msg(h, cls = 'rainbow') { const m = $('#reelMsg'); if (m) { m.className = 'ftext small ' + cls; m.innerHTML = h; } }
+    };
+  }
+  return { reset, on, off, flash, text, hide, reels };
+})();
 let view = null, screenKey = '', localDeadline = 0, roomCode = '', lastError = '';
 let screenTimers = [], mySubmittedRound = -1, myVoteLocal = null;
 const app = $('#app');
@@ -440,15 +593,19 @@ const Host = {
   s: null, timer: null, deck: [], owner: {}, conns: new Map(),
   init() {
     this.s = { phase: 'lobby', players: [], order: [], round: 0, topic: '', deadline: 0, answers: {}, cards: [], votes: {}, pick: null, result: null, answerTime: CONFIG.ANSWER_TIME_DEFAULT };
-    this.owner = {}; this.conns = new Map();
+    this.owner = {}; this.conns = new Map(); this.imgs = {};
   },
+  setImg(id, img) { if (isValidImg(img)) this.imgs[id] = img; else delete this.imgs[id]; },
+  sendImgs() { const m = { ...this.imgs }; this.conns.forEach(c => { try { if (c.open) c.send({ t: 'imgs', m }); } catch {} }); avatarImgs = m; },
+  notice(msg) { this.conns.forEach(c => { try { if (c.open) c.send({ t: 'notice', msg }); } catch {} }); showNotice(msg); },
+  abort(msg) { if (!this.s || this.s.phase === 'lobby') return; this.notice(msg); this.again(); },
   player(id) { return this.s.players.find(p => p.id === id); },
   inGame() { return this.s.players.filter(p => p.connected && this.s.order.includes(p.id)); },
-  addPlayer(id, name) {
+  addPlayer(id, name, wantAvatar) {
     const s = this.s; let nm = String(name || '').trim().slice(0, 10) || 'ななし';
     const base = nm; let k = 2; while (s.players.some(p => p.name === nm)) nm = base.slice(0, 8) + k++;
     const usedA = new Set(s.players.map(p => p.avatar)), usedC = new Set(s.players.map(p => p.color));
-    const avatar = shuffle(AVATARS).find(a => !usedA.has(a)) || '🐣';
+    const avatar = AVATARS.includes(wantAvatar) ? wantAvatar : (shuffle(AVATARS).find(a => !usedA.has(a)) || '🐣');
     const color = PCOLORS.find(c => !usedC.has(c)) || '#999';
     s.players.push({ id, name: nm, avatar, color, score: 0, connected: true, stats: newStats() });
   },
@@ -486,17 +643,19 @@ const Host = {
     const s = this.s, pid = String(d.pid || '').slice(0, 24); if (!pid || pid === me.pid) return;
     const p = this.player(pid);
     if (p) { const old = this.conns.get(pid); if (old && old !== conn) try { old.close(); } catch {}
-      conn._pid = pid; this.conns.set(pid, conn); p.connected = true; this.fx('join'); this.broadcast(); return; }
+      conn._pid = pid; this.conns.set(pid, conn); p.connected = true; this.setImg(pid, d.img); this.sendImgs(); this.fx('join'); this.broadcast(); return; }
     const refuse = msg => { try { conn.send({ t: 'error', msg }); } catch {} setTimeout(() => { try { conn.close(); } catch {} }, 600); };
     if (s.phase !== 'lobby') return refuse('ゲームはもう始まっています。次のゲームまで待ってね！');
     if (s.players.length >= CONFIG.MAX_PLAYERS) return refuse('満員です（最大' + CONFIG.MAX_PLAYERS + '人）');
-    conn._pid = pid; this.conns.set(pid, conn); this.addPlayer(pid, d.name); this.fx('join'); this.broadcast();
+    conn._pid = pid; this.conns.set(pid, conn); this.addPlayer(pid, d.name, d.avatar); this.setImg(pid, d.img); this.sendImgs(); this.fx('join'); this.broadcast();
   },
   onClose(conn) {
     if (!this.s) return; const pid = conn._pid; if (!pid || this.conns.get(pid) !== conn) return;
     this.conns.delete(pid); const p = this.player(pid); if (!p) return;
-    if (this.s.phase === 'lobby') this.s.players = this.s.players.filter(x => x.id !== pid); else p.connected = false;
-    this.fx('leave'); this.broadcast(); this.checkAnswers(); this.checkVotes();
+    if (this.s.phase === 'lobby') { this.s.players = this.s.players.filter(x => x.id !== pid); delete this.imgs[pid]; } else p.connected = false;
+    this.fx('leave');
+    if (this.s.phase !== 'lobby' && this.s.phase !== 'final' && this.inGame().length <= 1) { this.abort('プレイヤーが1人になったので、ゲームを終了しました'); return; }
+    this.broadcast(); this.checkAnswers(); this.checkVotes();
   },
   onAction(pid, a) {
     const s = this.s; if (!s || !a) return; const isHost = pid === me.pid;
@@ -515,6 +674,12 @@ const Host = {
         this.fx('vote'); this.broadcast(); this.checkVotes(); break;
       }
       case 'next': if (isHost && s.phase === 'result') this.next(); break;
+      case 'abort': if (isHost) this.abort('ホストがゲームを終了しました。ロビーに戻ります'); break;
+      case 'profile': {
+        const p = this.player(pid); if (!p) break;
+        if (AVATARS.includes(a.avatar)) p.avatar = a.avatar;
+        this.setImg(pid, a.img); this.sendImgs(); this.broadcast(); break;
+      }
       case 'again': if (isHost && s.phase === 'final') this.again(); break;
     }
   },
@@ -542,7 +707,7 @@ const Host = {
     const target = s.order[s.round];
     if (!s.answers[target]) s.answers[target] = '……（ノーコメント）';
     s.cards = shuffle(Object.entries(s.answers).map(([pid, text]) => { const cid = rid(6); this.owner[cid] = pid; return { cid, text }; }));
-    s.phase = 'reveal'; this.setTimer(s.cards.length * CONFIG.REVEAL_PER_CARD + 1.5, () => this.beginVote()); this.broadcast();
+    s.phase = 'reveal'; this.setTimer(s.cards.length * CONFIG.REVEAL_PER_CARD + 1.5 + CONFIG.REVEAL_INTRO, () => this.beginVote()); this.broadcast();
   },
   beginVote() { const s = this.s; s.phase = 'vote'; this.setTimer(CONFIG.VOTE_TIME, () => this.endVote()); this.broadcast(); this.checkVotes(); },
   checkVotes() {
@@ -575,6 +740,7 @@ const Host = {
   again() {
     const s = this.s; clearTimeout(this.timer);
     s.players = s.players.filter(p => p.connected); s.players.forEach(p => { p.score = 0; p.stats = newStats(); });
+    for (const id in this.imgs) if (!this.player(id)) delete this.imgs[id];
     s.phase = 'lobby'; s.order = []; s.round = 0; s.deadline = 0; s.answers = {}; s.votes = {}; s.cards = []; s.pick = null; s.result = null;
     this.broadcast();
   }
@@ -590,7 +756,7 @@ function leaveNet() {
   clearTimeout(Net.joinTimer); clearTimeout(Host.timer);
   const p = Net.peer; Net.peer = null; Net.hostConn = null;
   try { p && p.destroy(); } catch {}
-  me.isHost = false; Host.s = null; view = null; roomCode = ''; updateRoomBadge();
+  me.isHost = false; Host.s = null; view = null; roomCode = ''; avatarImgs = {}; updateRoomBadge(); $('#abortBtn').classList.add('hidden'); Fever.reset();
 }
 function createRoom() {
   if (!peerOk()) return;
@@ -600,7 +766,7 @@ function createRoom() {
   peer.on('open', () => {
     if (Net.peer !== peer) return;
     me.isHost = true; roomCode = code; setTtsDefault(true); updateRoomBadge(); ss.del('room');
-    Host.init(); Host.addPlayer(me.pid, me.name); hideOverlay(); Host.broadcast();
+    Host.init(); Host.addPlayer(me.pid, me.name, me.avatar); Host.setImg(me.pid, me.img); Host.sendImgs(); hideOverlay(); Host.broadcast();
   });
   peer.on('connection', conn => {
     conn.on('data', d => Host.onMessage(conn, d));
@@ -624,7 +790,7 @@ function joinRoom(code) {
   peer.on('open', () => {
     if (Net.peer !== peer) return;
     const conn = peer.connect(CONFIG.PEER_PREFIX + code, { reliable: true }); Net.hostConn = conn;
-    conn.on('open', () => conn.send({ t: 'join', pid: me.pid, name: me.name }));
+    conn.on('open', () => conn.send({ t: 'join', pid: me.pid, name: me.name, avatar: me.avatar, img: me.img }));
     conn.on('data', d => {
       if (Net.hostConn !== conn) return;
       if (d && d.t === 'state' && !got) { got = true; clearTimeout(Net.joinTimer); roomCode = code; setTtsDefault(false); updateRoomBadge(); hideOverlay(); ss.set('room', code); }
@@ -643,6 +809,8 @@ function onHostMsg(d) {
   if (!d || typeof d !== 'object') return;
   if (d.t === 'state') onState(d.v);
   else if (d.t === 'fx') Sound.sfx(d.n);
+  else if (d.t === 'imgs') { avatarImgs = (d.m && typeof d.m === 'object') ? d.m : {}; if (view && view.phase === 'lobby' && $('#plist')) updateLobby(); }
+  else if (d.t === 'notice') showNotice(d.msg);
   else if (d.t === 'error') lastError = d.msg;
 }
 function send(a) {
@@ -654,7 +822,10 @@ function exitToTop() { ss.del('room'); leaveNet(); stopSpeak(); renderHome(); }
 
 /* ===================== 画面描画 ===================== */
 const P = id => (view && view.players.find(p => p.id === id)) || { id, name: '???', avatar: '❓', color: '#999', score: 0, stats: newStats() };
-const avatarHtml = (p, cls = '') => `<span class="av ${cls}" style="--c:${esc(p.color)}">${esc(p.avatar)}</span>`;
+const iconHtml = (avatar, img, color, cls = '') => isValidImg(img)
+  ? `<span class="av img ${cls}" style="--c:${esc(color)};background-image:url('${img}')"></span>`
+  : `<span class="av ${cls}" style="--c:${esc(color)}">${esc(avatar)}</span>`;
+const avatarHtml = (p, cls = '') => iconHtml(p.avatar, avatarImgs[p.id], p.color, cls);
 const chip = (p, extra = '') => `<div class="pchip ${p.connected === false ? 'off' : ''} ${extra}">${avatarHtml(p)}<span>${esc(p.name)}</span>${view && p.id === view.hostId ? '👑' : ''}${p.id === me.pid ? '<span class="you">YOU</span>' : ''}</div>`;
 const timerHtml = (cls = '') => `<div class="timer ${cls}" id="timer"><b>--</b></div>`;
 function topicHtml(topic, name) { const e = esc(topic), n = esc(name); return n && e.includes(n) ? e.replace(n, `<span class="hl">${n}</span>`) : e; }
@@ -662,7 +833,8 @@ function topicHtml(topic, name) { const e = esc(topic), n = esc(name); return n 
 function onState(v) {
   const prev = view; view = v; localDeadline = Date.now() + (v.remain || 0);
   const key = v.phase + ':' + v.round + ':' + v.total;
-  if (key !== screenKey) { screenKey = key; clearScreenTimers(); stopSpeak(); buildScreen(prev); }
+  $('#abortBtn').classList.toggle('hidden', !(me.isHost && v.phase !== 'lobby'));
+  if (key !== screenKey) { screenKey = key; clearScreenTimers(); stopSpeak(); Fever.reset(); buildScreen(prev); }
   else updateScreen(prev);
 }
 function buildScreen(prev) {
@@ -687,7 +859,7 @@ function updateScreen(prev) {
 
 // ---------- ホーム ----------
 function renderHome(msg) {
-  screenKey = 'home'; clearScreenTimers(); view = null; Sound.song('lobby');
+  screenKey = 'home'; clearScreenTimers(); Fever.reset(); view = null; Sound.song('lobby'); $('#abortBtn').classList.add('hidden');
   const urlRoom = (new URLSearchParams(location.search).get('room') || '').toUpperCase().slice(0, 4);
   app.innerHTML = `
   <div class="panel">
@@ -695,6 +867,8 @@ function renderHome(msg) {
     <p class="tagline">あの人が言いそうなこと、なりきって当てろ！</p>
     <label class="lbl" for="nameIn">あなたのなまえ</label>
     <input id="nameIn" maxlength="10" placeholder="ニックネーム（10文字まで）" value="${esc(me.name)}" autocomplete="off">
+    <label class="lbl">アイコン</label>
+    <div class="icon-row"><span id="myIcon">${iconHtml(me.avatar, me.img, '#fff')}</span><button class="btn small" id="iconBtn">🎨 アイコンを変える</button></div>
     <div class="home-actions">
       <button class="btn pink big" id="createBtn">🎉 部屋をつくる</button>
       <div class="or">— または招待コードで —</div>
@@ -711,7 +885,59 @@ function renderHome(msg) {
   codeIn.oninput = () => { codeIn.value = codeIn.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); };
   codeIn.onkeydown = e => { if (e.key === 'Enter' && !e.isComposing) doJoin(); };
   $('#rulesBtn').onclick = showRules;
+  $('#iconBtn').onclick = openIconPicker;
   if (urlRoom && me.name) codeIn.focus();
+}
+function loadImageFile(file) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), im = new Image();
+    im.onload = () => {
+      const S = 128, c = document.createElement('canvas'); c.width = c.height = S;
+      const x = c.getContext('2d'), m = Math.min(im.width, im.height);
+      x.fillStyle = '#fff'; x.fillRect(0, 0, S, S);
+      x.drawImage(im, (im.width - m) / 2, (im.height - m) / 2, m, m, 0, 0, S, S);
+      URL.revokeObjectURL(url);
+      let q = 0.82, d = c.toDataURL('image/jpeg', q);
+      while (d.length > 40000 && q > 0.3) { q -= 0.15; d = c.toDataURL('image/jpeg', q); }
+      isValidImg(d) ? res(d) : rej(new Error('too big'));
+    };
+    im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('load')); };
+    im.src = url;
+  });
+}
+function openIconPicker() {
+  let selA = me.avatar, selImg = me.img;
+  const render = () => {
+    showOverlay(`<h2 class="h2 center" style="margin-top:0">🎨 アイコンをえらぶ</h2>
+      <div class="picker-prev">${iconHtml(selA, selImg, '#fff')}</div>
+      <div class="upload-row">
+        <label class="btn small cyan">📷 写真をアップロード<input type="file" accept="image/*" id="imgIn" hidden></label>
+        ${selImg ? '<button class="btn small" id="imgDel">🗑️ 写真をやめる</button>' : ''}
+      </div>
+      <p class="hint">または好きなキャラをえらんでね</p>
+      <div class="emoji-grid">${AVATARS.map(a => `<button data-a="${a}" class="${!selImg && a === selA ? 'sel' : ''}">${a}</button>`).join('')}</div>
+      <button class="btn pink big" id="iconOk">これにする！</button>`);
+    $('#imgIn').onchange = async e => {
+      const f = e.target.files && e.target.files[0]; if (!f) return;
+      try { selImg = await loadImageFile(f); Sound.sfx('kirakira'); render(); }
+      catch { Sound.sfx('buzzer'); toast('画像を読みこめませんでした'); }
+    };
+    const del = $('#imgDel'); if (del) del.onclick = () => { selImg = null; Sound.sfx('pop'); render(); };
+    $('.emoji-grid').onclick = e => { const b = e.target.closest('button'); if (!b) return; selA = b.dataset.a; selImg = null; Sound.sfx('pop'); render(); };
+    $('#iconOk').onclick = () => {
+      me.avatar = selA; me.img = selImg; store.set('avatar', selA); store.set('img', selImg);
+      hideOverlay(); Sound.sfx('coin');
+      if (roomCode) send({ t: 'profile', avatar: selA, img: selImg });
+      const pv = $('#myIcon'); if (pv) pv.innerHTML = iconHtml(me.avatar, me.img, '#fff');
+    };
+  };
+  render();
+}
+function confirmDialog(msg, okLabel, onOk) {
+  showOverlay(`<p style="font-size:20px;text-align:center;margin:6px 0 18px">${esc(msg)}</p>
+    <div class="ctl"><button class="btn orange big" id="cfOk">${esc(okLabel)}</button><button class="btn small ghost" id="cfNo">やめる</button></div>`);
+  $('#cfOk').onclick = () => { hideOverlay(); onOk(); };
+  $('#cfNo').onclick = hideOverlay;
 }
 function showRules() {
   showOverlay(`<div class="rules">
@@ -754,20 +980,22 @@ function buildLobby() {
         <button class="btn pink big pulse" id="startBtn">🚀 ゲームスタート！</button>
         <div class="hint" id="startHint"></div>`
       : `<div class="wait-msg">ホストがスタートするのを待っています…</div><div class="hint" id="timeInfo"></div>`}
+      <button class="btn small" id="iconBtn2">🎨 アイコンを変える</button>
       <button class="btn small ghost" id="rulesBtn2">📖 あそびかた</button>
       <button class="btn small ghost" id="leaveBtn">🚪 退出する</button>
     </div>
   </div>`;
   $('#copyBtn').onclick = copyInvite;
   $('#rulesBtn2').onclick = showRules;
-  $('#leaveBtn').onclick = () => { if (!me.isHost || confirmLeave()) exitToTop(); };
+  $('#iconBtn2').onclick = openIconPicker;
+  $('#leaveBtn').onclick = () => me.isHost ? confirmLeave() : exitToTop();
   if (isHost) {
     $('#timeSel').onchange = e => send({ t: 'setting', answerTime: +e.target.value });
     $('#startBtn').onclick = () => send({ t: 'start' });
   }
   updateLobby();
 }
-function confirmLeave() { return window.confirm('ホストが退出すると部屋がなくなります。退出しますか？'); }
+function confirmLeave() { confirmDialog('ホストが退出すると部屋がなくなります。退出しますか？', '退出する', exitToTop); }
 function updateLobby() {
   const ps = view.players;
   $('#plist').innerHTML = ps.map(p => chip(p)).join('');
@@ -847,13 +1075,15 @@ function updateAnswer() {
 
 // ---------- 発表 ----------
 function buildReveal() {
-  const t = P(view.target), per = CONFIG.REVEAL_PER_CARD;
+  const t = P(view.target), per = CONFIG.REVEAL_PER_CARD, OFF = CONFIG.REVEAL_INTRO;
   app.innerHTML = `
   <div class="phase-title center">📢 回答はっぴょう！</div>
   <div class="bubble small">${topicHtml(view.topic, t.name)}</div>
-  <div class="cards">${view.cards.map((c, i) => `<div class="card reveal" style="--r:${rot(c.cid)}deg;animation-delay:${(i * per).toFixed(2)}s"><span class="qmark">?</span>${esc(c.text)}</div>`).join('')}</div>
+  <div class="cards">${view.cards.map((c, i) => `<div class="card reveal" style="--r:${rot(c.cid)}deg;animation-delay:${(OFF + i * per).toFixed(2)}s"><span class="qmark">?</span>${esc(c.text)}</div>`).join('')}</div>
   <p class="hint">このなかに${esc(t.name)}の本物の回答がまぎれています…！</p>`;
-  view.cards.forEach((c, i) => later(() => { Sound.sfx(i % 2 ? 'boing' : 'pop'); speak(c.text); }, i * per * 1000 + 250));
+  Fever.text('回答<br>オープン!!', { ms: OFF * 1000 }); Fever.flash(); Fever.on(); Sound.sfx('kyuin');
+  later(() => Fever.off(), OFF * 1000);
+  view.cards.forEach((c, i) => later(() => { Sound.sfx(i % 2 ? 'boing' : 'pop'); speak(c.text); }, (OFF + i * per) * 1000 + 250));
 }
 
 // ---------- 投票 ----------
@@ -893,7 +1123,7 @@ function buildResult() {
   const cardsHtml = view.cards.map(c => {
     const ownerId = r.owners[c.cid], owner = P(ownerId), isReal = c.cid === r.real, voters = r.votesBy[c.cid] || [];
     const fooled = !isReal && voters.length > 0, isPick = c.cid === r.pick, sync = r.syncs.includes(ownerId);
-    return `<div class="card res ${isReal ? 'real-card' : ''}" style="--r:${rot(c.cid)}deg">
+    return `<div class="card res ${isReal ? 'real-card' : ''} ${isPick ? 'pick-card' : ''}" style="--r:${rot(c.cid)}deg">
       <div class="badges">${isReal ? '<span class="badge gold stage-real">👑 本物！</span>' : ''}${isPick ? '<span class="badge pink stage-pick">🏆 言いそう大賞</span>' : ''}${fooled ? `<span class="badge cyan stage-owner">🎭 だまし成功×${voters.length}</span>` : ''}${sync ? '<span class="badge purple stage-owner">🌀 シンクロ！</span>' : ''}</div>
       <div class="ctext">${esc(c.text)}</div>
       <div class="owner ${isReal ? 'stage-real' : 'stage-owner'}">✍️ ${avatarHtml(owner, 'sm')} ${esc(owner.name)}</div>
@@ -920,12 +1150,21 @@ function buildResult() {
   </div>`;
   if (me.isHost) $('#nextBtn').onclick = () => send({ t: 'next' });
   const W = $('#resWrap');
-  Sound.sfx('drumroll');
-  later(() => { W.classList.add('show-real'); Sound.sfx('tada'); Confetti.burst(120, .5, .4); shake(); }, 2100);
-  later(() => { W.classList.add('show-owner'); Sound.sfx(Object.values(r.votesBy).some((v, i) => v.length && Object.keys(r.votesBy)[i] !== r.real) ? 'boing' : 'slideDown'); }, 3500);
-  if (r.pick) later(() => { W.classList.add('show-pick'); Sound.sfx('airhorn'); Confetti.burst(80, .5, .5); }, 4700);
-  later(() => { W.classList.add('show-score'); Sound.sfx(myD ? 'coin' : 'buzzer'); if (myD >= 3) { Sound.sfx('applause'); Confetti.rain(100); } }, r.pick ? 5900 : 4900);
-  later(() => Sound.song('lobby'), 7000);
+  const anyFooled = Object.keys(r.votesBy).some(cid => cid !== r.real && r.votesBy[cid].length);
+  // パチンコ大当たり演出：リーチ → 激アツ → キュイン！大当たり!!
+  Fever.text('リーチ!!', { ms: 1300, dark: true, cls: 'red' }); Sound.sfx('reach');
+  later(() => { Fever.text('激アツ!!', { ms: 1100, dark: true, cls: 'red' }); Sound.sfx('gekiatsu'); shake(); }, 1300);
+  later(() => {
+    Fever.flash(); Fever.on(); Sound.sfx('kyuin');
+    Fever.text('大当たり!!', { ms: 1700 });
+    later(() => { Sound.sfx('pachiFanfare'); Sound.sfx('jara'); }, 350);
+    W.classList.add('show-real'); Confetti.burst(200, .5, .4); Confetti.rain(120); shake();
+  }, 2400);
+  later(() => { W.classList.add('show-owner'); Sound.sfx(anyFooled ? 'boing' : 'slideDown'); }, 4300);
+  if (r.pick) later(() => { W.classList.add('show-pick'); Fever.flash(); Sound.sfx('kyuin'); Fever.text('言いそう<br>大賞!!', { ms: 1300, cls: 'rainbow mid' }); Confetti.burst(100, .5, .5); }, 5300);
+  later(() => { W.classList.add('show-score'); Sound.sfx(myD ? 'coin' : 'buzzer'); if (myD >= 3) { Sound.sfx('applause'); Confetti.rain(100); } }, r.pick ? 6900 : 5400);
+  later(() => Sound.song('kakuhen'), 7300);
+  later(() => Fever.off(), 10500);
 }
 
 // ---------- 最終結果 ----------
@@ -962,14 +1201,23 @@ function buildFinal() {
     <button class="btn small ghost" id="exitBtn">🏠 トップへもどる</button>
   </div>`;
   if (me.isHost) $('#againBtn').onclick = () => send({ t: 'again' });
-  $('#exitBtn').onclick = () => { if (!me.isHost || confirmLeave()) exitToTop(); };
-  Sound.sfx('drumroll');
+  $('#exitBtn').onclick = () => me.isHost ? confirmLeave() : exitToTop();
+  // パチンコ風スロット：3つのリールが優勝者でそろったら大当たり!!
+  const R = Fever.reels(ps, ps[0]);
+  later(() => R.stop(0), 1300);
+  later(() => R.stop(1), 2300);
+  later(() => { R.msg('リーチ!!', 'red'); R.slow(2); Sound.sfx('reach'); }, 2500);
+  later(() => { R.msg('激アツ!!', 'red'); Sound.sfx('gekiatsu'); Fever.on(); shake(); }, 3800);
+  later(() => { R.stop(2); R.msg('大当たり!!', 'rainbow'); Fever.flash(); Sound.sfx('kyuin'); Confetti.burst(220); shake(); }, 5000);
+  later(() => { Sound.sfx('pachiFanfare'); Sound.sfx('jara'); Confetti.rain(200); }, 5350);
+  const T = 8000;
+  later(() => Fever.hide(), T);
   const up = (i, sfx, at) => later(() => { const el = $('#pod' + i); if (el) { el.classList.add('up'); Sound.sfx(sfx); } }, at);
-  up(2, 'slideUp', 1200); up(1, 'slideUp', 2200);
-  later(() => { const el = $('#pod0'); if (el) el.classList.add('up'); Sound.sfx('fanfare'); Sound.sfx('applause'); Confetti.rain(220); Confetti.burst(160); shake(); }, 3300);
-  later(() => { $('#winBox').style.opacity = 1; Sound.sfx('airhorn'); }, 4300);
-  later(() => Sound.song('final'), 5200);
-  later(() => Confetti.rain(150), 7000);
+  up(2, 'slideUp', T + 300); up(1, 'slideUp', T + 1100);
+  later(() => { const el = $('#pod0'); if (el) el.classList.add('up'); Fever.flash(); Sound.sfx('kyuin'); Sound.sfx('applause'); Confetti.rain(220); Confetti.burst(160); shake(); Sound.song('kakuhen'); }, T + 2000);
+  later(() => { $('#winBox').style.opacity = 1; Sound.sfx('airhorn'); Fever.text(`優勝<br>${winners.map(w => esc(w.name)).join('・')}`, { ms: 2200, cls: 'rainbow mid' }); }, T + 2800);
+  later(() => Confetti.rain(150), T + 5000);
+  later(() => { Fever.off(); Sound.song('final'); }, T + 14000);
 }
 
 /* ===================== タイマー表示 ===================== */
@@ -990,7 +1238,10 @@ function refreshToggles() {
   $('#bgmBtn').classList.toggle('off', !Sound.bgmOn);
   $('#sfxBtn').classList.toggle('off', !Sound.sfxOn);
   $('#ttsBtn').classList.toggle('off', !ttsOn);
+  $('#fxBtn').classList.toggle('off', !effectsOn);
 }
+$('#fxBtn').onclick = () => { effectsOn = !effectsOn; store.set('effects', effectsOn); if (!effectsOn) Fever.off(); refreshToggles(); toast(effectsOn ? '派手演出 オン✨（虹色の点滅あり）' : '派手演出 オフ（点滅なし）'); };
+$('#abortBtn').onclick = () => confirmDialog('ゲームを強制終了して、みんなをロビーに戻しますか？', '⏹ 強制終了する', () => send({ t: 'abort' }));
 $('#bgmBtn').onclick = () => { Sound.init(); Sound.setBgm(!Sound.bgmOn); refreshToggles(); toast(Sound.bgmOn ? 'BGM オン🎵' : 'BGM オフ'); };
 $('#sfxBtn').onclick = () => { Sound.init(); Sound.setSfx(!Sound.sfxOn); refreshToggles(); Sound.sfx('pop'); toast(Sound.sfxOn ? '効果音 オン🔔' : '効果音 オフ'); };
 $('#ttsBtn').onclick = () => { ttsOn = !ttsOn; store.set('tts', ttsOn); refreshToggles(); toast(ttsOn ? '読み上げ オン🗣️（同じ部屋で遊ぶなら1台だけオンがおすすめ）' : '読み上げ オフ'); if (ttsOn) speak('読み上げ、オン！'); };
