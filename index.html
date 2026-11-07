@@ -187,6 +187,14 @@ header#top{flex-wrap:wrap;row-gap:6px}
   .snd button{width:36px;height:36px;font-size:16px}
   #roomBadge{font-size:12px;padding:4px 9px;letter-spacing:1px}
 }
+.mode-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mode-btn{font-family:inherit;font-weight:800;font-size:15px;border:4px solid var(--ink);border-radius:18px;padding:12px 8px;background:#fff;color:var(--ink);box-shadow:0 4px 0 var(--ink);cursor:pointer;line-height:1.4}
+.mode-btn .em{font-size:28px;display:block}
+.mode-btn.sel{background:var(--cyan);color:#fff;transform:translateY(-2px) rotate(-1deg)}
+.mode-info{text-align:center;font-size:16px;background:#fff;border:3px solid var(--ink);border-radius:14px;padding:8px}
+.topic-in{margin-bottom:10px}
+.topic-ex{font-size:13px;opacity:.75;line-height:1.6;margin:4px 0 12px}
+.topic-author{text-align:center;font-size:14px;margin:-12px 0 14px}
 @media (max-width:480px){.panel{padding:16px;box-shadow:6px 6px 0 var(--ink)}.card{font-size:18px}.mini-logo{font-size:15px}}
 </style>
 </head>
@@ -222,6 +230,9 @@ const CONFIG = {
   MIN_PLAYERS: 3,
   MAX_PLAYERS: 8,
   MAX_ANSWER: 60,
+  // 「みんなで考えるお題」モードの設定
+  TOPIC_WRITE_TIME: 90,     // お題を考える時間（秒）
+  TOPICS_PER_PLAYER: 1,     // 1人が書くお題の数
   PEER_PREFIX: 'soreiisou-game-v1-',
   // つながりにくい場合は TURN サーバーをここに追加してください
   PEER_OPTIONS: {
@@ -235,6 +246,7 @@ const CONFIG = {
   }
 };
 
+// 用意されたお題（「用意されたお題」モードで使う。ここに書き足せば増やせます）
 const TOPICS = [
   '{name}が朝起きて最初に言いそうなことは？','{name}が宝くじで1億円当たった時の第一声は？','{name}が遅刻した時に使いそうな言い訳は？',
   '{name}が嫌いな食べ物を出された時のひとことは？','{name}がコンビニのレジで言いそうなことは？','{name}が寝る前にひとりでつぶやきそうなことは？',
@@ -458,12 +470,33 @@ function later(fn, ms) { screenTimers.push(setTimeout(fn, ms)); }
 function clearScreenTimers() { screenTimers.forEach(clearTimeout); screenTimers = []; }
 function updateRoomBadge() { $('#roomBadge').textContent = roomCode ? 'ROOM ' + roomCode : ''; }
 
+/* ===================== お題 ===================== */
+// 「○○」が主役の名前に置きかわる。「○○」がないお題は、先頭に「○○が」を自動でつける
+const toTemplate = l => { l = String(l).trim().replace(/○○|〇〇|◯◯|\{name\}|\{名前\}/g, '{name}'); if (!l.includes('{name}')) l = '{name}が' + l; return l.slice(0, 120); };
+// 自作お題の割り当て：どのラウンドも「主役 ≠ お題を書いた人」になるように組み合わせる（足りない分は用意されたお題で補う）
+function planCustomTopics(order, subs) {
+  const pool = shuffle(subs.map((x, i) => ({ ...x, i })));
+  const match = {}; // topic index -> round index
+  const tryRound = (r, seen) => {
+    for (const tp of pool) {
+      if (tp.author === order[r] || seen.has(tp.i)) continue;
+      seen.add(tp.i);
+      if (match[tp.i] === undefined || tryRound(match[tp.i], seen)) { match[tp.i] = r; return true; }
+    }
+    return false;
+  };
+  for (let r = 0; r < order.length; r++) tryRound(r, new Set());
+  const plan = order.map(() => null);
+  for (const [ti, r] of Object.entries(match)) { const tp = subs[ti]; plan[r] = { text: tp.text, author: tp.author }; }
+  return plan;
+}
+
 /* ===================== ホスト（ゲームサーバー役） ===================== */
 const newStats = () => ({ picked: 0, fooled: 0, correct: 0, guessedBy: 0, sync: 0 });
 const Host = {
   s: null, timer: null, deck: [], owner: {}, conns: new Map(),
   init() {
-    this.s = { phase: 'lobby', players: [], order: [], round: 0, topic: '', deadline: 0, answers: {}, cards: [], votes: {}, pick: null, result: null, answerTime: CONFIG.ANSWER_TIME_DEFAULT };
+    this.s = { phase: 'lobby', players: [], order: [], round: 0, topic: '', deadline: 0, answers: {}, cards: [], votes: {}, pick: null, result: null, answerTime: CONFIG.ANSWER_TIME_DEFAULT, mode: 'fixed', topicSubs: {}, plan: null, topicAuthor: null };
     this.owner = {}; this.conns = new Map(); this.imgs = {};
   },
   setImg(id, img) { if (isValidImg(img)) this.imgs[id] = img; else delete this.imgs[id]; },
@@ -493,7 +526,8 @@ const Host = {
       remain: s.deadline ? Math.max(0, s.deadline - Date.now()) : 0,
       submitted: Object.keys(s.answers), voted: Object.keys(s.votes), picked: !!s.pick,
       cards: showCards ? s.cards : [], myCid, myVote: pid === target ? s.pick : (s.votes[pid] || null),
-      myAnswer: s.answers[pid] || null, result: s.phase === 'result' ? s.result : null, answerTime: s.answerTime
+      myAnswer: s.answers[pid] || null, result: s.phase === 'result' ? s.result : null, answerTime: s.answerTime,
+      mode: s.mode, topicAuthor: s.topicAuthor, topicDone: Object.keys(s.topicSubs), myTopics: s.topicSubs[pid] || null
     };
   },
   broadcast() {
@@ -526,13 +560,21 @@ const Host = {
     if (this.s.phase === 'lobby') { this.s.players = this.s.players.filter(x => x.id !== pid); delete this.imgs[pid]; } else p.connected = false;
     this.fx('leave');
     if (this.s.phase !== 'lobby' && this.s.phase !== 'final' && this.inGame().length <= 1) { this.abort('プレイヤーが1人になったので、ゲームを終了しました'); return; }
-    this.broadcast(); this.checkAnswers(); this.checkVotes();
+    this.broadcast(); this.checkTopics(); this.checkAnswers(); this.checkVotes();
   },
   onAction(pid, a) {
     const s = this.s; if (!s || !a) return; const isHost = pid === me.pid;
     switch (a.t) {
       case 'start': if (isHost && s.phase === 'lobby') this.startGame(); break;
-      case 'setting': if (isHost && s.phase === 'lobby') { const v = +a.answerTime; if ([30, 45, 60, 90].includes(v)) { s.answerTime = v; this.broadcast(); } } break;
+      case 'setting': if (isHost && s.phase === 'lobby') {
+        const v = +a.answerTime; if ([30, 45, 60, 90].includes(v)) s.answerTime = v;
+        if (a.mode === 'fixed' || a.mode === 'custom') s.mode = a.mode;
+        this.broadcast(); } break;
+      case 'topics': { // みんなで考えるお題モード：お題の提出
+        if (s.phase !== 'topicwrite' || s.topicSubs[pid] || !s.order.includes(pid)) break;
+        const list = (Array.isArray(a.list) ? a.list : []).map(x => String(x || '').replace(/\s+/g, ' ').trim().slice(0, CONFIG.MAX_ANSWER)).filter(Boolean).slice(0, CONFIG.TOPICS_PER_PLAYER);
+        s.topicSubs[pid] = list; this.fx('submit'); this.broadcast(); this.checkTopics(); break;
+      }
       case 'answer': {
         if (s.phase !== 'answer' || s.answers[pid] || !s.order.includes(pid)) break;
         const txt = String(a.text || '').replace(/\s+/g, ' ').trim().slice(0, CONFIG.MAX_ANSWER); if (!txt) break;
@@ -548,7 +590,8 @@ const Host = {
       case 'abort': if (isHost) this.abort('ホストがゲームを終了しました。ロビーに戻ります'); break;
       case 'close': // ホストの途中締め切り／スキップ
         if (!isHost) break;
-        if (s.phase === 'answer') this.endAnswer();
+        if (s.phase === 'topicwrite') this.endTopicWrite();
+        else if (s.phase === 'answer') this.endAnswer();
         else if (s.phase === 'vote') this.endVote();
         else if (s.phase === 'reveal') { clearTimeout(this.timer); this.beginVote(); }
         else if (s.phase === 'intro') { clearTimeout(this.timer); this.beginAnswer(); }
@@ -566,6 +609,17 @@ const Host = {
     s.players = s.players.filter(p => p.connected);
     s.players.forEach(p => { p.score = 0; p.stats = newStats(); });
     s.order = shuffle(s.players.map(p => p.id)); s.round = 0; this.deck = shuffle(TOPICS);
+    s.plan = null; s.topicSubs = {}; s.topicAuthor = null;
+    if (s.mode === 'custom') { // まず全員でお題を考える
+      s.phase = 'topicwrite'; this.setTimer(CONFIG.TOPIC_WRITE_TIME, () => this.endTopicWrite()); this.broadcast(); return;
+    }
+    this.startRound();
+  },
+  checkTopics() { const s = this.s; if (s.phase === 'topicwrite' && this.inGame().every(p => s.topicSubs[p.id])) this.endTopicWrite(); },
+  endTopicWrite() {
+    const s = this.s; if (s.phase !== 'topicwrite') return; clearTimeout(this.timer);
+    const subs = []; for (const [author, list] of Object.entries(s.topicSubs)) for (const text of list) subs.push({ author, text: toTemplate(text) });
+    s.plan = planCustomTopics(s.order, subs);
     this.startRound();
   },
   startRound() {
@@ -574,7 +628,9 @@ const Host = {
     if (s.round >= s.order.length) return this.finish();
     const t = this.player(s.order[s.round]);
     if (!this.deck.length) this.deck = shuffle(TOPICS);
-    s.topic = this.deck.pop().replace('{name}', t.name);
+    const planned = s.plan && s.plan[s.round];
+    s.topic = (planned ? planned.text : this.deck.pop()).split('{name}').join(t.name);
+    s.topicAuthor = planned ? planned.author : null;
     s.answers = {}; s.votes = {}; s.pick = null; s.cards = []; s.result = null; this.owner = {};
     s.phase = 'intro'; this.setTimer(CONFIG.INTRO_TIME, () => this.beginAnswer()); this.broadcast();
   },
@@ -620,6 +676,7 @@ const Host = {
     s.players = s.players.filter(p => p.connected); s.players.forEach(p => { p.score = 0; p.stats = newStats(); });
     for (const id in this.imgs) if (!this.player(id)) delete this.imgs[id];
     s.phase = 'lobby'; s.order = []; s.round = 0; s.deadline = 0; s.answers = {}; s.votes = {}; s.cards = []; s.pick = null; s.result = null;
+    s.topicSubs = {}; s.plan = null; s.topicAuthor = null;
     this.broadcast();
   }
 };
@@ -720,6 +777,7 @@ function buildScreen(prev) {
   switch (view.phase) {
     case 'lobby': Sound.song('lobby'); buildLobby(); break;
     case 'intro': Sound.stop(); Sound.sfx('drumroll'); buildIntro(); break;
+    case 'topicwrite': Sound.song('think'); Sound.sfx('whoosh'); buildTopicWrite(); break;
     case 'answer': Sound.song('think'); Sound.sfx('whoosh'); buildAnswer(); break;
     case 'reveal': Sound.stop(); Sound.sfx('slideUp'); buildReveal(); break;
     case 'vote': Sound.song('think'); Sound.sfx('boing'); buildVote(); break;
@@ -730,6 +788,7 @@ function buildScreen(prev) {
 function updateScreen(prev) {
   switch (view.phase) {
     case 'lobby': updateLobby(); break;
+    case 'topicwrite': updateTopicWrite(); break;
     case 'answer': updateAnswer(); break;
     case 'vote': updateVote(); break;
   }
@@ -823,6 +882,7 @@ function showRules() {
     <ol>
       <li>みんなが1回ずつ<b>「主役」</b>になります。全員が主役をやったらゲーム終了！</li>
       <li>お題が出たら、主役は<b>本音の回答</b>を、ほかの人は<b>主役が言いそうなセリフ</b>を書きます。</li>
+      <li>お題は「<b>用意されたお題</b>」か「<b>みんなで考えるお題</b>」をホストが選べます。みんなで考えるときは、自分が考えたお題で自分が主役になることはありません。</li>
       <li>回答が名前なしでシャッフルされて発表されます（読み上げもあるよ）。</li>
       <li>主役以外は<b>「本物はどれ？」</b>に投票。主役は<b>「いちばん自分が言いそう！」</b>を選びます。</li>
     </ol>
@@ -853,11 +913,16 @@ function buildLobby() {
     <div id="plist" class="plist"></div>
     <div class="lobby-ctl">
       ${isHost ? `
+        <div class="mode-row">
+          <button class="mode-btn" data-mode="fixed"><span class="em">📚</span>用意されたお題</button>
+          <button class="mode-btn" data-mode="custom"><span class="em">✍️</span>みんなで考えるお題</button>
+        </div>
         <div class="setting-row">⏱️ 回答時間
           <select id="timeSel">${[30, 45, 60, 90].map(t => `<option value="${t}" ${t === view.answerTime ? 'selected' : ''}>${t}秒</option>`).join('')}</select></div>
         <button class="btn pink big pulse" id="startBtn">🚀 ゲームスタート！</button>
-        <div class="hint" id="startHint"></div>`
-      : `<div class="wait-msg">ホストがスタートするのを待っています…</div><div class="hint" id="timeInfo"></div>`}
+        <div class="hint" id="startHint"></div>
+        <div class="hint" id="topicInfo"></div>`
+      : `<div class="mode-info" id="modeInfo"></div><div class="wait-msg">ホストがスタートするのを待っています…</div><div class="hint" id="timeInfo"></div>`}
       <button class="btn small" id="iconBtn2">🎨 アイコンを変える</button>
       <button class="btn small ghost" id="rulesBtn2">📖 あそびかた</button>
       <button class="btn small ghost" id="leaveBtn">🚪 退出する</button>
@@ -869,6 +934,7 @@ function buildLobby() {
   $('#leaveBtn').onclick = () => me.isHost ? confirmLeave() : exitToTop();
   if (isHost) {
     $('#timeSel').onchange = e => send({ t: 'setting', answerTime: +e.target.value });
+    document.querySelectorAll('.mode-btn').forEach(b => b.onclick = () => { Sound.sfx('pop'); send({ t: 'setting', mode: b.dataset.mode }); });
     $('#startBtn').onclick = () => send({ t: 'start' });
   }
   updateLobby();
@@ -882,7 +948,12 @@ function updateLobby() {
     const ok = ps.filter(p => p.connected).length >= CONFIG.MIN_PLAYERS;
     $('#startBtn').disabled = !ok;
     $('#startHint').textContent = ok ? '全員そろったらスタート！' : `あと${CONFIG.MIN_PLAYERS - ps.length}人以上集まるとスタートできます`;
-  } else { const ti = $('#timeInfo'); if (ti) ti.textContent = `回答時間：${view.answerTime}秒`; }
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('sel', b.dataset.mode === view.mode));
+    $('#topicInfo').textContent = view.mode === 'custom' ? `✍️ 最初に1人${CONFIG.TOPICS_PER_PLAYER}つお題を考えます（自分のお題で自分は主役になりません）` : `📚 用意されたお題（${TOPICS.length}個）からランダムに出題します`;
+  } else {
+    const ti = $('#timeInfo'); if (ti) ti.textContent = `回答時間：${view.answerTime}秒`;
+    const mi = $('#modeInfo'); if (mi) mi.innerHTML = view.mode === 'custom' ? '✍️ お題モード：<b>みんなで考えるお題</b>' : '📚 お題モード：<b>用意されたお題</b>';
+  }
 }
 async function copyInvite() {
   const url = location.href.split(/[?#]/)[0] + '?room=' + roomCode;
@@ -917,6 +988,7 @@ function buildAnswer() {
   app.innerHTML = `
   <div class="row-between"><div class="who">${avatarHtml(t)} 主役：<b>${esc(t.name)}</b></div>${timerHtml()}</div>
   <div class="bubble">${topicHtml(view.topic, t.name)}</div>
+  ${view.topicAuthor ? `<div class="topic-author">✍️ このお題を考えた人：<b>${esc(P(view.topicAuthor).name)}</b></div>` : ''}
   <div class="panel">
     <div class="role-msg">${isT ? '🤫 <b>本音で</b>答えてね！みんながあなたのマネをしてくるよ' : `🎭 <b>${esc(t.name)}</b>になりきって書け！`}</div>
     <div id="answerBox">
@@ -951,6 +1023,52 @@ function updateAnswer() {
   if (view.myAnswer && !$('#answerBox').classList.contains('hidden')) showAnswerDone(view.myAnswer);
   const ps = view.players.filter(p => view.order.includes(p.id));
   $('#progress').innerHTML = ps.map(p => chip(p, view.submitted.includes(p.id) ? 'done' : '')).join('');
+}
+
+// ---------- お題づくり（みんなで考えるお題モード） ----------
+function buildTopicWrite() {
+  const n = CONFIG.TOPICS_PER_PLAYER;
+  app.innerHTML = `
+  <div class="row-between"><div class="phase-title">✍️ お題をつくろう！</div>${timerHtml()}</div>
+  <div class="panel">
+    <div class="role-msg">「<b>○○</b>」のところに、そのラウンドの主役の名前が入ります。<br>あなたが考えたお題で、<b>あなたが主役になることはありません</b>。</div>
+    <div class="topic-ex">例）○○が宝くじで1億円当たった時の第一声は？<br>　　○○が無人島に1つだけ持っていくものは？<br>※「○○」を書き忘れたら、先頭に自動で「○○が」をつけます</div>
+    <div id="topicBox">
+      ${Array.from({ length: n }, (_, i) => `<input class="topic-in" id="tp${i}" maxlength="${CONFIG.MAX_ANSWER}" placeholder="${n > 1 ? `お題${i + 1}` : 'お題'}（例：○○が〜で言いそうなことは？）" autocomplete="off">`).join('')}
+      <button class="btn small" id="tpInsert">「○○」を入れる</button>
+      <div style="height:12px"></div>
+      <button class="btn pink big" id="tpBtn">お題を出す！</button>
+    </div>
+    <div id="topicDone" class="done-msg hidden"></div>
+  </div>
+  <div class="progress" id="progress"></div>
+  ${hostCloseBtn('⏭ お題づくりを締め切る')}`;
+  bindClose('まだお題を出していない人がいても締め切りますか？（足りない分は用意されたお題を使います）');
+  let lastFocus = $('#tp0');
+  document.querySelectorAll('.topic-in').forEach(el => {
+    el.onfocus = () => { lastFocus = el; };
+    el.onkeydown = e => { if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); submitTopics(); } };
+  });
+  $('#tpInsert').onclick = () => { const el = lastFocus || $('#tp0'); const p = el.selectionStart ?? el.value.length; el.value = (el.value.slice(0, p) + '○○' + el.value.slice(p)).slice(0, CONFIG.MAX_ANSWER); el.focus(); el.selectionStart = el.selectionEnd = p + 2; };
+  $('#tpBtn').onclick = submitTopics;
+  if (!view.myTopics) setTimeout(() => $('#tp0') && $('#tp0').focus(), 300);
+  updateTopicWrite();
+}
+function submitTopics() {
+  const list = [...document.querySelectorAll('.topic-in')].map(el => el.value.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  if (!list.length) { Sound.sfx('buzzer'); toast('お題を書いてね！'); $('#tp0').focus(); return; }
+  send({ t: 'topics', list }); Sound.sfx('coin'); Confetti.burst(40, .5, .6);
+  showTopicDone(list);
+}
+function showTopicDone(list) {
+  $('#topicBox').classList.add('hidden');
+  const d = $('#topicDone'); d.classList.remove('hidden');
+  d.innerHTML = `✅ お題を出しました！みんなを待ってるよ…${list.map(t => `<span class="mine-ans">「${esc(t)}」</span>`).join('')}`;
+}
+function updateTopicWrite() {
+  if (view.myTopics && !$('#topicBox').classList.contains('hidden')) showTopicDone(view.myTopics);
+  const ps = view.players.filter(p => view.order.includes(p.id));
+  $('#progress').innerHTML = ps.map(p => chip(p, view.topicDone.includes(p.id) ? 'done' : '')).join('');
 }
 
 const hostCloseBtn = label => me.isHost ? `<div class="ctl center"><button class="btn small orange" id="closeBtn">${label}<span style="font-size:11px;opacity:.85">（ホストのみ）</span></button></div>` : '';
@@ -1097,9 +1215,9 @@ setInterval(() => {
   const el = $('#timer'); if (!el || !view) return;
   const ms = Math.max(0, localDeadline - Date.now()), sec = Math.ceil(ms / 1000);
   el.querySelector('b').textContent = sec;
-  const tot = view.phase === 'answer' ? view.answerTime : view.phase === 'vote' ? CONFIG.VOTE_TIME : CONFIG.RESULT_TIME;
+  const tot = view.phase === 'answer' ? view.answerTime : view.phase === 'vote' ? CONFIG.VOTE_TIME : view.phase === 'topicwrite' ? CONFIG.TOPIC_WRITE_TIME : CONFIG.RESULT_TIME;
   el.style.setProperty('--p', Math.min(1, ms / 1000 / tot).toFixed(3));
-  const tense = view.phase === 'answer' || view.phase === 'vote';
+  const tense = view.phase === 'answer' || view.phase === 'vote' || view.phase === 'topicwrite';
   el.classList.toggle('hurry', tense && sec <= 10);
   if (tense && sec <= 5 && sec > 0 && sec !== lastTick) { lastTick = sec; Sound.sfx('tick'); }
 }, 100);
