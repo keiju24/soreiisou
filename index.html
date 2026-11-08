@@ -246,7 +246,8 @@ const CONFIG = {
   VOTE_TIME: 30,            // 投票の制限時間（秒）
   RESULT_TIME: 25,          // 結果画面から自動で次へ進むまで（秒）
   INTRO_TIME: 4.8,          // 主役発表の演出時間（秒）
-  REVEAL_PER_CARD: 3.6,     // 回答カード1枚あたりの発表時間（秒）
+  REVEAL_PER_CARD: 3.6,     // 回答カード1枚あたりの発表時間（秒・最低）
+  READ_SEC_PER_CHAR: 0.17,  // 読み上げ1文字あたりの時間の目安（長い回答ほど発表時間をのばす）
   REVEAL_INTRO: 0.6,        // 回答発表が始まるまでの間（秒）
   MIN_PLAYERS: 3,
   MAX_PLAYERS: 8,
@@ -507,7 +508,7 @@ const TTS = {
       u.lang = 'ja-JP'; u.rate = prof ? prof.rate : 1.15; u.pitch = prof ? prof.pitch : 1;
       const v = (prof && prof.voice) || jaVoices()[0]; if (v) u.voice = v;
       u.onend = done; u.onerror = done;
-      this.wd = setTimeout(done, 2500 + [...String(text)].length * 300); // 終わりの合図が来ない端末向けの保険
+      this.wd = setTimeout(done, 6000 + [...String(text)].length * 600); // 終わりの合図が来ない端末向けの保険
       speechSynthesis.speak(u);
     } catch { done(); }
   },
@@ -553,6 +554,14 @@ const app = $('#app');
 function later(fn, ms) { screenTimers.push(setTimeout(fn, ms)); }
 function clearScreenTimers() { screenTimers.forEach(clearTimeout); screenTimers = []; }
 function updateRoomBadge() { $('#roomBadge').textContent = roomCode ? 'ROOM ' + roomCode : ''; }
+
+/* ===================== 発表のタイミング ===================== */
+// 回答カード1枚ごとの発表時間を文字数から決める（読み終わる前に次へ進まないように）
+function revealPlan(cards) {
+  let t = CONFIG.REVEAL_INTRO; const starts = [];
+  for (const c of cards) { starts.push(t); t += Math.max(CONFIG.REVEAL_PER_CARD, 1.4 + [...String(c.text)].length * CONFIG.READ_SEC_PER_CHAR); }
+  return { starts, total: t };
+}
 
 /* ===================== お題 ===================== */
 // 「○○」が主役の名前に置きかわる。「○○」がないお題は、先頭に「○○が」を自動でつける
@@ -725,7 +734,7 @@ const Host = {
     const target = s.order[s.round];
     if (!s.answers[target]) s.answers[target] = '……（ノーコメント）';
     s.cards = shuffle(Object.entries(s.answers).map(([pid, text]) => { const cid = rid(6); this.owner[cid] = pid; return { cid, text }; }));
-    s.phase = 'reveal'; this.setTimer(s.cards.length * CONFIG.REVEAL_PER_CARD + 1.5 + CONFIG.REVEAL_INTRO, () => this.beginVote()); this.broadcast();
+    s.phase = 'reveal'; this.setTimer(revealPlan(s.cards).total + 1.5, () => this.beginVote()); this.broadcast();
   },
   beginVote() { const s = this.s; s.phase = 'vote'; this.setTimer(CONFIG.VOTE_TIME, () => this.endVote()); this.broadcast(); this.checkVotes(); },
   checkVotes() {
@@ -853,7 +862,11 @@ function onState(v) {
   const prev = view; view = v; localDeadline = Date.now() + (v.remain || 0);
   const key = v.phase + ':' + v.round + ':' + v.total;
   $('#abortBtn').classList.toggle('hidden', !(me.isHost && v.phase !== 'lobby' && v.phase !== 'final'));
-  if (key !== screenKey) { screenKey = key; clearScreenTimers(); stopSpeak(); buildScreen(prev); }
+  if (key !== screenKey) {
+    screenKey = key; clearScreenTimers();
+    if (!(prev && prev.phase === 'reveal' && v.phase === 'vote')) stopSpeak(); // 発表→投票のときは読み上げを最後まで続ける
+    buildScreen(prev);
+  }
   else updateScreen(prev);
 }
 function buildScreen(prev) {
@@ -1171,16 +1184,16 @@ function bindClose(confirmMsg) {
 }
 // ---------- 発表 ----------
 function buildReveal() {
-  const t = P(view.target), per = CONFIG.REVEAL_PER_CARD, OFF = CONFIG.REVEAL_INTRO;
+  const t = P(view.target), plan = revealPlan(view.cards);
   app.innerHTML = `
   <div class="phase-title center">📢 回答はっぴょう！</div>
   <div class="bubble small">${topicHtml(view.topic, t.name)}</div>
-  <div class="cards">${view.cards.map((c, i) => `<div class="card reveal" style="--r:${rot(c.cid)}deg;animation-delay:${(OFF + i * per).toFixed(2)}s"><span class="qmark">?</span>${esc(c.text)}</div>`).join('')}</div>
+  <div class="cards">${view.cards.map((c, i) => `<div class="card reveal" style="--r:${rot(c.cid)}deg;animation-delay:${plan.starts[i].toFixed(2)}s"><span class="qmark">?</span>${esc(c.text)}</div>`).join('')}</div>
   <p class="hint">このなかに${esc(t.name)}の本物の回答がまぎれています…！</p>
   ${hostCloseBtn('⏭ 発表をスキップして投票へ')}`;
   bindClose(null);
   const profs = voiceProfiles(view.cards.length);
-  view.cards.forEach((c, i) => later(() => { Sound.sfx(i % 2 ? 'boing' : 'pop'); TTS.say(c.cid, c.text, profs[i]); }, (OFF + i * per) * 1000 + 250));
+  view.cards.forEach((c, i) => later(() => { Sound.sfx(i % 2 ? 'boing' : 'pop'); TTS.say(c.cid, c.text, profs[i]); }, plan.starts[i] * 1000 + 250));
 }
 
 // ---------- 投票 ----------
