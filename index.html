@@ -114,7 +114,7 @@ input:focus,textarea:focus{box-shadow:0 0 0 5px rgba(255,93,143,.45)}
 .card.votable:hover:not(:disabled){transform:rotate(0) scale(1.04);background:#FFF3B0}
 .card.votable:disabled{cursor:default}
 .card.mine{background:#e9e9e9;opacity:.7}
-.cards.locked .card:not(.chosen){opacity:.45}
+.cards.voted .card:not(.chosen):not(.mine){opacity:.75}
 .card.chosen{background:var(--pink)!important;color:#fff;transform:scale(1.06) rotate(0);animation:chosen .4s cubic-bezier(.2,1.8,.4,1)}
 @keyframes chosen{0%{transform:scale(.8)}100%{transform:scale(1.06)}}
 .tag{display:inline-block;font-size:12px;background:var(--ink);color:#fff;border-radius:999px;padding:2px 10px;margin-bottom:6px}
@@ -251,7 +251,9 @@ const CONFIG = {
   REVEAL_INTRO: 0.6,        // 回答発表が始まるまでの間（秒）
   MIN_PLAYERS: 3,
   MAX_PLAYERS: 8,
-  MAX_ANSWER: 60,
+  MAX_ANSWER: 2000,         // 文字数制限はなし（通信が重くならないための安全用の上限だけ）
+  TTS: false,               // 回答の読み上げ（いまはお休み中。true にすると復活します）
+  VOTE_GRACE: 3,            // 全員が投票したあと、締め切るまでの猶予（秒）。この間も選びなおせる
   // 「みんなで考えるお題」モードの設定
   TOPIC_WRITE_TIME: 90,     // お題を考える時間（秒）
   TOPICS_PER_PLAYER: 1,     // 1人が書くお題の数
@@ -515,7 +517,7 @@ const TTS = {
   reset() { this.token++; this.q = []; this.busy = false; clearTimeout(this.wd); this.spoken.clear(); try { speechSynthesis.cancel(); } catch {} }
 };
 function unlockSpeech() { // iPhone/iPadはタップの中で一度しゃべらせないと読み上げできない
-  if (unlockSpeech.done || !('speechSynthesis' in window)) return; unlockSpeech.done = true;
+  if (!CONFIG.TTS || unlockSpeech.done || !('speechSynthesis' in window)) return; unlockSpeech.done = true;
   try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch {}
 }
 function stopSpeak() { TTS.reset(); }
@@ -559,13 +561,15 @@ function updateRoomBadge() { $('#roomBadge').textContent = roomCode ? 'ROOM ' + 
 // 回答カード1枚ごとの発表時間を文字数から決める（読み終わる前に次へ進まないように）
 function revealPlan(cards) {
   let t = CONFIG.REVEAL_INTRO; const starts = [];
-  for (const c of cards) { starts.push(t); t += Math.max(CONFIG.REVEAL_PER_CARD, 1.4 + [...String(c.text)].length * CONFIG.READ_SEC_PER_CHAR); }
+  // 読み上げなしのときは「目で読む」時間（1文字0.06秒）で計算する
+  const perChar = CONFIG.TTS ? CONFIG.READ_SEC_PER_CHAR : 0.06, base = CONFIG.TTS ? 1.4 : 1.2;
+  for (const c of cards) { starts.push(t); t += Math.max(CONFIG.REVEAL_PER_CARD, base + [...String(c.text)].length * perChar); }
   return { starts, total: t };
 }
 
 /* ===================== お題 ===================== */
 // 「○○」が主役の名前に置きかわる。「○○」がないお題は、先頭に「○○が」を自動でつける
-const toTemplate = l => { l = String(l).trim().replace(/○○|〇〇|◯◯|\{name\}|\{名前\}/g, '{name}'); if (!l.includes('{name}')) l = '{name}が' + l; return l.slice(0, 120); };
+const toTemplate = l => { l = String(l).trim().replace(/○○|〇〇|◯◯|\{name\}|\{名前\}/g, '{name}'); if (!l.includes('{name}')) l = '{name}が' + l; return l; };
 // 自作お題の割り当て：どのラウンドも「主役 ≠ お題を書いた人」になるように組み合わせる（足りない分は用意されたお題で補う）
 function planCustomTopics(order, subs) {
   const pool = shuffle(subs.map((x, i) => ({ ...x, i })));
@@ -617,7 +621,7 @@ const Host = {
       players: s.players.map(p => ({ id: p.id, name: p.name, avatar: p.avatar, color: p.color, score: p.score, connected: p.connected, stats: p.stats })),
       order: s.order, round: s.round, total: s.order.length, target, topic: s.topic,
       remain: s.deadline ? Math.max(0, s.deadline - Date.now()) : 0,
-      submitted: Object.keys(s.answers), voted: Object.keys(s.votes), picked: !!s.pick,
+      submitted: Object.keys(s.answers), voted: Object.keys(s.votes), picked: !!s.pick, allVoted: !!s.allVoted,
       cards: showCards ? s.cards : [], myCid, myVote: pid === target ? s.pick : (s.votes[pid] || null),
       myAnswer: s.answers[pid] || null, result: s.phase === 'result' ? s.result : null, answerTime: s.answerTime,
       mode: s.mode, topicAuthor: s.topicAuthor, topicDone: Object.keys(s.topicSubs), myTopics: s.topicSubs[pid] || null
@@ -676,8 +680,9 @@ const Host = {
       case 'vote': {
         if (s.phase !== 'vote') break; const cid = String(a.cid || '');
         if (!this.owner[cid] || this.owner[cid] === pid || !s.order.includes(pid)) break;
-        if (pid === s.order[s.round]) { if (s.pick) break; s.pick = cid; } else { if (s.votes[pid]) break; s.votes[pid] = cid; }
-        this.fx('vote'); this.broadcast(); this.checkVotes(); break;
+        // 締め切りまでは何度でも選びなおせる
+        if (pid === s.order[s.round]) { if (s.pick === cid) break; s.pick = cid; } else { if (s.votes[pid] === cid) break; s.votes[pid] = cid; }
+        this.fx('vote'); this.checkVotes(); this.broadcast(); break;
       }
       case 'next': if (isHost && s.phase === 'result') this.next(); break;
       case 'abort': if (isHost) this.abort('ホストがゲームを終了しました。ロビーに戻ります'); break;
@@ -736,12 +741,13 @@ const Host = {
     s.cards = shuffle(Object.entries(s.answers).map(([pid, text]) => { const cid = rid(6); this.owner[cid] = pid; return { cid, text }; }));
     s.phase = 'reveal'; this.setTimer(revealPlan(s.cards).total + 1.5, () => this.beginVote()); this.broadcast();
   },
-  beginVote() { const s = this.s; s.phase = 'vote'; this.setTimer(CONFIG.VOTE_TIME, () => this.endVote()); this.broadcast(); this.checkVotes(); },
+  beginVote() { const s = this.s; s.phase = 'vote'; s.allVoted = false; this.setTimer(CONFIG.VOTE_TIME, () => this.endVote()); this.broadcast(); this.checkVotes(); },
   checkVotes() {
     const s = this.s; if (s.phase !== 'vote') return; const target = s.order[s.round];
     const voters = this.inGame().filter(p => p.id !== target);
     const tp = this.player(target); const tNeeds = tp && tp.connected && s.cards.some(c => this.owner[c.cid] !== target);
-    if (voters.every(p => s.votes[p.id]) && (!tNeeds || s.pick)) { clearTimeout(this.timer); this.timer = setTimeout(() => this.endVote(), 700); }
+    // 全員そろったら少しだけ待ってから締め切る（その間に選びなおすと、また少し待つ）
+    if (voters.every(p => s.votes[p.id]) && (!tNeeds || s.pick)) { s.allVoted = true; this.setTimer(CONFIG.VOTE_GRACE, () => this.endVote()); this.broadcast(); }
   },
   endVote() {
     const s = this.s; if (s.phase !== 'vote') return; clearTimeout(this.timer);
@@ -1093,7 +1099,7 @@ function buildAnswer() {
     <div class="role-msg">${isT ? '🤫 <b>本音で</b>答えてね！みんながあなたのマネをしてくるよ' : `🎭 <b>${esc(t.name)}</b>になりきって書け！`}</div>
     <div id="answerBox">
       <textarea id="ansIn" rows="3" placeholder="${isT ? 'あなたの本音は…？' : esc(t.name) + 'が言いそうなセリフ…'}"></textarea>
-      <div class="cnt"><span id="cnt">0</span>/${CONFIG.MAX_ANSWER}</div>
+      <div style="height:12px"></div>
       <button class="btn pink big" id="ansBtn">これで決まり！</button>
     </div>
     <div id="answerDone" class="done-msg hidden"></div>
@@ -1102,8 +1108,6 @@ function buildAnswer() {
   ${hostCloseBtn('⏭ 回答を締め切る')}`;
   bindClose('まだ回答していない人がいても締め切りますか？');
   const ta = $('#ansIn');
-  // maxlength は日本語入力で文字がふえる不具合（iPadなど）の原因になるので使わず、文字数はここで数える
-  ta.oninput = () => { const n = [...ta.value].length, c = $('#cnt'); c.textContent = n; c.parentElement.classList.toggle('over', n > CONFIG.MAX_ANSWER); };
   ta.onkeydown = e => { if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); submitAnswer(); } };
   $('#ansBtn').onclick = submitAnswer;
   if (!view.myAnswer) setTimeout(() => ta.focus(), 300);
@@ -1112,7 +1116,6 @@ function buildAnswer() {
 function submitAnswer() {
   const ta = $('#ansIn'); const txt = ta.value.replace(/\s+/g, ' ').trim();
   if (!txt) { Sound.sfx('buzzer'); toast('なにか書いてね！'); ta.focus(); return; }
-  if ([...txt].length > CONFIG.MAX_ANSWER) { Sound.sfx('buzzer'); toast(`${CONFIG.MAX_ANSWER}文字以内にしてね`); ta.focus(); return; }
   mySubmittedRound = view.round; send({ t: 'answer', text: txt }); Sound.sfx('coin'); Confetti.burst(40, .5, .6);
   showAnswerDone(txt);
 }
@@ -1162,7 +1165,6 @@ function buildTopicWrite() {
 function submitTopics() {
   const list = [...document.querySelectorAll('.topic-in')].map(el => el.value.replace(/\s+/g, ' ').trim().replace(/^が/, '')).filter(Boolean).map(v => '○○が' + v);
   if (!list.length) { Sound.sfx('buzzer'); toast('お題を書いてね！'); $('#tp0').focus(); return; }
-  if (list.some(t => [...t].length > CONFIG.MAX_ANSWER)) { Sound.sfx('buzzer'); toast(`お題は${CONFIG.MAX_ANSWER - 3}文字以内にしてね`); return; }
   send({ t: 'topics', list }); Sound.sfx('coin'); Confetti.burst(40, .5, .6);
   showTopicDone(list);
 }
@@ -1193,7 +1195,7 @@ function buildReveal() {
   ${hostCloseBtn('⏭ 発表をスキップして投票へ')}`;
   bindClose(null);
   const profs = voiceProfiles(view.cards.length);
-  view.cards.forEach((c, i) => later(() => { Sound.sfx(i % 2 ? 'boing' : 'pop'); TTS.say(c.cid, c.text, profs[i]); }, plan.starts[i] * 1000 + 250));
+  view.cards.forEach((c, i) => later(() => { Sound.sfx(i % 2 ? 'boing' : 'pop'); if (CONFIG.TTS) TTS.say(c.cid, c.text, profs[i]); }, plan.starts[i] * 1000 + 250));
 }
 
 // ---------- 投票 ----------
@@ -1210,20 +1212,21 @@ function buildVote() {
   bindClose('まだ投票していない人がいても締め切りますか？');
   $('#cards').onclick = e => {
     const b = e.target.closest('.card.votable'); if (!b || b.disabled) return;
-    if (view.myVote || myVoteLocal) return;
-    myVoteLocal = b.dataset.cid; send({ t: 'vote', cid: myVoteLocal }); Sound.sfx('pinpon'); Confetti.burst(30, .5, .5);
+    if (b.dataset.cid === (myVoteLocal || view.myVote)) return; // 同じカードはそのまま
+    const first = !(myVoteLocal || view.myVote);
+    myVoteLocal = b.dataset.cid; send({ t: 'vote', cid: myVoteLocal }); Sound.sfx(first ? 'pinpon' : 'pop'); if (first) Confetti.burst(30, .5, .5);
     markVote(myVoteLocal);
   };
   updateVote();
 }
 function markVote(cid) {
   const cards = $('#cards'); if (!cards) return;
-  cards.classList.add('locked');
-  cards.querySelectorAll('.card').forEach(c => { c.disabled = true; c.classList.toggle('chosen', c.dataset.cid === cid); });
-  $('#voteMsg').textContent = '✅ 投票完了！みんなを待ってるよ…';
+  cards.classList.add('voted');
+  cards.querySelectorAll('.card').forEach(c => c.classList.toggle('chosen', c.dataset.cid === cid));
+  $('#voteMsg').textContent = view.allVoted ? `⏳ 全員投票しました！まもなく締め切り（まだ選びなおせます）` : '✅ 投票しました！締め切りまでは、ほかのカードを押して選びなおせます';
 }
 function updateVote() {
-  const v = view.myVote || myVoteLocal; if (v) markVote(v);
+  const v = myVoteLocal || view.myVote; if (v) markVote(v);
   const ps = view.players.filter(p => view.order.includes(p.id));
   $('#progress').innerHTML = ps.map(p => { const done = p.id === view.target ? view.picked : view.voted.includes(p.id); return chip(p, done ? 'done' : ''); }).join('');
 }
