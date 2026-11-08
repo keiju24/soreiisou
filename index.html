@@ -487,20 +487,37 @@ function voiceProfiles(n) {
   const vs = jaVoices(), pitches = [1.0, 1.7, 0.6, 1.35, 0.8, 2.0, 0.5, 1.15], rates = [1.1, 1.25, 0.95, 1.2, 1.0, 1.3, 0.9, 1.15];
   return shuffle(Array.from({ length: Math.max(1, n) }, (_, i) => ({ voice: vs.length ? vs[i % vs.length] : null, pitch: pitches[i % pitches.length], rate: rates[i % rates.length] })));
 }
-function speak(text, prof) {
-  if (!('speechSynthesis' in window)) return;
-  try {
-    const u = new SpeechSynthesisUtterance(String(text).replace(/[（）()「」]/g, ' '));
-    u.lang = 'ja-JP'; u.rate = prof ? prof.rate : 1.15; u.pitch = prof ? prof.pitch : 1;
-    const v = (prof && prof.voice) || jaVoices()[0]; if (v) u.voice = v;
-    speechSynthesis.speak(u);
-  } catch {}
-}
+// 読み上げの順番待ち。1つ読み終わってから次を読む（読み上げ中に次を頼むと、直前の文をもう一度読んでしまう端末があるため）
+const TTS = {
+  q: [], busy: false, spoken: new Set(), token: 0, wd: null,
+  say(id, text, prof) {
+    if (!('speechSynthesis' in window) || this.spoken.has(id)) return; // 同じ回答は1回だけ
+    this.spoken.add(id); this.q.push({ text, prof }); this.next();
+  },
+  next() {
+    if (this.busy || !this.q.length) return;
+    const { text, prof } = this.q.shift(), tk = this.token; let finished = false;
+    this.busy = true;
+    const done = () => {
+      if (finished || tk !== this.token) return; finished = true;
+      clearTimeout(this.wd); this.busy = false; setTimeout(() => this.next(), 150);
+    };
+    try {
+      const u = new SpeechSynthesisUtterance(String(text).replace(/[（）()「」]/g, ' '));
+      u.lang = 'ja-JP'; u.rate = prof ? prof.rate : 1.15; u.pitch = prof ? prof.pitch : 1;
+      const v = (prof && prof.voice) || jaVoices()[0]; if (v) u.voice = v;
+      u.onend = done; u.onerror = done;
+      this.wd = setTimeout(done, 2500 + [...String(text)].length * 300); // 終わりの合図が来ない端末向けの保険
+      speechSynthesis.speak(u);
+    } catch { done(); }
+  },
+  reset() { this.token++; this.q = []; this.busy = false; clearTimeout(this.wd); this.spoken.clear(); try { speechSynthesis.cancel(); } catch {} }
+};
 function unlockSpeech() { // iPhone/iPadはタップの中で一度しゃべらせないと読み上げできない
   if (unlockSpeech.done || !('speechSynthesis' in window)) return; unlockSpeech.done = true;
   try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch {}
 }
-function stopSpeak() { try { speechSynthesis.cancel(); } catch {} }
+function stopSpeak() { TTS.reset(); }
 
 /* ===================== 紙吹雪 ===================== */
 const Confetti = (() => {
@@ -1163,7 +1180,7 @@ function buildReveal() {
   ${hostCloseBtn('⏭ 発表をスキップして投票へ')}`;
   bindClose(null);
   const profs = voiceProfiles(view.cards.length);
-  view.cards.forEach((c, i) => later(() => { Sound.sfx(i % 2 ? 'boing' : 'pop'); speak(c.text, profs[i]); }, (OFF + i * per) * 1000 + 250));
+  view.cards.forEach((c, i) => later(() => { Sound.sfx(i % 2 ? 'boing' : 'pop'); TTS.say(c.cid, c.text, profs[i]); }, (OFF + i * per) * 1000 + 250));
 }
 
 // ---------- 投票 ----------
