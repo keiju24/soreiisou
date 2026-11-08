@@ -107,7 +107,7 @@ input:focus,textarea:focus{box-shadow:0 0 0 5px rgba(255,93,143,.45)}
 .phase-title{font-family:'Dela Gothic One',sans-serif;font-weight:400;font-size:clamp(22px,6vw,34px);color:#fff;-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;text-shadow:4px 4px 0 var(--ink);line-height:1.3}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:20px;margin:18px 0}
 .card{position:relative;background:#fff;border:4px solid var(--ink);border-radius:22px;padding:18px 16px;font-size:20px;line-height:1.5;box-shadow:6px 6px 0 var(--ink);transform:rotate(var(--r,0deg));text-align:left;font-family:inherit;font-weight:800;color:var(--ink);word-break:break-word;width:100%}
-.card.reveal{animation:dropIn .7s cubic-bezier(.2,1.6,.4,1) both}
+.card.reveal{animation:dropIn .5s cubic-bezier(.2,1.6,.4,1) both}
 @keyframes dropIn{0%{opacity:0;transform:translateY(-140px) rotate(-35deg) scale(.3)}100%{opacity:1;transform:rotate(var(--r,0deg))}}
 .card .qmark{position:absolute;top:-16px;right:-12px;width:38px;height:38px;border-radius:50%;background:var(--pink);color:#fff;border:3px solid var(--ink);display:grid;place-items:center;font-family:'Dela Gothic One',sans-serif;font-size:20px}
 .card.votable{cursor:pointer;transition:transform .15s,background .15s}
@@ -210,6 +210,9 @@ header#top{flex-wrap:wrap;row-gap:6px}
 #tapStart .tap-inner{text-align:center;max-width:440px;width:100%}
 #tapStart .btn{animation:pulse 1s ease-in-out infinite}
 .cnt.over{color:var(--red);opacity:1}
+.rv-bar{height:12px;border:3px solid var(--ink);border-radius:999px;background:#fff;overflow:hidden;margin:6px 0}
+.rv-bar i{display:block;height:100%;background:var(--cyan);animation:rvBar linear both}
+@keyframes rvBar{from{width:100%}to{width:0}}
 @media (max-width:480px){.panel{padding:16px;box-shadow:6px 6px 0 var(--ink)}.card{font-size:18px}.mini-logo{font-size:15px}}
 </style>
 </head>
@@ -246,13 +249,13 @@ const CONFIG = {
   VOTE_TIME: 30,            // 投票の制限時間（秒）
   RESULT_TIME: 25,          // 結果画面から自動で次へ進むまで（秒）
   INTRO_TIME: 4.8,          // 主役発表の演出時間（秒）
-  REVEAL_PER_CARD: 3.6,     // 回答カード1枚あたりの発表時間（秒・最低）
-  READ_SEC_PER_CHAR: 0.17,  // 読み上げ1文字あたりの時間の目安（長い回答ほど発表時間をのばす）
-  REVEAL_INTRO: 0.6,        // 回答発表が始まるまでの間（秒）
+  REVEAL_STAGGER: 0.45,     // 回答カードが1枚ずつ出てくる間隔（秒）
+  REVEAL_READ_MIN: 2.5,     // 全部出たあと、読む時間の最低（秒）
+  REVEAL_READ_MAX: 10,      // 読む時間の最大（秒）
+  REVEAL_SEC_PER_CHAR: 0.05,// 読む時間：回答の合計文字数 × この秒数
   MIN_PLAYERS: 3,
   MAX_PLAYERS: 8,
   MAX_ANSWER: 2000,         // 文字数制限はなし（通信が重くならないための安全用の上限だけ）
-  TTS: false,               // 回答の読み上げ（いまはお休み中。true にすると復活します）
   VOTE_GRACE: 3,            // 全員が投票したあと、締め切るまでの猶予（秒）。この間も選びなおせる
   // 「みんなで考えるお題」モードの設定
   TOPIC_WRITE_TIME: 90,     // お題を考える時間（秒）
@@ -481,47 +484,6 @@ const Sound = (() => {
   return { init, unlock, sfx, song, stop, setBgm, setSfx, get bgmOn() { return bgmOn; }, get sfxOn() { return sfxOn; } };
 })();
 
-/* ===================== 読み上げ ===================== */
-// 読み上げは常にオン。回答カードごとに声（声の種類・高さ・速さ）を変える
-const jaVoices = () => { try { return speechSynthesis.getVoices().filter(v => /^ja/i.test(v.lang)); } catch { return []; } };
-function voiceProfiles(n) {
-  // 回答の数だけ別々の声を用意して、毎ラウンドシャッフルする
-  // （声を人ごとに固定すると「この声は○○さん」と回答者がバレてしまうため）
-  const vs = jaVoices(), pitches = [1.0, 1.7, 0.6, 1.35, 0.8, 2.0, 0.5, 1.15], rates = [1.1, 1.25, 0.95, 1.2, 1.0, 1.3, 0.9, 1.15];
-  return shuffle(Array.from({ length: Math.max(1, n) }, (_, i) => ({ voice: vs.length ? vs[i % vs.length] : null, pitch: pitches[i % pitches.length], rate: rates[i % rates.length] })));
-}
-// 読み上げの順番待ち。1つ読み終わってから次を読む（読み上げ中に次を頼むと、直前の文をもう一度読んでしまう端末があるため）
-const TTS = {
-  q: [], busy: false, spoken: new Set(), token: 0, wd: null,
-  say(id, text, prof) {
-    if (!('speechSynthesis' in window) || this.spoken.has(id)) return; // 同じ回答は1回だけ
-    this.spoken.add(id); this.q.push({ text, prof }); this.next();
-  },
-  next() {
-    if (this.busy || !this.q.length) return;
-    const { text, prof } = this.q.shift(), tk = this.token; let finished = false;
-    this.busy = true;
-    const done = () => {
-      if (finished || tk !== this.token) return; finished = true;
-      clearTimeout(this.wd); this.busy = false; setTimeout(() => this.next(), 150);
-    };
-    try {
-      const u = new SpeechSynthesisUtterance(String(text).replace(/[（）()「」]/g, ' '));
-      u.lang = 'ja-JP'; u.rate = prof ? prof.rate : 1.15; u.pitch = prof ? prof.pitch : 1;
-      const v = (prof && prof.voice) || jaVoices()[0]; if (v) u.voice = v;
-      u.onend = done; u.onerror = done;
-      this.wd = setTimeout(done, 6000 + [...String(text)].length * 600); // 終わりの合図が来ない端末向けの保険
-      speechSynthesis.speak(u);
-    } catch { done(); }
-  },
-  reset() { this.token++; this.q = []; this.busy = false; clearTimeout(this.wd); this.spoken.clear(); try { speechSynthesis.cancel(); } catch {} }
-};
-function unlockSpeech() { // iPhone/iPadはタップの中で一度しゃべらせないと読み上げできない
-  if (!CONFIG.TTS || unlockSpeech.done || !('speechSynthesis' in window)) return; unlockSpeech.done = true;
-  try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch {}
-}
-function stopSpeak() { TTS.reset(); }
-
 /* ===================== 紙吹雪 ===================== */
 const Confetti = (() => {
   const cv = $('#confetti'), cx = cv.getContext('2d'); let parts = [], raf = null, W = 0, H = 0;
@@ -558,13 +520,12 @@ function clearScreenTimers() { screenTimers.forEach(clearTimeout); screenTimers 
 function updateRoomBadge() { $('#roomBadge').textContent = roomCode ? 'ROOM ' + roomCode : ''; }
 
 /* ===================== 発表のタイミング ===================== */
-// 回答カード1枚ごとの発表時間を文字数から決める（読み終わる前に次へ進まないように）
+// カードはテンポよく次々に出して、そのあと全部の文字数に合わせて読む時間をとる
 function revealPlan(cards) {
-  let t = CONFIG.REVEAL_INTRO; const starts = [];
-  // 読み上げなしのときは「目で読む」時間（1文字0.06秒）で計算する
-  const perChar = CONFIG.TTS ? CONFIG.READ_SEC_PER_CHAR : 0.06, base = CONFIG.TTS ? 1.4 : 1.2;
-  for (const c of cards) { starts.push(t); t += Math.max(CONFIG.REVEAL_PER_CARD, base + [...String(c.text)].length * perChar); }
-  return { starts, total: t };
+  const starts = cards.map((_, i) => 0.3 + i * CONFIG.REVEAL_STAGGER);
+  const chars = cards.reduce((n, c) => n + [...String(c.text)].length, 0);
+  const read = Math.min(CONFIG.REVEAL_READ_MAX, Math.max(CONFIG.REVEAL_READ_MIN, chars * CONFIG.REVEAL_SEC_PER_CHAR));
+  return { starts, total: (starts.length ? starts[starts.length - 1] : 0) + 0.7 + read };
 }
 
 /* ===================== お題 ===================== */
@@ -739,7 +700,7 @@ const Host = {
     const target = s.order[s.round];
     if (!s.answers[target]) s.answers[target] = '……（ノーコメント）';
     s.cards = shuffle(Object.entries(s.answers).map(([pid, text]) => { const cid = rid(6); this.owner[cid] = pid; return { cid, text }; }));
-    s.phase = 'reveal'; this.setTimer(revealPlan(s.cards).total + 1.5, () => this.beginVote()); this.broadcast();
+    s.phase = 'reveal'; this.setTimer(revealPlan(s.cards).total, () => this.beginVote()); this.broadcast();
   },
   beginVote() { const s = this.s; s.phase = 'vote'; s.allVoted = false; this.setTimer(CONFIG.VOTE_TIME, () => this.endVote()); this.broadcast(); this.checkVotes(); },
   checkVotes() {
@@ -852,7 +813,7 @@ function send(a) {
   else if (Net.hostConn && Net.hostConn.open) Net.hostConn.send(a);
   else toast('接続が切れています…');
 }
-function exitToTop() { ss.del('room'); leaveNet(); stopSpeak(); renderHome(); }
+function exitToTop() { ss.del('room'); leaveNet(); renderHome(); }
 
 /* ===================== 画面描画 ===================== */
 const P = id => (view && view.players.find(p => p.id === id)) || { id, name: '???', avatar: '❓', color: '#999', score: 0, stats: newStats() };
@@ -870,7 +831,6 @@ function onState(v) {
   $('#abortBtn').classList.toggle('hidden', !(me.isHost && v.phase !== 'lobby' && v.phase !== 'final'));
   if (key !== screenKey) {
     screenKey = key; clearScreenTimers();
-    if (!(prev && prev.phase === 'reveal' && v.phase === 'vote')) stopSpeak(); // 発表→投票のときは読み上げを最後まで続ける
     buildScreen(prev);
   }
   else updateScreen(prev);
@@ -990,7 +950,7 @@ function showRules() {
       <li>みんなが1回ずつ<b>「主役」</b>になります。全員が主役をやったらゲーム終了！</li>
       <li>お題が出たら、主役は<b>本音の回答</b>を、ほかの人は<b>主役が言いそうなセリフ</b>を書きます。</li>
       <li>お題は「<b>用意されたお題</b>」か「<b>みんなで考えるお題</b>」をホストが選べます。みんなで考えるときは、自分が考えたお題で自分が主役になることはありません。</li>
-      <li>回答が名前なしでシャッフルされて発表されます（読み上げもあるよ）。</li>
+      <li>回答が名前なしでシャッフルされて発表されます。</li>
       <li>主役以外は<b>「本物はどれ？」</b>に投票。主役は<b>「いちばん自分が言いそう！」</b>を選びます。</li>
     </ol>
     <h3>🎯 得点</h3>
@@ -1192,10 +1152,11 @@ function buildReveal() {
   <div class="bubble small">${topicHtml(view.topic, t.name)}</div>
   <div class="cards">${view.cards.map((c, i) => `<div class="card reveal" style="--r:${rot(c.cid)}deg;animation-delay:${plan.starts[i].toFixed(2)}s"><span class="qmark">?</span>${esc(c.text)}</div>`).join('')}</div>
   <p class="hint">このなかに${esc(t.name)}の本物の回答がまぎれています…！</p>
-  ${hostCloseBtn('⏭ 発表をスキップして投票へ')}`;
+  <div class="rv-bar"><i style="animation-duration:${(view.remain / 1000).toFixed(2)}s"></i></div>
+  <div class="center hint">まもなく投票タイム！</div>
+  ${hostCloseBtn('⏭ すぐ投票へ')}`;
   bindClose(null);
-  const profs = voiceProfiles(view.cards.length);
-  view.cards.forEach((c, i) => later(() => { Sound.sfx(i % 2 ? 'boing' : 'pop'); if (CONFIG.TTS) TTS.say(c.cid, c.text, profs[i]); }, plan.starts[i] * 1000 + 250));
+  view.cards.forEach((c, i) => later(() => Sound.sfx('pop'), plan.starts[i] * 1000 + 150));
 }
 
 // ---------- 投票 ----------
@@ -1346,9 +1307,8 @@ refreshToggles();
 // 最初のタップで音を解禁 & ボタンのクリック音
 document.addEventListener('pointerdown', e => { Sound.init(); if (e.target.closest('.btn')) Sound.sfx('click'); }, true);
 // iPhone/iPadは touchend / click の中でないと音が解禁されないので、そこでも毎回ためす
-['touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => { Sound.unlock(); unlockSpeech(); }, true));
+['touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => Sound.unlock(), true));
 window.addEventListener('beforeunload', e => { if (me.isHost && Host.s && Host.s.players.length > 1) { e.preventDefault(); e.returnValue = ''; } });
-if ('speechSynthesis' in window) try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices(); } catch {}
 
 /* ===================== 起動 ===================== */
 (() => {
@@ -1356,7 +1316,7 @@ if ('speechSynthesis' in window) try { speechSynthesis.getVoices(); speechSynthe
   if (saved && me.name) joinRoom(saved); // リロード時は自動で再参加
   else renderHome();
   // ブラウザは「一度も操作されていないページ」では音を出せないので、最初の1タップでBGMをスタートする
-  $('#tapStart').addEventListener('click', () => { Sound.unlock(); unlockSpeech(); $('#tapStart').classList.add('hide'); });
+  $('#tapStart').addEventListener('click', () => { Sound.unlock(); $('#tapStart').classList.add('hide'); });
 })();
 </script>
 </body>
