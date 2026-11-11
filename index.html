@@ -267,11 +267,17 @@ const CONFIG = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' }
-        // ,{ urls: 'turn:YOUR_TURN_SERVER:3478', username: 'USER', credential: 'PASS' }
       ]
     }
-  }
+  },
+  // ▼ つながらない人がいるとき用の「中継サーバー（TURNサーバー）」
+  //   Metered（Open Relay）や ExpressTURN などの無料プランで、管理画面の「ICE Servers の配列」をコピーして
+  //   [ ] の中にそのまま貼り付けてください。空のままなら中継サーバーは使いません。
+  TURN_SERVERS: [
+  ]
 };
+// 中継サーバーが設定されていたら、つなぐときの候補に加える
+CONFIG.PEER_OPTIONS.config.iceServers.push(...CONFIG.TURN_SERVERS.filter(x => x && x.urls));
 
 // 用意されたお題（「用意されたお題」モードで使う。ここに書き足せば増やせます）
 const TOPICS = [
@@ -605,10 +611,12 @@ const Host = {
   onJoin(conn, d) {
     const s = this.s, pid = String(d.pid || '').slice(0, 24); if (!pid || pid === me.pid) return;
     const p = this.player(pid);
-    if (p) { const old = this.conns.get(pid); if (old && old !== conn) try { old.close(); } catch {}
-      conn._pid = pid; this.conns.set(pid, conn); p.connected = true; this.setImg(pid, d.img); this.sendImgs(); this.fx('join'); this.broadcast(); return; }
+    if (p) { // 入り直し：先に新しい接続に切りかえてから古い接続を閉じる（逆だと「退出した」と扱われてしまう）
+      const old = this.conns.get(pid);
+      conn._pid = pid; this.conns.set(pid, conn); p.connected = true;
+      if (old && old !== conn) try { old.close(); } catch {} this.setImg(pid, d.img); this.sendImgs(); this.fx('join'); this.broadcast(); return; }
     const refuse = msg => { try { conn.send({ t: 'error', msg }); } catch {} setTimeout(() => { try { conn.close(); } catch {} }, 600); };
-    if (s.phase !== 'lobby') return refuse('ゲームはもう始まっています。次のゲームまで待ってね！');
+    if (s.phase !== 'lobby' && s.phase !== 'final') return refuse('ゲームはもう始まっています。次のゲームまで待ってね！');
     if (s.players.length >= CONFIG.MAX_PLAYERS) return refuse('満員です（最大' + CONFIG.MAX_PLAYERS + '人）');
     conn._pid = pid; this.conns.set(pid, conn); this.addPlayer(pid, d.name, d.avatar); this.setImg(pid, d.img); this.sendImgs(); this.fx('join'); this.broadcast();
   },
@@ -753,6 +761,19 @@ function leaveNet() {
   try { p && p.destroy(); } catch {}
   me.isHost = false; Host.s = null; view = null; roomCode = ''; avatarImgs = {}; updateRoomBadge(); $('#abortBtn').classList.add('hidden');
 }
+// 仲介サーバーとの接続が切れたら（スリープ・画面切りかえ・回線の切りかえなど）、つながるまで何度でもつなぎ直す
+function keepSignal(peer) {
+  let t = null;
+  const retry = () => {
+    clearTimeout(t);
+    if (Net.peer !== peer || peer.destroyed || !peer.disconnected) return;
+    try { peer.reconnect(); } catch {}
+    t = setTimeout(retry, 4000);
+  };
+  peer.on('disconnected', () => { clearTimeout(t); t = setTimeout(retry, 500); });
+  peer.on('open', () => clearTimeout(t));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) retry(); });
+}
 function createRoom() {
   if (!peerOk()) return;
   showOverlay('<div class="spinner">🎲</div><p class="center">部屋をつくっています…</p>');
@@ -760,6 +781,7 @@ function createRoom() {
   const peer = new window.Peer(CONFIG.PEER_PREFIX + code, CONFIG.PEER_OPTIONS); Net.peer = peer;
   peer.on('open', () => {
     if (Net.peer !== peer) return;
+    if (roomCode === code && Host.s) return; // つなぎ直しただけ（部屋はそのまま）
     me.isHost = true; roomCode = code; updateRoomBadge(); ss.del('room');
     Host.init(); Host.addPlayer(me.pid, me.name, me.avatar); Host.setImg(me.pid, me.img); Host.sendImgs(); hideOverlay(); Host.broadcast();
   });
@@ -768,35 +790,49 @@ function createRoom() {
     conn.on('close', () => Host.onClose(conn));
     conn.on('error', () => Host.onClose(conn));
   });
-  peer.on('disconnected', () => { if (Net.peer === peer) try { peer.reconnect(); } catch {} });
+  keepSignal(peer);
   peer.on('error', e => {
     if (Net.peer !== peer) return;
     if (e.type === 'unavailable-id') { Net.peer = null; try { peer.destroy(); } catch {} createRoom(); return; }
     if (!roomCode) { leaveNet(); hideOverlay(); renderHome('部屋をつくれませんでした（' + e.type + '）。もう一度ためしてね。'); }
-    else toast('通信エラー: ' + e.type);
+    // 部屋ができたあとのエラーは、自動でつなぎ直すので表示だけ（遊んでいる人の通信はそのまま続く）
   });
 }
-function joinRoom(code) {
+function joinRoom(code, auto = false) {
   if (!peerOk()) return;
   showOverlay('<div class="spinner">🚪</div><p class="center">部屋「' + esc(code) + '」に入っています…</p>');
-  const peer = new window.Peer(CONFIG.PEER_OPTIONS); Net.peer = peer; let got = false;
-  const fail = msg => { if (Net.peer !== peer) return; leaveNet(); hideOverlay(); ss.del('room'); renderHome(msg); };
-  Net.joinTimer = setTimeout(() => { if (!got) fail('つながりませんでした。部屋コードやネット接続を確認してね。'); }, 15000);
+  const peer = new window.Peer(CONFIG.PEER_OPTIONS); Net.peer = peer; let got = false, found = false;
+  const fail = msg => { if (Net.peer !== peer) return; leaveNet(); hideOverlay(); ss.del('room'); renderHome(auto ? null : msg); };
+  // 部屋は見つかったのに、通信が止められて直接つながれなかったとき
+  const blocked = () => fail('部屋「' + code + '」は見つかりましたが、ホストとつながれませんでした。ホストか自分のネットワーク（会社・学校のWi-Fi、VPN、セキュリティソフト、ブラウザの拡張機能など）が通信を止めているかもしれません。' + (CONFIG.TURN_SERVERS.length ? '' : '（中継サーバーを設定すると解決できます）'));
+  let connRef = null;
+  // 15秒たってもつながらないときは、どこで止まったのかを調べて理由を出し分ける
+  Net.joinTimer = setTimeout(() => {
+    if (got) return;
+    const pc = connRef && connRef.peerConnection;
+    if (found || (pc && pc.remoteDescription)) blocked(); // ホストから返事はあったが、通信が止められた
+    else if (connRef) fail('部屋「' + code + '」のホストから返事がありませんでした。ホストの画面が消えていたり（スリープ）、ホストのネットが一度切れていたりするかもしれません。ホストに画面を開いてもらってから、もう一度ためしてね。');
+    else fail('仲介サーバーにつながりませんでした。自分のネット接続を確認してね。');
+  }, 15000);
   peer.on('open', () => {
-    if (Net.peer !== peer) return;
-    const conn = peer.connect(CONFIG.PEER_PREFIX + code, { reliable: true }); Net.hostConn = conn;
+    if (Net.peer !== peer || Net.hostConn) return; // つなぎ直しただけのときは、ホストへの接続はそのまま
+    const conn = peer.connect(CONFIG.PEER_PREFIX + code, { reliable: true }); Net.hostConn = conn; connRef = conn;
+    // つなぐ途中の様子：checking まで進んだら部屋は見つかっている。failed は通信が止められている
+    conn.on('iceStateChanged', st => { if (Net.hostConn !== conn || got) return; if (st === 'checking' || st === 'connected') found = true; if (st === 'failed') blocked(); });
     conn.on('open', () => conn.send({ t: 'join', pid: me.pid, name: me.name, avatar: me.avatar, img: me.img }));
     conn.on('data', d => {
       if (Net.hostConn !== conn) return;
       if (d && d.t === 'state' && !got) { got = true; clearTimeout(Net.joinTimer); roomCode = code; updateRoomBadge(); hideOverlay(); ss.set('room', code); }
+      if (d && d.t === 'state') ss.set('roomAt', String(Date.now())); // 最後に部屋とやりとりした時刻
       onHostMsg(d);
     });
     conn.on('close', () => { if (Net.hostConn === conn) { const m = lastError || 'ホストとの接続が切れました。'; lastError = ''; fail(m); } });
   });
-  peer.on('disconnected', () => { if (Net.peer === peer) try { peer.reconnect(); } catch {} });
+  keepSignal(peer);
   peer.on('error', e => {
     if (Net.peer !== peer) return;
-    if (e.type === 'peer-unavailable') fail('部屋「' + code + '」が見つかりません。');
+    if (got) return; // 入室後の一時的なエラーでは追い出さない
+    if (e.type === 'peer-unavailable') fail('部屋「' + code + '」が見つかりません。コードの打ちまちがいか、ホストが部屋を閉じたのかもしれません。');
     else if (!got) fail('つながりませんでした（' + e.type + '）');
   });
 }
@@ -1312,9 +1348,12 @@ window.addEventListener('beforeunload', e => { if (me.isHost && Host.s && Host.s
 
 /* ===================== 起動 ===================== */
 (() => {
-  const saved = ss.get('room');
-  if (saved && me.name) joinRoom(saved); // リロード時は自動で再参加
-  else renderHome();
+  // ゲームの途中でページを読み込み直したときだけ、さっきの部屋に自動で戻る
+  // （招待リンクで別の部屋に来たときや、時間がたって部屋がもうないときは戻らない）
+  const saved = ss.get('room'), at = +ss.get('roomAt') || 0;
+  const urlRoom = (new URLSearchParams(location.search).get('room') || '').toUpperCase();
+  if (saved && me.name && (!urlRoom || urlRoom === saved) && Date.now() - at < 15 * 60 * 1000) joinRoom(saved, true);
+  else { ss.del('room'); renderHome(); }
   // ブラウザは「一度も操作されていないページ」では音を出せないので、最初の1タップでBGMをスタートする
   $('#tapStart').addEventListener('click', () => { Sound.unlock(); $('#tapStart').classList.add('hide'); });
 })();
