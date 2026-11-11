@@ -274,6 +274,11 @@ const CONFIG = {
   //   Metered（Open Relay）や ExpressTURN などの無料プランで、管理画面の「ICE Servers の配列」をコピーして
   //   [ ] の中にそのまま貼り付けてください。空のままなら中継サーバーは使いません。
   TURN_SERVERS: [
+    { urls: 'stun:stun.relay.metered.ca:80' },
+    { urls: 'turn:global.relay.metered.ca:80', username: '0c2b1b37b268b211dcdfe5f4', credential: 'mBlKia4x1M5cxexA' },
+    { urls: 'turn:global.relay.metered.ca:80?transport=tcp', username: '0c2b1b37b268b211dcdfe5f4', credential: 'mBlKia4x1M5cxexA' },
+    { urls: 'turn:global.relay.metered.ca:443', username: '0c2b1b37b268b211dcdfe5f4', credential: 'mBlKia4x1M5cxexA' },
+    { urls: 'turns:global.relay.metered.ca:443?transport=tcp', username: '0c2b1b37b268b211dcdfe5f4', credential: 'mBlKia4x1M5cxexA' }
   ]
 };
 // 中継サーバーが設定されていたら、つなぐときの候補に加える
