@@ -579,18 +579,30 @@ const MI = {
   left: () => anyP('ArrowLeft', 'KeyA'), right: () => anyP('ArrowRight', 'KeyD'),
   ok: () => anyP('Enter', 'Space', 'KeyZ', 'KeyJ'), back: () => anyP('Escape', 'Backspace', 'KeyX', 'KeyK'),
 };
+// バトルの入力：いま押しているキーに加えて、前のフレームから今までに押されたキー（すばやいタップ）も拾う
+const anyH = (...c) => c.some(k => K[k] || KP[k]);
 function readHuman() {
   return {
-    left: any('ArrowLeft', 'KeyA'), right: any('ArrowRight', 'KeyD'),
-    up: any('ArrowUp', 'KeyW'), down: any('ArrowDown', 'KeyS'),
-    jump: any('Space'), attack: any('KeyZ', 'KeyJ'), special: any('KeyX', 'KeyK'),
-    shield: any('KeyC', 'KeyL'), smash: any('KeyV', 'KeyI'),
+    left: anyH('ArrowLeft', 'KeyA'), right: anyH('ArrowRight', 'KeyD'),
+    up: anyH('ArrowUp', 'KeyW'), down: anyH('ArrowDown', 'KeyS'),
+    jump: anyH('Space'), attack: anyH('KeyZ', 'KeyJ'), special: anyH('KeyX', 'KeyK'),
+    shield: anyH('KeyC', 'KeyL'), smash: anyH('KeyV', 'KeyI'), grab: anyH('KeyF', 'KeyU'),
   };
 }
-const BTN = ['left', 'right', 'up', 'down', 'jump', 'attack', 'special', 'shield', 'smash'];
+const BTN = ['left', 'right', 'up', 'down', 'jump', 'attack', 'special', 'shield', 'smash', 'grab'];
+// 先行入力：ワザや着地のすきの間に押した攻撃・ジャンプなどを少しの間覚えておき、動けるようになった瞬間に出す
+const BUFFERED = new Set(['jump', 'attack', 'special', 'smash', 'grab']), BUF_F = 7;
 class Ctrl {
-  constructor() { this.h = {}; this.p = {}; for (const b of BTN) { this.h[b] = false; this.p[b] = false; } }
-  set(s) { for (const b of BTN) { const v = !!s[b]; this.p[b] = v && !this.h[b]; this.h[b] = v; } }
+  constructor() { this.h = {}; this.p = {}; this.buf = {}; for (const b of BTN) { this.h[b] = false; this.p[b] = false; this.buf[b] = 0; } }
+  set(s) {
+    for (const b of BTN) {
+      const v = !!s[b], fresh = v && !this.h[b];
+      if (fresh) this.buf[b] = BUF_F; else if (this.buf[b] > 0) this.buf[b]--;
+      this.p[b] = fresh || (BUFFERED.has(b) && this.buf[b] > 0);
+      this.h[b] = v;
+    }
+  }
+  clear() { for (const b of BTN) { this.buf[b] = 0; this.p[b] = false; } }
   get hx() { return (this.h.right ? 1 : 0) - (this.h.left ? 1 : 0); }
 }
 
@@ -1453,6 +1465,218 @@ function windup(M, k, W) {
 for (const [k, W] of [['jab', 5], ['ftilt', 8], ['utilt', 8], ['dtilt', 7], ['dash', 6], ['fsmash', 14], ['usmash', 12], ['dsmash', 12],
   ['nair', 5], ['fair', 8], ['bair', 7], ['uair', 6], ['dair', 8]]) windup(BMOVES, k, W);
 
+// =====================================================================
+//  つかみ・投げ（全キャラ）
+//  つかみ：F / U キー（シールド中に攻撃でも可）。つかんだら ←→↑↓ で投げ、攻撃でつかみ攻撃
+//  vic：投げの間の相手の位置 [フレーム, 前方向の距離, 高さ]（キャラの大きさで拡大）
+//  rel：相手を放つフレーム
+// =====================================================================
+const HOLD_MOVES = new Set(['sbt', 'ghold', 'gpum', 'fthrow', 'bthrow', 'uthrow', 'dthrow']);
+const THROW_HIT = { fthrow: { dmg: 9, ang: 40, base: 8, gr: 0.85 }, bthrow: { dmg: 10, ang: 40, base: 8.5, gr: 0.95 },
+  uthrow: { dmg: 8, ang: 88, base: 8, gr: 0.8 }, dthrow: { dmg: 7, ang: 72, base: 6, gr: 0.55 } };
+const heldOf = F => BT.fs.find(o => o.heldBy === F && o.state === 'held');
+function placeVictim(F, T, dx, dy, k = 0.35) {
+  const sc = F.ch.scale;
+  T.x += (F.x + F.dir * dx * sc - T.x) * k; T.y += (F.y + dy * sc - T.y) * k;
+}
+function vicAt(vic, f) {
+  if (f <= vic[0][0]) return vic[0];
+  for (let i = 1; i < vic.length; i++) if (f <= vic[i][0]) {
+    const a = vic[i - 1], b = vic[i], q = ease((f - a[0]) / Math.max(1, b[0] - a[0]));
+    return [f, lerp(a[1], b[1], q), lerp(a[2], b[2], q)];
+  }
+  return vic[vic.length - 1];
+}
+function releaseHold(F, T) {
+  T.heldBy = null; T.setState('air'); T.vx = F.dir * 7; T.vy = -6; T.inv = 12;
+  F.move = null; F.setState(F.ground ? 'idle' : 'air'); F.vx = -F.dir * 3;
+}
+function makeGrabs(M, d) {
+  const R = d.reach || 1, pow = d.pow || 1;
+  M.grab = { len: 30, noCancel: true, slide: true, keys: d.grab, sfx: 4,
+    hb: [HB(5, 9, 48 * R, -80, 34 * Math.min(1.3, R), 0, 0, 0, 0, { grab: 1, hold: 'ghold' })],
+    upd(F) { F.vx *= 0.8; } };
+  M.ghold = { len: 400, noCancel: true, keys: d.hold, hb: [],
+    upd(F, f, c) {
+      const T = heldOf(F); if (!T) { F.move = null; F.setState(F.ground ? 'idle' : 'air'); return; }
+      F.vx *= 0.7; F.holdT++;
+      placeVictim(F, T, d.hv[0], d.hv[1] + Math.sin(F.holdT * 0.3) * 2);
+      if (F.holdT > 110) { releaseHold(F, T); return; }   // 時間切れ：相手が抜け出す
+      if (F.holdT < 5) return;
+      const hx = c.hx;
+      const th = c.h.up ? 'uthrow' : c.h.down ? 'dthrow' : hx === F.dir ? 'fthrow' : hx === -F.dir ? 'bthrow' : null;
+      if (th) { F.startMove(th); return; }
+      if (c.p.attack || c.p.grab) F.startMove('gpum');
+    } };
+  M.gpum = { len: 16, noCancel: true, keys: d.pum, hb: [],
+    upd(F, f) {
+      const T = heldOf(F); if (!T) { F.move = null; F.setState(F.ground ? 'idle' : 'air'); return; }
+      F.holdT++;
+      placeVictim(F, T, d.hv[0] + (f >= 5 && f <= 8 ? 6 : 0), d.hv[1]);
+      if (f === 6) {
+        const dm = 1.5 * pow; T.percent += dm; F.stats.dmg += dm; T.pctShake = 8; T.flash = 5;
+        Snd.hitC(F.ch, 3); BT.burst(T.x, T.y - 70 * T.ch.scale, '#ffffff', 8);
+        BT.parts.push({ x: T.x, y: T.y - 70 * T.ch.scale, flare: 1, r: 40, life: 10, max: 10, col: F.col.light, rot: rnd(0, TAU), n: 6 });
+      }
+      if (f >= 15) F.startMove('ghold');
+    } };
+  for (const th of ['fthrow', 'bthrow', 'uthrow', 'dthrow']) {
+    const t = d[th];
+    M[th] = { len: t.len, noCancel: true, keys: t.keys, hb: [], sfx: Math.max(1, t.rel - 3),
+      upd(F, f) {
+        const T = heldOf(F);
+        if (T && f < t.rel) { const v = vicAt(t.vic, f); placeVictim(F, T, v[1], v[2], 0.55); }
+        if (T && f === t.rel) {
+          const v = vicAt(t.vic, f); T.x = F.x + F.dir * v[1] * F.ch.scale; T.y = F.y + v[2] * F.ch.scale;
+          T.heldBy = null; T.setState('air');
+          const h = THROW_HIT[th], hit = { ...h, dmg: Math.round(h.dmg * pow), base: h.base * (0.9 + pow * 0.1), ...(t.hit || {}) };
+          BT.applyHit(F, T, hit, 1, th === 'bthrow' ? -F.dir : F.dir, true, T.x, T.y - 70 * T.ch.scale);
+          if (th === 'dthrow') { BT.dust(T.x, F.y, 16); BT.shake = Math.max(BT.shake, 12 * pow); BT.parts.push({ x: T.x, y: F.y, shock: 1, r: 10, vr: 12, life: 16, max: 16, col: '#ffffff', w: 8 }); }
+          if (th === 'bthrow' && t.turn) F.dir = -F.dir;
+        }
+        if (t.fx) t.fx(F, f, T);
+        if (!F.ground) F.vy = Math.min(F.vy, 2);
+        F.vx *= 0.8;
+      } };
+  }
+  for (const k of ['grab', 'ghold', 'gpum', 'fthrow', 'bthrow', 'uthrow', 'dthrow']) M[k].K = M[k].keys.map(([f, o]) => [f, mk(o)]);
+}
+// 演出の小道具
+const gfx = {
+  ring: (x, y, col, r = 16) => BT.parts.push({ x, y, shock: 1, r, vr: 10, life: 16, max: 16, col, w: 8 }),
+  flare: (x, y, col, r = 70) => BT.parts.push({ x, y, flare: 1, r, life: 14, max: 14, col, rot: rnd(0, TAU), n: 8 }),
+  slash: (x, y, col, rot, len = 120) => BT.parts.push({ x, y, slash: 1, rot, len, life: 12, max: 12, col }),
+  bolts: (x, y, n) => { for (let i = 0; i < n; i++) BT.parts.push({ x, y, bolt: 1, rot: rnd(0, TAU), len: rnd(60, 110), life: 10, max: 10, seed: Math.random() * 1e5 | 0 }); },
+  notes: (x, y) => { for (let i = 0; i < 4; i++) BT.parts.push({ x, y, vx: rnd(-3, 3), vy: rnd(-5, -2), life: 40, max: 40, note: 1, size: rnd(0.7, 1.1), col: i % 2 ? '#7fe8ff' : '#ff7ad9', g: -0.02 }); },
+};
+const tcy = T => T ? T.y - 70 * T.ch.scale : 0;
+
+// ---- しまりん：念力で浮かせて投げる ----
+{ const H = { lean: 0.05, by: -4, fa: A_(1.9, 0.3), ba: A_(1.7, 0.3), fa2: A_(1.4, 0.5), ba2: A_(1.2, 0.5), fl: G_(0.1, -0.5), bl: G_(0, -0.6) };
+makeGrabs(SMOVES, { reach: 1.35, hv: [66, -46],
+  grab: [[0, {}], [4, { lean: 0.3, fa: A_(1.6, 0), ba: A_(1.5, 0), fa2: A_(1.3, 0), ba2: A_(1.2, 0) }], [12, { lean: 0.3, fa: A_(1.6, 0), ba: A_(1.5, 0), fa2: A_(1.3, 0), ba2: A_(1.2, 0) }], [30, {}]],
+  hold: [[0, H], [400, H]],
+  pum: [[0, H], [5, { ...H, lean: 0.25, fa: A_(1.6, 0), fa2: A_(1.2, 0) }], [16, H]],
+  fthrow: { len: 36, rel: 16, vic: [[0, 66, -46], [10, 40, -70], [16, 100, -60]], keys: [[0, H], [10, { lean: -0.2, fa: A_(2.4, 0.6), ba: A_(2.2, 0.6), fa2: A_(1.9, 0.8), ba2: A_(1.7, 0.8) }], [16, { lean: 0.45, fa: A_(1.6, 0), ba: A_(1.55, 0), fa2: A_(1.3, 0), ba2: A_(1.25, 0) }], [36, {}]],
+    fx: (F, f, T) => { if (f === 16) { gfx.flare(F.x + F.dir * 90, F.y - 80, '#c9b8ff', 90); BT.parts.push({ x: F.x + F.dir * 90, y: F.y - 80, psy: 1, r: 70, life: 16, max: 16 }); } } },
+  bthrow: { len: 40, rel: 22, turn: true, vic: [[0, 66, -46], [8, 30, -150], [16, -40, -130], [22, -90, -60]], keys: [[0, H], [10, { lean: -0.3, hd: -0.3, fa: A_(3.0, 0), ba: A_(2.9, 0), fa2: A_(2.4, 0.2), ba2: A_(2.3, 0.2) }], [22, { lean: -0.45, fa: A_(-1.4, 0), ba: A_(-1.3, 0), fa2: A_(-1.0, 0), ba2: A_(-0.9, 0) }], [40, {}]],
+    fx: (F, f) => { if (f === 22) gfx.ring(F.x - F.dir * 90, F.y - 60, '#b89cff', 20); } },
+  uthrow: { len: 40, rel: 20, vic: [[0, 66, -46], [12, 10, -150], [20, 0, -210]], keys: [[0, H], [12, { by: 8, fa: A_(2.6, 0.4), ba: A_(-2.6, 0.4), fa2: A_(2.0, 0.6), ba2: A_(-2.0, 0.6) }], [20, { by: -10, hd: -0.4, fa: A_(3.1, 0), ba: A_(3.0, 0), fa2: A_(2.6, 0), ba2: A_(2.5, 0) }], [40, {}]],
+    fx: (F, f, T) => { if (f === 20 && T) gfx.flare(T.x, tcy(T), '#c9b8ff', 90); } },
+  dthrow: { len: 40, rel: 18, vic: [[0, 66, -46], [10, 60, -130], [18, 70, 0]], keys: [[0, H], [10, { by: -6, fa: A_(2.9, 0.2), ba: A_(2.8, 0.2), fa2: A_(2.4, 0.3), ba2: A_(2.3, 0.3) }], [18, { by: 14, lean: 0.5, fa: A_(1.0, 0), ba: A_(0.9, 0), fa2: A_(0.6, 0), ba2: A_(0.5, 0) }], [40, {}]],
+    fx: (F, f, T) => { if (f === 18 && T) BT.parts.push({ x: T.x, y: F.y - 20, psy: 1, r: 80, life: 18, max: 18 }); } },
+}); }
+
+// ---- 一瑚：えりをつかんで、けり・背負い投げ・斬り上げ・押さえこみ ----
+{ const H = { lean: 0.15, fa: A_(1.5, 0.2), ba: A_(0.9, 1.4), fl: G_(0.5, -0.3), bl: G_(-0.45, -0.1) };
+makeGrabs(IMOVES, { reach: 1.05, hv: [54, -8],
+  grab: [[0, {}], [5, { lean: 0.4, fa: A_(1.6, 0), ba: A_(0.4, 1.4), fl: G_(0.7, -0.3), bl: G_(-0.6, 0) }], [12, { lean: 0.4, fa: A_(1.6, 0), ba: A_(0.4, 1.4), fl: G_(0.7, -0.3), bl: G_(-0.6, 0) }], [30, {}]],
+  hold: [[0, H], [400, H]],
+  pum: [[0, H], [5, { ...H, lean: 0.3, ba: A_(1.6, 0.1) }], [16, H]],
+  fthrow: { len: 34, rel: 14, vic: [[0, 54, -8], [14, 70, -20]], keys: [[0, H], [8, { lean: 0.1, fl: G_(1.0, -2.2), fa: A_(1.3, 0.4) }], [14, { lean: -0.5, fl: G_(1.8, 0), bl: G_(-0.2, -0.2), fa: A_(-0.8, 0.6), ba: A_(-0.5, 0.6) }], [34, {}]],
+    fx: (F, f, T) => { if (f === 16 && T) gfx.slash(T.x, tcy(T), '#ff8fb0', -0.4); } },
+  bthrow: { len: 42, rel: 24, turn: true, vic: [[0, 54, -8], [10, 20, -110], [18, -30, -120], [24, -70, -20]], keys: [[0, H], [10, { by: 16, lean: 0.6, fa: A_(2.4, 0.8), ba: A_(2.2, 0.8), fl: G_(0.8, -1.4), bl: G_(-0.4, -1) }], [24, { by: 22, lean: 1.0, hd: 0.3, fa: A_(0.6, 0.2), ba: A_(0.4, 0.2), fl: G_(1.0, -1.6), bl: G_(-0.5, -0.8) }], [42, {}]],
+    fx: (F, f, T) => { if (f === 24 && T) { BT.dust(T.x, F.y, 10); gfx.ring(T.x, F.y - 10, '#ffffff'); } } },
+  uthrow: { len: 40, rel: 18, vic: [[0, 54, -8], [12, 40, -60], [18, 30, -150]], keys: [[0, H], [10, { by: 14, lean: 0.4, fa: A_(0.4, 0.2), ba: A_(-0.2, 0.2), fl: G_(0.9, -1.6), bl: G_(-0.4, -1.2) }], [18, { by: -8, lean: -0.15, hd: -0.3, fa: A_(3.1, 0), ba: A_(2.7, 0.2) }], [40, {}]],
+    fx: (F, f, T) => { if (f === 18 && T) { gfx.slash(T.x, tcy(T), '#ff8fb0', -1.4, 160); gfx.slash(T.x, tcy(T), '#ffd0dc', -1.7, 140); } } },
+  dthrow: { len: 40, rel: 20, vic: [[0, 54, -8], [10, 60, -10], [20, 62, 6]], keys: [[0, H], [10, { by: 20, lean: 0.7, fa: A_(1.2, 0), ba: A_(1.4, 0.6), fl: G_(1.1, -1.8), bl: G_(-0.3, -1.2) }], [20, { by: 24, lean: 0.85, fa: A_(0.6, 0), ba: A_(0.4, 0), fl: G_(1.2, -1.9), bl: G_(-0.3, -1.4) }], [40, {}]],
+    fx: (F, f, T) => { if (f === 20 && T) gfx.slash(T.x, F.y - 20, '#ff8fb0', 0, 140); } },
+}); }
+
+// ---- バーサーカー：首をつかんで持ち上げる。ジャイアントスイング・叩きつけ ----
+{ const H = { by: -2, lean: 0.05, fa: A_(2.3, 0.1), ba: A_(0.5, 0.8), fl: G_(0.5, -0.2), bl: G_(-0.5, 0) };
+makeGrabs(BMOVES, { reach: 1.15, pow: 1.3, hv: [64, -60],
+  grab: [[0, {}], [6, { lean: 0.5, by: 8, fa: A_(1.5, 0), ba: A_(0.3, 0.8), fl: G_(0.8, -0.5), bl: G_(-0.6, -0.1) }], [14, { lean: 0.5, by: 8, fa: A_(1.5, 0), ba: A_(0.3, 0.8), fl: G_(0.8, -0.5), bl: G_(-0.6, -0.1) }], [30, {}]],
+  hold: [[0, H], [400, H]],
+  pum: [[0, H], [4, { ...H, ba: A_(2.6, 1.6) }], [7, { ...H, lean: 0.2, ba: A_(1.4, 0) }], [16, H]],
+  fthrow: { len: 40, rel: 20, vic: [[0, 64, -60], [14, 60, -60], [20, 90, -60]], keys: [[0, H], [14, { ...H, lean: -0.3, ba: A_(-1.0, 1.6) }], [20, { lean: 0.6, by: 8, fa: A_(1.2, 0.2), ba: A_(1.7, 0), fl: G_(0.9, -0.4), bl: G_(-0.8, 0) }], [40, {}]],
+    fx: (F, f, T) => { if (f === 20 && T) { gfx.flare(T.x, tcy(T), '#ff2a2a', 110); BT.shake = Math.max(BT.shake, 16); } } },
+  bthrow: { len: 56, rel: 40, turn: true, vic: [[0, 64, -60], [10, 90, -50], [20, -90, -50], [30, 90, -50], [40, -110, -60]],
+    keys: [[0, H], [10, { lean: -0.35, fa: A_(1.6, 0), ba: A_(1.5, 0), fl: G_(0.6, -0.4), bl: G_(-0.6, -0.2) }], [20, { rot: -Math.PI, lean: -0.35, fa: A_(1.6, 0), ba: A_(1.5, 0) }], [30, { rot: -TAU, lean: -0.35, fa: A_(1.6, 0), ba: A_(1.5, 0) }], [40, { rot: -TAU - Math.PI, lean: -0.3, fa: A_(1.4, 0), ba: A_(1.3, 0) }], [56, { rot: -TAU * 2 }]],
+    fx: (F, f) => { if (f % 6 === 0 && f < 40) BT.dust(F.x, F.y, 4); } },
+  uthrow: { len: 48, rel: 28, vic: [[0, 64, -60], [12, 20, -170], [20, 10, -230], [28, 20, -200]], keys: [[0, H], [12, { by: 12, hd: -0.3, fa: A_(3.0, 0.2), ba: A_(2.8, 0.2) }], [20, { by: 16, lean: 0.3, fa: A_(0.6, 1.6), ba: A_(0.4, 1.6) }], [28, { by: -12, lean: -0.2, hd: -0.4, fa: A_(3.1, 0), ba: A_(-0.6, 0.6) }], [48, {}]],
+    fx: (F, f, T) => { if (f === 28 && T) { gfx.flare(T.x, tcy(T), '#ff2a2a', 120); gfx.ring(T.x, tcy(T), '#b00014', 24); } } },
+  dthrow: { len: 50, rel: 26, vic: [[0, 64, -60], [12, 30, -200], [26, 70, 4]], keys: [[0, H], [12, { by: -8, hd: -0.3, fa: A_(3.0, 0.2), ba: A_(2.9, 0.2) }], [26, { by: 28, lean: 0.95, fa: A_(1.0, 0), ba: A_(0.85, 0), fl: G_(1.2, -1.8), bl: G_(-0.5, -0.8) }], [50, {}]],
+    fx: (F, f) => { if (f === 26) { Snd.quake(); BT.shake = Math.max(BT.shake, 28); for (let i = 0; i < 12; i++) BT.parts.push({ x: F.x + F.dir * 70 + rnd(-40, 40), y: F.y - 4, vx: rnd(-7, 7), vy: rnd(-14, -5), life: 40, max: 40, rock: 1, size: rnd(5, 10), g: 0.55, col: '#8a6a50', rot: rnd(0, TAU) }); } } },
+}); }
+
+// ---- 恵授：手首をとって、けり＋矢・転がって投げる・真上に射る ----
+{ const H = { lean: 0.1, fa: A_(1.4, 0.1), ba: A_(1.2, 0.6), fl: G_(0.4, -0.15), bl: G_(-0.35, 0) };
+makeGrabs(AMOVES, { reach: 1, hv: [52, -6],
+  grab: [[0, {}], [4, { lean: 0.35, fa: A_(1.7, 0), ba: A_(1.5, 0.3), fl: G_(0.6, -0.2), bl: G_(-0.5, 0) }], [11, { lean: 0.35, fa: A_(1.7, 0), ba: A_(1.5, 0.3), fl: G_(0.6, -0.2), bl: G_(-0.5, 0) }], [30, {}]],
+  hold: [[0, H], [400, H]],
+  pum: [[0, H], [5, { ...H, fl: G_(1.1, -1.4) }], [16, H]],
+  fthrow: { len: 40, rel: 14, vic: [[0, 52, -6], [14, 70, -16]], keys: [[0, H], [8, { lean: 0.1, fl: G_(1.0, -2.1) }], [14, { lean: -0.45, fl: G_(1.75, 0), bl: G_(-0.2, -0.2) }], [24, { lean: 0.05, fa: A_(1.55, 0), ba: A_(1.5, 1.6) }], [40, {}]],
+    fx: (F, f) => { if (f === 26) { Snd.bow(0.5); BT.parts.push({ x: F.x + F.dir * 60, y: F.y - 90, vx: F.dir * 30, vy: 0, life: 10, max: 10, spark: 1, size: 6, g: 0, col: '#ffe680' }); } } },
+  bthrow: { len: 44, rel: 24, turn: true, vic: [[0, 52, -6], [12, 0, -60], [24, -80, -30]], keys: [[0, H], [12, { by: 30, lean: -0.6, rot: 0, fl: G_(1.4, -1.8), bl: G_(0.4, -1.6) }], [24, { by: 30, rot: -TAU, lean: -0.6, fl: G_(1.4, -1.8), bl: G_(0.4, -1.6) }], [44, { rot: -TAU }]],
+    fx: (F, f) => { if (f === 24) BT.dust(F.x, F.y, 10); } },
+  uthrow: { len: 48, rel: 14, vic: [[0, 52, -6], [14, 30, -120]], keys: [[0, H], [10, { by: 10, fa: A_(0.6, 0.4), ba: A_(0.4, 0.4) }], [14, { by: -6, fa: A_(2.9, 0), ba: A_(2.7, 0) }], [26, { lean: -0.15, hd: -0.35, fa: A_(2.9, 0), ba: A_(2.3, 1.4) }], [36, { lean: -0.1, hd: -0.3, fa: A_(2.9, 0), ba: A_(1.0, 0.6) }], [48, {}]],
+    fx: (F, f) => { if (f === 36) { Snd.bow(0.8); BT.parts.push({ x: F.x, y: F.y - 150, vx: 0, vy: -30, life: 12, max: 12, spark: 1, size: 7, g: 0, col: '#ffe680' }); } } },
+  dthrow: { len: 44, rel: 22, vic: [[0, 52, -6], [10, 56, 4]], keys: [[0, H], [10, { by: 10, lean: 0.5, fa: A_(1.0, 0.2), fl: G_(1.4, -1.4) }], [18, { by: 6, lean: 0.4, fa: A_(1.1, 0), ba: A_(0.9, 1.5), fl: G_(1.2, -1.2) }], [22, { by: 6, lean: 0.4, fa: A_(1.1, 0), ba: A_(1.0, 0.4), fl: G_(1.2, -1.2) }], [44, {}]],
+    fx: (F, f, T) => { if (f === 22 && T) { Snd.bow(0.6); gfx.flare(T.x, F.y - 20, '#ffe680', 60); } } },
+}); }
+
+// ---- おうち：柄で引っかけて、ゴルフスイング・回転・かち上げ・地面に叩きつけ ----
+{ const H = { lean: 0.15, by: 4, fa: A_(1.3, 0.3), ba: A_(1.1, 0.5), fl: G_(0.5, -0.2), bl: G_(-0.5, -0.1) };
+makeGrabs(HMOVES, { reach: 1.1, pow: 1.15, hv: [70, -10],
+  grab: [[0, {}], [6, { lean: 0.45, fa: A_(1.55, 0), ba: A_(1.3, 0.3), fl: G_(0.7, -0.3), bl: G_(-0.6, 0) }], [14, { lean: 0.45, fa: A_(1.55, 0), ba: A_(1.3, 0.3), fl: G_(0.7, -0.3), bl: G_(-0.6, 0) }], [30, {}]],
+  hold: [[0, H], [400, H]],
+  pum: [[0, H], [5, { ...H, lean: 0.35, fa: A_(1.7, 0) }], [16, H]],
+  fthrow: { len: 46, rel: 22, vic: [[0, 70, -10], [10, 50, 0], [22, 90, -20]], keys: [[0, H], [12, { by: 10, lean: 0.3, fa: A_(-1.8, 0.2), ba: A_(-1.5, 0.3), fl: G_(0.6, -0.5), bl: G_(-0.5, -0.2) }], [22, { by: 4, lean: -0.1, fa: A_(2.6, 0), ba: A_(2.4, 0.2), fl: G_(0.5, -0.2), bl: G_(-0.5, 0) }], [46, {}]],
+    fx: (F, f, T) => { if (f === 22 && T) { gfx.flare(T.x, tcy(T), '#ffd08a', 100); BT.shake = Math.max(BT.shake, 12); } } },
+  bthrow: { len: 50, rel: 30, turn: true, vic: [[0, 70, -10], [10, 90, -40], [20, -60, -60], [30, -100, -40]], keys: [[0, H], [10, { lean: -0.2, fa: A_(1.7, 0), ba: A_(1.5, 0.2) }], [20, { rot: -Math.PI, fa: A_(1.7, 0), ba: A_(1.5, 0.2) }], [30, { rot: -TAU, lean: -0.3, fa: A_(-1.4, 0), ba: A_(-1.2, 0.2) }], [50, { rot: -TAU }]] },
+  uthrow: { len: 44, rel: 20, vic: [[0, 70, -10], [10, 60, 0], [20, 30, -170]], keys: [[0, H], [10, { by: 18, lean: 0.4, fa: A_(0.1, 0), ba: A_(0.4, 0.6), fl: G_(0.8, -1.5), bl: G_(-0.4, -1.2) }], [20, { by: -6, lean: -0.25, hd: -0.3, fa: A_(3.15, 0), ba: A_(2.8, 0.3) }], [44, {}]],
+    fx: (F, f, T) => { if (f === 20 && T) gfx.ring(T.x, tcy(T), '#ffd08a', 20); } },
+  dthrow: { len: 48, rel: 26, vic: [[0, 70, -10], [14, 80, 2]], keys: [[0, H], [14, { by: 6, lean: -0.35, fa: A_(3.0, 0.2), ba: A_(2.8, 0.3) }], [26, { by: 26, lean: 0.8, fa: A_(0.75, 0), ba: A_(0.6, 0.3), fl: G_(1.2, -1.8), bl: G_(-0.6, -0.9) }], [48, {}]],
+    fx: (F, f) => { if (f === 26) { Snd.slam(); BT.dust(F.x + F.dir * 90, F.y, 16); } } },
+}); }
+
+// ---- 今井：触手で巻きとって、ふりまわす ----
+{ const H = { lean: -0.1, hd: -0.15, fa: A_(1.6, 0.6), ba: A_(1.2, 0.8), fl: G_(0.3, -0.1), bl: G_(-0.3, 0) };
+makeGrabs(TMOVES, { reach: 1.5, hv: [96, -34],
+  grab: [[0, {}], [4, { lean: 0.25, fa: A_(1.7, 0), ba: A_(1.4, 0.2) }], [14, { lean: 0.25, fa: A_(1.7, 0), ba: A_(1.4, 0.2) }], [30, {}]],
+  hold: [[0, H], [400, H]],
+  pum: [[0, H], [5, { ...H, lean: 0.2, fa: A_(1.9, 0) }], [16, H]],
+  fthrow: { len: 40, rel: 18, vic: [[0, 96, -34], [10, 60, -120], [18, 130, -40]], keys: [[0, H], [10, { lean: -0.35, hd: -0.3, fa: A_(2.8, 0.2), ba: A_(2.4, 0.4) }], [18, { lean: 0.45, fa: A_(1.6, 0), ba: A_(1.4, 0), fl: G_(0.7, -0.2), bl: G_(-0.6, 0) }], [40, {}]],
+    fx: (F, f, T) => { if (f === 18 && T) { for (let i = 0; i < 10; i++) BT.parts.push({ x: T.x, y: tcy(T), vx: rnd(-6, 6), vy: rnd(-8, -1), life: 30, max: 30, drop: 1, size: rnd(3, 7), g: 0.45, col: '#b45be0' }); } } },
+  bthrow: { len: 46, rel: 26, turn: true, vic: [[0, 96, -34], [10, 60, -180], [18, -60, -170], [26, -130, -40]], keys: [[0, H], [12, { lean: -0.3, hd: -0.4, fa: A_(3.0, 0), ba: A_(2.8, 0.2) }], [26, { lean: -0.4, fa: A_(-1.6, 0.2), ba: A_(-1.4, 0.2) }], [46, {}]] },
+  uthrow: { len: 44, rel: 22, vic: [[0, 96, -34], [12, 40, -160], [22, 20, -260]], keys: [[0, H], [12, { by: 10, fa: A_(2.2, 1), ba: A_(-2.2, 1) }], [22, { by: -6, hd: -0.45, fa: A_(2.9, 0), ba: A_(-2.9, 0) }], [44, {}]] },
+  dthrow: { len: 50, rel: 32, vic: [[0, 96, -34], [8, 90, -140], [14, 90, 0], [20, 90, -100], [26, 90, 0], [32, 90, 4]], keys: [[0, H], [8, { lean: -0.2, fa: A_(2.6, 0.2) }], [14, { lean: 0.4, fa: A_(1.0, 0) }], [20, { lean: -0.2, fa: A_(2.6, 0.2) }], [26, { lean: 0.4, fa: A_(1.0, 0) }], [32, { lean: 0.45, by: 8, fa: A_(0.8, 0) }], [50, {}]],
+    fx: (F, f) => { if (f === 14 || f === 26) { BT.dust(F.x + F.dir * 96, F.y, 8); BT.shake = Math.max(BT.shake, 8); Snd.squelch(); } } },
+}); }
+
+// ---- ヘンリー：すばやくつかんで、回しげり・ぐるっと回って投げる・回転ジャンプ ----
+{ const H = { lean: 0.2, fa: A_(1.5, 0.3), ba: A_(1.3, 0.5), fl: G_(0.4, -0.4), bl: G_(-0.4, -0.3) };
+makeGrabs(HEMOVES, { reach: 1, hv: [50, -8],
+  grab: [[0, { lean: 0.4 }], [3, { lean: 0.55, fa: A_(1.7, 0), ba: A_(1.6, 0), fl: G_(0.9, -0.5), bl: G_(-0.7, -0.2) }], [10, { lean: 0.55, fa: A_(1.7, 0), ba: A_(1.6, 0), fl: G_(0.9, -0.5), bl: G_(-0.7, -0.2) }], [30, {}]],
+  hold: [[0, H], [400, H]],
+  pum: [[0, H], [3, { ...H, fl: G_(1.4, -1.2) }], [6, { ...H, fl: G_(1.6, 0) }], [16, H]],
+  fthrow: { len: 34, rel: 14, vic: [[0, 50, -8], [14, 70, -20]], keys: [[0, H], [8, { rot: 0, lean: 0.2, fl: G_(1.0, -2) }], [14, { rot: -TAU * 0.75, lean: -0.6, fl: G_(1.85, 0), bl: G_(-0.2, -0.2) }], [34, { rot: -TAU }]],
+    fx: (F, f, T) => { if (f === 14 && T) gfx.bolts(T.x, tcy(T), 4); } },
+  bthrow: { len: 44, rel: 24, turn: true, vic: [[0, 50, -8], [8, 0, -10], [16, -60, -10], [24, -80, -20]], keys: [[0, H], [24, { rot: -TAU, lean: 0.5, fa: A_(1.8, 0), ba: A_(1.7, 0), fl: G_(1.1, -0.6), bl: G_(-0.8, -0.4) }], [44, { rot: -TAU }]],
+    fx: (F, f) => { if (f % 4 === 0 && f < 24) BT.parts.push({ x: F.x, y: F.y - 60, bolt: 1, rot: rnd(0, TAU), len: 70, life: 8, max: 8, seed: Math.random() * 1e5 | 0 }); } },
+  uthrow: { len: 46, rel: 20, vic: [[0, 50, -8], [20, 20, -200]], keys: [[0, H], [8, { by: 14, fl: G_(1.0, -2.1), bl: G_(0.6, -1.9) }], [20, { rot: -TAU, by: -20, fl: G_(2.9, 0), bl: G_(0.3, -0.6), fa: A_(-1.2, 0.4) }], [46, { rot: -TAU }]],
+    fx: (F, f, T) => { if (f === 20 && T) gfx.bolts(T.x, tcy(T), 5); } },
+  dthrow: { len: 48, rel: 30, vic: [[0, 50, -8], [10, 40, 4]], keys: [[0, H], [10, { by: 26, lean: 0.6, fa: A_(1.2, 1.6), ba: A_(1.0, 1.6), fl: G_(1.2, -2.2), bl: G_(0.6, -2) }], [30, { by: 26, lean: 0.6, fa: A_(1.2, 1.6), ba: A_(1.0, 1.6), fl: G_(1.2, -2.2), bl: G_(0.6, -2) }], [48, {}]],
+    fx: (F, f, T) => { if (f > 10 && f < 30 && f % 5 === 0 && T) { gfx.bolts(T.x, F.y - 10, 1); T.pctShake = 6; } } },
+}); }
+
+// ---- 朕太：胸ぐらをつかんで、至近距離で叫ぶ・ロックに投げる ----
+{ const H = { lean: 0.1, fa: A_(1.45, 1.9), ba: A_(1.5, 0.2), fl: G_(0.45, -0.2), bl: G_(-0.4, -0.1) };
+makeGrabs(CMOVES, { reach: 1, hv: [52, -8],
+  grab: [[0, {}], [5, { lean: 0.4, fa: A_(1.45, 1.9), ba: A_(1.7, 0), fl: G_(0.7, -0.3), bl: G_(-0.6, 0) }], [12, { lean: 0.4, fa: A_(1.45, 1.9), ba: A_(1.7, 0), fl: G_(0.7, -0.3), bl: G_(-0.6, 0) }], [30, {}]],
+  hold: [[0, H], [400, H]],
+  pum: [[0, H], [5, { ...H, lean: 0.3, hd: 0.3 }], [16, H]],
+  fthrow: { len: 44, rel: 24, vic: [[0, 52, -8], [24, 60, -14]], keys: [[0, H], [10, { lean: -0.3, hd: -0.4, fa: A_(1.6, 1.8) }], [24, { lean: 0.35, hd: 0.15, fa: A_(1.6, 1.8), ba: A_(1.6, 0) }], [44, {}]],
+    fx: (F, f, T) => { if (f === 18) Snd.chintaVoice(0.6); if (f >= 16 && f <= 24 && f % 3 === 0) BT.parts.push({ x: F.x + F.dir * 40, y: F.y - 110, sonic: 1, r: 60, life: 12, max: 12 }); } },
+  bthrow: { len: 44, rel: 22, turn: true, vic: [[0, 52, -8], [10, 30, -90], [22, -80, -50]], keys: [[0, H], [10, { lean: -0.3, ba: A_(2.8, 0.2), fa: A_(1.45, 1.9) }], [22, { lean: 0.4, hd: -0.3, ba: A_(-1.6, 0), fa: A_(2.6, 0.2), fl: G_(0.7, -0.2), bl: G_(-0.6, 0) }], [44, {}]],
+    fx: (F, f, T) => { if (f === 22 && T) gfx.notes(T.x, tcy(T)); } },
+  uthrow: { len: 46, rel: 20, vic: [[0, 52, -8], [20, 10, -160]], keys: [[0, H], [10, { by: 14, fa: A_(1.45, 1.9), ba: A_(0.3, 0.8) }], [20, { by: -8, hd: -0.5, fa: A_(2.7, 0), ba: A_(-2.7, 0) }], [46, {}]],
+    fx: (F, f) => { if (f === 22) { Snd.chintaVoice(0.4); BT.parts.push({ x: F.x, y: F.y - 140, sonic: 1, r: 90, life: 16, max: 16 }); } } },
+  dthrow: { len: 44, rel: 22, vic: [[0, 52, -8], [12, 56, 4]], keys: [[0, H], [12, { by: 6, fl: G_(1.6, -1.2), fa: A_(1.45, 1.9) }], [22, { by: 18, hd: 0.3, fl: G_(1.1, 0), bl: G_(-1.0, 0), fa: A_(0.9, 0.2), ba: A_(-0.9, 0.2) }], [44, {}]],
+    fx: (F, f, T) => { if (f === 22 && T) gfx.notes(T.x, F.y - 30); } },
+}); }
+
 const CHARS = [
   { key: 'shimarin', name: 'しまりん', kana: 'PSYCHIC', img: FACE, ar: FACE_AR, eyes: true, scale: 1, run: 7.0, airs: 5.8, jv: -14.6, shv: -10, djv: -13.4, airJumps: 2,
     kbTake: 0.95, swords: false, arms4: true, psychic: true, hand: '#c9c3f2', moves: SMOVES,
@@ -1536,11 +1760,12 @@ class Fighter {
     return (s === 'roll' && f >= 4 && f <= 18) || (s === 'spot' && f >= 3 && f <= 16) || (s === 'airdodge' && f >= 3 && f <= 22) || s === 'respawn';
   }
   hurt() {
-    const sc = this.ch.scale, h = (this.state === 'crouch' ? 124 : BODY.height) * sc, w = 52 * sc;
+    const sc = this.ch.scale, h = (this.state === 'crouch' ? 124 : BODY.height) * sc, w = 64 * sc;
     return { x: this.x - w / 2, y: this.y - h, w, h };
   }
   setState(s) { this.state = s; this.sf = 0; }
   startMove(n) {
+    this.ctrl.clear();
     this.move = this.ch.moves[n]; this.moveName = n; this.mf = 0; this.hitIds = new Set(); this.psyFx = new Set(); this.charge = 1; this.chargeT = 0;
     this.setState('move');
   }
@@ -1604,7 +1829,8 @@ class Fighter {
         if (this.shieldStun > 0) { this.shieldStun--; break; }
         this.shieldHP -= 0.2;
         if (this.shieldHP <= 0) { this.breakShield(); break; }
-        if (c.p.jump) { this.setState('jumpsquat'); break; }
+        if (c.p.attack || c.p.grab) { this.startMove('grab'); break; }   // シールドからつかみ
+        if (c.p.jump) { this.ctrl.clear(); this.setState('jumpsquat'); break; }
         if (c.p.left || c.p.right) { this.rollDir = c.p.left ? -1 : 1; this.setState('roll'); break; }
         if (c.p.down) { this.setState('spot'); break; }
         if (!c.h.shield) this.setState('idle');
@@ -1629,7 +1855,9 @@ class Fighter {
       case 'ledgeclimb': grav = false; this.ledgeClimb(B); break;
       case 'held':
         grav = false; this.vx = 0; this.vy = 0;
-        if (!this.heldBy || this.heldBy.state !== 'move' || this.heldBy.moveName !== 'sbt' || this.sf > 70) { this.heldBy = null; this.setState('air'); }
+        if (!this.heldBy || this.heldBy.state !== 'move' || !HOLD_MOVES.has(this.heldBy.moveName) || this.sf > (this.heldBy.moveName === 'sbt' ? 70 : 170)) { this.heldBy = null; this.setState('air'); break; }
+        // ボタン連打で早く抜け出せる
+        if (this.heldBy.moveName === 'ghold' && (c.p.attack || c.p.jump || c.p.special || c.p.left || c.p.right || c.p.shield)) this.heldBy.holdT += 4;
         break;
       case 'dizzy':
         this.vx *= 0.85;
@@ -1662,7 +1890,8 @@ class Fighter {
       if (hx) { this.dir = hx; return this.startMove('ftilt'); }
       return this.startMove('jab');
     }
-    if (c.p.jump) { this.setState('jumpsquat'); return; }
+    if (c.p.grab || (c.h.shield && c.p.attack)) { if (hx) this.dir = hx; return this.startMove('grab'); }
+    if (c.p.jump) { this.ctrl.clear(); this.setState('jumpsquat'); return; }
     if (c.h.shield) { this.setState('shield'); Snd.shield(); return; }
     if (c.h.down) {
       if (c.p.down && this.ground.soft) { this.ground = null; this.dropT = 12; this.y += 2; this.setState('air'); return; }
@@ -1670,10 +1899,10 @@ class Fighter {
       this.vx *= 0.7; return;
     }
     if (hx) {
-      this.dir = hx; this.vx += (hx * this.ch.run * (this.inkT > 0 ? 0.6 : 1) - this.vx) * 0.22;
+      this.dir = hx; this.vx += (hx * this.ch.run * (this.inkT > 0 ? 0.6 : 1) - this.vx) * 0.34;
       if (this.state !== 'run') { this.setState('run'); if (BT) BT.dust(this.x - this.dir * 12, this.y, 6); }
     } else {
-      this.vx *= 0.75; if (Math.abs(this.vx) < 0.3) this.vx = 0;
+      this.vx *= 0.62; if (Math.abs(this.vx) < 0.3) this.vx = 0;
       if (this.state !== 'idle') this.setState('idle');
     }
   }
@@ -1688,7 +1917,7 @@ class Fighter {
       return this.startMove(n);
     }
     if (c.p.jump && this.jumps > 0) {
-      this.jumps--; this.vy = this.ch.djv; this.vx = hx * this.ch.airs; this.ff = false; this.djT = 22;
+      this.ctrl.clear(); this.jumps--; this.vy = this.ch.djv; this.vx = hx * this.ch.airs; this.ff = false; this.djT = 22;
       if (BT) { BT.parts.push({ x: this.x, y: this.y - 6, ring: 1, r: 12, life: 14, max: 14, col: '#ffffff' }); BT.parts.push({ x: this.x, y: this.y - 6, shock: 1, r: 8, vr: 8, life: 12, max: 12, col: this.col.light, w: 5 }); }
       if (hx) this.dir = hx;
       Snd.jumpC(this.ch); BT.burst(this.x, this.y, '#ffffff', 6);
@@ -1701,7 +1930,7 @@ class Fighter {
   }
   airDrift(hx, m) {
     const t = hx * this.ch.airs * m * (this.inkT > 0 ? 0.65 : 1);
-    this.vx += clamp(t - this.vx, -0.45, 0.45);
+    this.vx += clamp(t - this.vx, -0.72, 0.72);
     if (!hx) this.vx *= 0.98;
   }
   doSpecial(c) {
@@ -1734,6 +1963,13 @@ class Fighter {
       if (c.p.down && this.vy > 0) this.ff = true;
     }
     if (m.sfx && this.mf === m.sfx) Snd.swingC(this.ch, m.hb.reduce((a, h) => Math.max(a, h.dmg), 0));
+    // ワザの終わりぎわ（攻撃が出おわったあと）は、次の行動でキャンセルできる
+    if (!m.noCancel && m.after !== 'helpless' && this.move === m) {
+      const last = m.hb.reduce((a, h) => Math.max(a, h.f1), 0);
+      if (this.mf > Math.max(last + 5, m.len * 0.72) && (c.p.attack || c.p.special || c.p.jump || c.p.smash || c.p.grab || (this.ground && c.h.shield))) {
+        this.move = null; this.setState(this.ground ? 'idle' : 'air'); return grav;
+      }
+    }
     if (this.mf >= m.len) {
       this.move = null;
       if (m.after === 'helpless' && !this.ground) this.setState('helpless');
@@ -1837,7 +2073,7 @@ class Fighter {
     if (s === 'move') {
       const m = this.move;
       if (m.onLand) { m.onLand(this); return; }
-      if (m.air) { this.landLag = m.landLag || 6; this.move = null; this.setState('land'); }
+      if (m.air) { this.landLag = Math.round((m.landLag || 6) * 0.65); this.move = null; this.setState('land'); }
       return;
     }
     if (s === 'helpless') { this.landLag = 20; this.setState('land'); return; }
@@ -1918,6 +2154,17 @@ class AI {
     if (!F.alive) return c;
     const opp = nearestFoe(F, B.fs);
     if (!opp) return c;
+    if (F.state === 'move' && F.moveName === 'ghold') {
+      if (F.holdT < 8 + (9 - L) * 3) return c;
+      const r = R();
+      if (r < 0.2) c.up = true; else if (r < 0.35) c.down = true;
+      else if (F.x * F.dir > 0) c[F.dir > 0 ? 'right' : 'left'] = true; else c[F.dir > 0 ? 'left' : 'right'] = true;
+      return c;
+    }
+    if (F.ground && (F.state === 'idle' || F.state === 'run') && opp.ground && Math.abs(opp.x - F.x) < 90 * F.ch.scale && Math.abs(opp.y - F.y) < 30
+      && R() < (opp.state === 'shield' ? 0.15 : 0.025) * (0.4 + L * 0.07)) {
+      c[opp.x > F.x ? 'right' : 'left'] = true; c.grab = true; return c;
+    }
     const m = B.stage.plats[0];
     this.jt++;
     if (F.state === 'respawn') { if (F.sf > 30 + (9 - L) * 10) c.down = true; return c; }
@@ -2234,13 +2481,13 @@ function drawAmbient(st, px, py, t) {
 
 const STAGES = [
   { name: 'ネオンアリーナ', sub: '足場なしのシンプルな一枚床', style: 'neon',
-    plats: [{ x1: -460, x2: 460, y: 0, h: 90 }], blast: { l: -1050, r: 1050, t: -860, b: 640 }, spawns: [-240, 240], respawnY: -330 },
+    plats: [{ x1: -715, x2: 715, y: 0, h: 90 }], blast: { l: -1500, r: 1500, t: -980, b: 700 }, spawns: [-360, 360], respawnY: -360 },
   { name: 'スカイガーデン', sub: 'すり抜けられる足場が3つ', style: 'sky',
-    plats: [{ x1: -380, x2: 380, y: 0, h: 90 }, { x1: -290, x2: -120, y: -135, soft: 1 }, { x1: 120, x2: 290, y: -135, soft: 1 }, { x1: -85, x2: 85, y: -255, soft: 1 }],
-    blast: { l: -1000, r: 1000, t: -880, b: 640 }, spawns: [-200, 200], respawnY: -380 },
+    plats: [{ x1: -590, x2: 590, y: 0, h: 90 }, { x1: -450, x2: -190, y: -135, soft: 1 }, { x1: 190, x2: 450, y: -135, soft: 1 }, { x1: -130, x2: 130, y: -255, soft: 1 }],
+    blast: { l: -1450, r: 1450, t: -1000, b: 700 }, spawns: [-300, 300], respawnY: -400 },
   { name: 'ムーンデッキ', sub: '左右に動く足場がある', style: 'moon',
-    plats: [{ x1: -340, x2: 340, y: 0, h: 90 }, { x1: -90, x2: 90, y: -165, soft: 1, mv: { ax: 250, per: 420 } }],
-    blast: { l: -1000, r: 1000, t: -860, b: 640 }, spawns: [-200, 200], respawnY: -340 },
+    plats: [{ x1: -530, x2: 530, y: 0, h: 90 }, { x1: -140, x2: 140, y: -165, soft: 1, mv: { ax: 380, per: 480 } }],
+    blast: { l: -1450, r: 1450, t: -980, b: 700 }, spawns: [-300, 300], respawnY: -360 },
 ];
 function cloneStage(s) {
   const c = { ...s, plats: s.plats.map(p => ({ ...p })) };
@@ -3902,7 +4149,6 @@ function drawMuscle(F, P, J, C, t) {
   };
   leg(J.bl, false);
   arm(J.ba, false);
-  pauldron(false);
   leg(J.fl, true);
   // ---- 胴体：分厚い胸板と割れた腹筋 ----
   const s1 = at(nk, -6, 37), s2 = at(nk, -6, -37), w1 = at(hip, 20, 21), w2 = at(hip, 20, -21);
@@ -3968,22 +4214,8 @@ function drawMuscle(F, P, J, C, t) {
   const ha = P.lean * 0.5 + P.hd + (F._look || 0);
   const hc = { x: nk.x + Math.sin(ha) * 30, y: nk.y - Math.cos(ha) * 30 };
   drawFace(hc.x, hc.y, 56, ha, 0, t, F.ch, F._fsx || 1);
-  ctx.save(); ctx.translate(hc.x, hc.y); ctx.rotate(ha);
-  for (const sd of [1, -1]) {   // 角：うしろへ反りかえる
-    ctx.beginPath(); ctx.moveTo(sd * 18, -20); ctx.bezierCurveTo(sd * 30, -32, sd * 34 - 10, -52, sd * 20 - 16, -62);
-    ctx.bezierCurveTo(sd * 26 - 4, -46, sd * 22, -34, sd * 10, -24); ctx.closePath();
-    ctx.lineWidth = 3; ctx.strokeStyle = LN; ctx.stroke(); ctx.fillStyle = '#e8dcc0'; ctx.fill();
-    ctx.fillStyle = 'rgba(120,90,50,.35)'; ctx.beginPath(); ctx.moveTo(sd * 16, -24); ctx.bezierCurveTo(sd * 26, -34, sd * 28 - 10, -50, sd * 20 - 16, -62); ctx.lineTo(sd * 20 - 13, -58); ctx.bezierCurveTo(sd * 22 - 6, -46, sd * 20, -34, sd * 14, -26); ctx.fill();
-  }
-  ctx.beginPath(); ctx.moveTo(-26, -16); ctx.quadraticCurveTo(0, -28, 26, -16); ctx.lineTo(24, -10); ctx.quadraticCurveTo(0, -21, -24, -10); ctx.closePath();
-  ctx.lineWidth = 3; ctx.strokeStyle = LN; ctx.stroke(); ctx.fillStyle = GOLD; ctx.fill();
-  ctx.beginPath(); ctx.moveTo(-7, -21); ctx.quadraticCurveTo(0, -36, 7, -21); ctx.closePath(); ctx.fillStyle = GOLD; ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#d7191f'; ctx.beginPath(); ctx.arc(0, -22, 3.6, 0, TAU); ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.arc(-1.2, -23.2, 1.2, 0, TAU); ctx.fill();
-  ctx.restore();
-  // ---- 前の腕・前の肩当て ----
+  // ---- 前の腕 ----
   arm(J.fa, true);
-  pauldron(true);
 }
 function drawFighterExtras(F, t) {
   const C = F.col;
@@ -4609,6 +4841,7 @@ SC_.howto = () => {
     ['回避', 'シールド中に ← → / ↓、空中でシールド'], ['しゃがみ / すり抜け / 急降下', '↓'], ['ポーズ', 'Esc または Enter'],
     ['崖つかまり中', '↑登る Space跳ぶ Z攻撃 C転がる ↓離す'],
     ['最後の切り札', 'ボールをこわして X'],
+    ['つかみ', 'F または U（シールド中に Z でも）'], ['投げ ／ つかみ攻撃', 'つかんで ←→↑↓ ／ Z'],
   ];
   const moves = [
     ['しまりんビーム', '必殺', '目から光線を発射'], ['ロケットずつき', '横＋必殺', '頭から突進。空中では1回まで'],
@@ -4622,8 +4855,8 @@ SC_.howto = () => {
       ctx.fillStyle = UIC.red; ctx.fillRect(36, 84, 560, 40); ctx.fillRect(620, 84, 624, 40);
       text('操作（キーボード）', 56, 104, 22, '#fff', 'left', '900');
       rows.forEach((r, i) => {
-        const y = 156 + i * 44;
-        if (i % 2 === 0) { ctx.fillStyle = '#f3f1ec'; ctx.fillRect(40, y - 20, 552, 40); }
+        const y = 152 + i * 37;
+        if (i % 2 === 0) { ctx.fillStyle = '#f3f1ec'; ctx.fillRect(40, y - 17, 552, 34); }
         text(r[0], 56, y, 18, UIC.ink, 'left', '900'); text(r[1], 578, y, i === 9 ? 14 : 18, UIC.red2, 'right', '900');
       });
       text('必殺ワザ', 640, 104, 22, '#fff', 'left', '900');
@@ -4672,7 +4905,7 @@ SC_.sss = () => {
       const cur = M.cur;
       const big = { x: 240, y: 82, w: 800, h: 344 };
       ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(big.x + 8, big.y + 8, big.w, big.h);
-      if (cur.st) preview(previews[cur.idx], big.x, big.y, big.w, big.h, 0.85);
+      if (cur.st) preview(previews[cur.idx], big.x, big.y, big.w, big.h, 0.62);
       else {
         ctx.fillStyle = UIC.ink; ctx.fillRect(big.x, big.y, big.w, big.h);
         text('?', VW / 2, 240, 180, UIC.red, 'center', '900');
@@ -4686,7 +4919,7 @@ SC_.sss = () => {
       items.forEach(a => {
         if (a.back) return drawBackBtn(a, M.cur === a, t);
         ctx.fillStyle = 'rgba(0,0,0,.15)'; ctx.fillRect(a.x + 6, a.y + 6, a.w, a.h);
-        if (a.st) { ctx.save(); preview(previews[a.idx], a.x, a.y, a.w, a.h, 0.75); ctx.restore(); }
+        if (a.st) { ctx.save(); preview(previews[a.idx], a.x, a.y, a.w, a.h, 0.55); ctx.restore(); }
         else { ctx.fillStyle = UIC.ink; ctx.fillRect(a.x, a.y, a.w, a.h); text('?', a.x + a.w / 2, a.y + a.h / 2 - 14, 90, UIC.red, 'center', '900'); }
         ctx.fillStyle = M.cur === a ? UIC.red : UIC.ink; ctx.fillRect(a.x, a.y + a.h - 34, a.w, 34);
         text(a.st ? a.st.name : 'ランダム', a.x + a.w / 2, a.y + a.h - 16, 19, '#fff', 'center', '900');
@@ -4774,11 +5007,12 @@ SC_.battle = (o) => {
     }
     // 念力つかみ（シールドを無視してつかむ）
     if (hb.grab) {
-      if (T.state === 'held') return false;
+      if (T.state === 'held' || (hb.hold && A.moveName !== 'grab')) return false;
       T.move = null; T.setState('held'); T.heldBy = A; T.vx = 0; T.vy = 0; T.ground = null; T.hitlag = 0; T.spin = 0;
       T.percent += hb.dmg; A.stats.dmg += hb.dmg; T.lastHitBy = A; T.flash = 8; T.pctShake = 8;
-      A.startMove('sbt');
-      B.parts.push({ x: hx, y: hy, psy: 1, r: 60, life: 16, max: 16 }); Snd.psy(); Snd.hitC(A.ch, 4);
+      A.startMove(hb.hold || 'sbt'); A.holdT = 0;
+      if (hb.hold) { B.parts.push({ x: hx, y: hy, shock: 1, r: 10, vr: 8, life: 14, max: 14, col: '#ffffff', w: 6 }); Snd.hitC(A.ch, 3); }
+      else { B.parts.push({ x: hx, y: hy, psy: 1, r: 60, life: 16, max: 16 }); Snd.psy(); Snd.hitC(A.ch, 4); }
       return true;
     }
     if (T.state === 'shield') {
@@ -5407,7 +5641,7 @@ SC_.battle = (o) => {
         }
         for (const T of fs) {
           if (T === A || A.hitIds.has(T.id) || !T.alive) continue;
-          if (circRect(hx, hy, hb.r * sc, T.hurt())) {
+          if (circRect(hx, hy, hb.r * sc * 1.25, T.hurt())) {
             const ds = hb.auto ? sgn(T.x - A.x || A.dir) : A.dir;
             if (B.applyHit(A, T, hb, A.charge, ds, false, (hx + T.x) / 2, (hy + T.y - 75) / 2)) A.hitIds.add(T.id);
           }
@@ -5467,7 +5701,7 @@ SC_.battle = (o) => {
           B.parts.push({ x: p.x, y: p.y, psy: 1, r: 40, life: 14, max: 14 }); Snd.shield();
           break;
         }
-        if (circRect(p.x, p.y, p.r, T.hurt()) && B.applyHit(p.owner, T, p.hb, 1, sgn(p.vx), true, p.x, p.y)) { p.life = 0; break; }
+        if (circRect(p.x, p.y, p.r * 1.2, T.hurt()) && B.applyHit(p.owner, T, p.hb, 1, sgn(p.vx), true, p.x, p.y)) { p.life = 0; break; }
       }
     }
     updOrcs();
