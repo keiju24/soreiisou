@@ -830,12 +830,14 @@ for (const k in MOVES) {
 const TGRAB = { lean: 0.2, fa: { s: 1.6, e: 0 } };
 Object.assign(TMOVES, {
   // 必殺：インク弾（当たると動きが鈍くなる）
-  nb: { len: 36, keys: [[0, {}], [8, { lean: -0.2, hd: -0.2, fa: { s: 0.6, e: 1.4 } }], [12, { lean: 0.25, hd: 0.15, fa: { s: 1.4, e: 0.2 } }], [36, {}]], hb: [],
+  // 構え：腰を引いてから、腰を前に突き出して股間あたりから発射
+  nb: { len: 36, keys: [[0, {}], [8, { lean: 0.25, hd: 0.15, by: 6, fa: { s: 0.3, e: 1.2 }, ba: { s: -0.1, e: 1.2 } }],
+    [12, { lean: -0.35, hd: -0.2, fa: { s: -0.5, e: 0.4 }, ba: { s: -0.8, e: 0.4 }, fl: { h: 0.45, k: -0.2 }, bl: { h: -0.45, k: -0.1 } }], [36, {}]], hb: [],
     upd(F, f) {
       if (!F.ground) F.vy = Math.min(F.vy, 1.5);
       if (f === 12) {
         const sc = F.ch.scale;
-        BT.proj.push({ type: 'ink', x: F.x + F.dir * 44 * sc, y: F.y - 110 * sc, vx: 11 * F.dir, vy: -3, g: 0.25, life: 60, owner: F, r: 18,
+        BT.proj.push({ type: 'ink', x: F.x + F.dir * 24 * sc, y: F.y - 50 * sc, vx: 11 * F.dir, vy: -3.5, g: 0.22, life: 60, owner: F, r: 18,
           hb: { dmg: 6, ang: 40, base: 4, gr: 0.4, ink: 150 } });
         Snd.inkShot();
       }
@@ -3171,7 +3173,7 @@ function drawFighterExtras(F, t) {
   // 墨をかぶっている（今井のインク弾）
   if (F.inkT > 0 && F.alive) {
     const a = Math.min(1, F.inkT / 40), sc = F.ch.scale;
-    ctx.save(); ctx.globalAlpha = 0.8 * a; ctx.fillStyle = '#2a0f38';
+    ctx.save(); ctx.globalAlpha = 0.85 * a; ctx.fillStyle = '#f6f6f1'; ctx.strokeStyle = 'rgba(150,150,140,.6)'; ctx.lineWidth = 1;
     for (const [ox, oy, r] of [[-14, -128, 9], [12, -140, 7], [4, -96, 6], [-20, -70, 7], [16, -58, 5]]) {
       ctx.beginPath(); ctx.ellipse(F.x + ox * sc * F.dir, F.y + oy * sc, r * sc, r * 0.8 * sc, 0.4, 0, TAU); ctx.fill();
     }
@@ -3355,10 +3357,14 @@ function drawBackBtn(a, f, t) {
 //  サーバー役になり、ほかの人はホストにだけつながる（スター型）。
 //  方式：ロックステップ。各プレイヤーは自分の入力だけをホストへ送り、ホストが
 //  全員分をフレームごとにまとめて配る。全員がそのまとめを使って同じ計算をする。
-//  入力は NET_DELAY フレーム先の分として送るので、多少の遅延は吸収できる。
+//  ラグ対策：
+//   ・入力を何フレーム先の分として送るか（遅らせ幅）を、ping を測って自動で決める
+//   ・入力とフレームは「相手がまだ受け取っていない分」をまとめて毎フレーム送り直す。
+//     対戦用の通信は順番待ちをしない経路を使うので、1つ取りこぼしても止まらない
+//   ・通信待ちで遅れたら、そのあと数フレームまとめて進めて追いつく
 // =====================================================================
-const NET_DELAY = 5, NET_MAX = 8, CODE_LEN = 5, CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const PEER_PREFIX = 'shimarin-brawl-v2-';
+const NET_START = 8, NET_WIN = 40, NET_MAX = 8, CODE_LEN = 5, CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const PEER_PREFIX = 'shimarin-brawl-v3-';
 const PEERJS_URL = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
 // ▼ 「それ、言いそう！」と同じ STUN / 中継サーバー（TURN）の設定
 const TURN_SERVERS = [
@@ -3373,14 +3379,18 @@ const PEER_OPTIONS = { config: { iceServers: [
   { urls: 'stun:stun1.l.google.com:19302' },
   ...TURN_SERVERS.filter(x => x && x.urls),
 ] } };
-const NET = { peer: null, hostConn: null, conns: new Map(), isHost: false, code: '', status: '', err: '', notice: '', noticeUntil: 0,
-  myCh: undefined, mySlot: -1, myReady: false, stage: 0, stocks: 3, lobby: [], busy: false, inGame: false, order: [], startMsg: null,
-  frame: 0, local: {}, frames: {}, inbuf: {}, nextOut: 0, dropped: new Set(), chk: {}, myChk: {}, desync: false, t0: 0, retrySignal: null };
+const NET = { peer: null, hostConn: null, gameConn: null, conns: new Map(), gconns: new Map(), toks: {}, tok: '',
+  isHost: false, code: '', status: '', err: '', notice: '', noticeUntil: 0,
+  myCh: undefined, mySlot: -1, myReady: false, stage: 0, stocks: 3, lobby: [], busy: false, inGame: false, order: [], startMsg: null, gid: 0,
+  frame: 0, local: {}, frames: {}, inbuf: {}, nextOut: 0, dropped: new Set(), hAck: [], cAck: {}, sentTo: 0, recvTo: 0, ackMine: 0,
+  rtt: 0, rtts: {}, maxRtt: 0, delay: 4, delayT: 0, pingTimer: null,
+  chk: {}, myChk: {}, desync: false, t0: 0, retrySignal: null };
 const packIn = s => BTN.reduce((m, b, i) => m | (s[b] ? 1 << i : 0), 0);
 const unpackIn = m => { const o = {}; if (m < 0) return o; BTN.forEach((b, i) => { o[b] = !!(m & (1 << i)); }); return o; };
 const netOpen = () => NET.isHost ? !!(NET.peer && !NET.peer.destroyed && NET.status === 'open')
   : !!(NET.hostConn && NET.hostConn.open && NET.status === 'open');
 const validCh = c => Number.isInteger(c) && c >= 0 && c < CHARS.length ? c : 0;
+const isIn = v => Number.isInteger(v) && v >= -1 && v < (1 << BTN.length);
 function netLoad(cb) {
   if (window.Peer) return cb();
   const s = document.createElement('script'); s.src = PEERJS_URL;
@@ -3389,16 +3399,17 @@ function netLoad(cb) {
 }
 function connSend(c, o) { try { if (c && c.open) c.send(o); } catch (e) {} }
 function netBroadcast(o) { for (const c of NET.conns.values()) connSend(c, o); }
-// ホストなら全員へ、ほかの人ならホストへ送る
+// ホストなら全員へ、ほかの人ならホストへ送る（ロビーなどの確実に届けたいもの）
 function netSend(o) { if (NET.isHost) netBroadcast(o); else connSend(NET.hostConn, o); }
 function netNotice(msg) { NET.notice = msg; NET.noticeUntil = performance.now() + 4000; }
 function netClose() {
-  const p = NET.peer, conns = [...NET.conns.values()], hc = NET.hostConn;
-  NET.peer = null; NET.hostConn = null; NET.conns.clear(); NET.retrySignal = null;
-  for (const c of conns) { try { c.close(); } catch (e) {} }
-  try { if (hc) hc.close(); } catch (e) {}
+  const p = NET.peer, conns = [...NET.conns.values(), ...NET.gconns.values(), NET.hostConn, NET.gameConn];
+  NET.peer = null; NET.hostConn = null; NET.gameConn = null; NET.conns.clear(); NET.gconns.clear(); NET.retrySignal = null;
+  clearInterval(NET.pingTimer); NET.pingTimer = null;
+  for (const c of conns) { try { if (c) c.close(); } catch (e) {} }
   try { if (p) p.destroy(); } catch (e) {}
   NET.myReady = false; NET.lobby = []; NET.mySlot = -1; NET.busy = false; NET.inGame = false; NET.order = []; NET.startMsg = null;
+  NET.toks = {}; NET.rtts = {}; NET.rtt = 0; NET.maxRtt = 0;
 }
 function netErrText(e) {
   const t = e && e.type;
@@ -3422,6 +3433,11 @@ function keepSignal(peer) {
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && NET.retrySignal) NET.retrySignal(); });
 function genCode() { let s = ''; for (let i = 0; i < CODE_LEN; i++) s += CODE_CHARS[Math.random() * CODE_CHARS.length | 0]; return s; }
+// 入力の遅らせ幅（フレーム）：自分の入力が「ホスト経由でいちばん遠い人」に届くまでの時間＋ゆとり
+function netTargetDelay() {
+  const ms = NET.isHost ? NET.maxRtt / 2 : (NET.rtt + Math.max(NET.rtt, NET.maxRtt)) / 2;
+  return clamp(Math.ceil(ms / 16.67) + 2, 2, 24);
+}
 
 // ---------- ホスト（サーバー役） ----------
 function netLobbySync() {
@@ -3452,6 +3468,12 @@ function netHost(retry = 0) {
     });
   });
 }
+function netUpdateMaxRtt() {
+  let m = 0;
+  for (const s of NET.conns.keys()) if (NET.rtts[s] > m) m = NET.rtts[s];
+  NET.maxRtt = m;
+}
+const hostHas = (idx, fr) => fr < NET.nextOut || !!(NET.inbuf[fr] && NET.inbuf[fr][idx] !== undefined);
 function netHostRecv(c, d) {
   if (!d || typeof d !== 'object') return;
   if (d.t === 'hello') {
@@ -3463,56 +3485,88 @@ function netHostRecv(c, d) {
       setTimeout(() => { try { c.close(); } catch (e) {} }, 600); return;
     }
     c._slot = slot; NET.conns.set(slot, c);
+    if (typeof d.tok === 'string' && d.tok) NET.toks[d.tok] = slot;
     NET.lobby[slot] = { slot, ch: validCh(d.ch), ready: false };
     connSend(c, { t: 'welcome', slot });
     netNotice(NCOL[slot].tag + ' が入りました'); netLobbySync(); Snd.move();
     return;
   }
+  if (d.t === 'g') {   // 対戦用の通信路のあいさつ（だれの通信路かを合言葉で確かめる）
+    const slot = NET.toks[d.tok];
+    if (c._slot !== undefined || slot === undefined || !NET.conns.has(slot)) return;
+    c._slot = slot; c._game = true; NET.gconns.set(slot, c); return;
+  }
   const slot = c._slot;
-  if (slot === undefined || NET.conns.get(slot) !== c) return;
+  if (slot === undefined || (NET.conns.get(slot) !== c && NET.gconns.get(slot) !== c)) return;
   switch (d.t) {
     case 'pick':
       if (NET.lobby[slot]) { NET.lobby[slot].ch = validCh(d.ch); NET.lobby[slot].ready = !!d.ready; netLobbySync(); }
       break;
+    case 'ping':
+      connSend(c, { t: 'pong', ts: d.ts, m: NET.maxRtt });
+      if (Number.isFinite(d.rtt) && d.rtt >= 0) { NET.rtts[slot] = Math.min(2000, d.rtt); netUpdateMaxRtt(); }
+      break;
     case 'in': {
-      if (!NET.inGame || !Number.isInteger(d.f) || !Number.isInteger(d.i) || d.i < 0 || d.f < NET.nextOut) break;
+      // まだ届いていなかった分の入力をまとめて受け取る（同じ分が何度届いても大丈夫）
+      if (!NET.inGame || d.g !== NET.gid || !Number.isInteger(d.f) || !Array.isArray(d.a)) break;
       const idx = NET.order.indexOf(slot); if (idx < 0) break;
-      (NET.inbuf[d.f] || (NET.inbuf[d.f] = []))[idx] = d.i;
+      if (Number.isInteger(d.k) && d.k > (NET.cAck[slot] ?? -1)) NET.cAck[slot] = d.k;
+      for (let i = 0; i < d.a.length && i < NET_WIN * 2; i++) {
+        const fr = d.f + i, v = d.a[i];
+        if (fr < NET.nextOut || !Number.isInteger(v) || v < 0 || v >= (1 << BTN.length)) continue;
+        const buf = NET.inbuf[fr] || (NET.inbuf[fr] = []);
+        if (buf[idx] === undefined) buf[idx] = v;
+      }
+      while (hostHas(idx, NET.hAck[idx] + 1)) NET.hAck[idx]++;
       netHostFlush(); break;
     }
-    case 'bye': netHostDrop(c); try { c.close(); } catch (e) {} break;
+    case 'bye': if (!c._game) { netHostDrop(c); try { c.close(); } catch (e) {} } break;
   }
 }
 function netHostDrop(c) {
   const slot = c._slot;
-  if (slot === undefined || NET.conns.get(slot) !== c) return;
-  NET.conns.delete(slot); NET.lobby[slot] = null;
+  if (slot === undefined) return;
+  if (c._game) { if (NET.gconns.get(slot) === c) NET.gconns.delete(slot); return; }
+  if (NET.conns.get(slot) !== c) return;
+  NET.conns.delete(slot); NET.lobby[slot] = null; delete NET.rtts[slot]; netUpdateMaxRtt();
+  const g = NET.gconns.get(slot); NET.gconns.delete(slot); try { if (g) g.close(); } catch (e) {}
   // 対戦中に抜けた人は、全員同じフレームで「退場」になるように入力を -1 にして配る
   if (NET.inGame && NET.order.includes(slot)) { NET.dropped.add(NET.order.indexOf(slot)); netHostFlush(); }
   netNotice(NCOL[slot].tag + ' が抜けました'); netBroadcast({ t: 'left', slot }); netLobbySync();
 }
-// 全員分の入力がそろったフレームから順に、まとめて配る
+// 全員分の入力がそろったフレームを順に確定する
 function netHostFlush() {
   const n = NET.order.length;
   for (;;) {
     const f = NET.nextOut, buf = NET.inbuf[f] || [], a = [];
     for (let i = 0; i < n; i++) { const v = NET.dropped.has(i) ? -1 : buf[i]; if (v === undefined) return; a.push(v); }
     NET.frames[f] = a; delete NET.inbuf[f]; NET.nextOut++;
-    for (const [s, c] of NET.conns) if (NET.order.includes(s)) connSend(c, { t: 'fr', f, a });
   }
+}
+// 毎フレーム、各プレイヤーに「まだ受け取っていない確定フレーム」をまとめて送る
+function netHostSendFrames() {
+  NET.order.forEach((s, idx) => {
+    if (!s) return;   // 0 はホスト自身
+    const g = NET.gconns.get(s), c = g && g.open ? g : NET.conns.get(s);
+    if (!c) return;
+    const from = Math.max(NET_START, (NET.cAck[s] ?? NET_START - 1) + 1), to = Math.min(NET.nextOut - 1, from + NET_WIN - 1);
+    const a = []; for (let f = from; f <= to; f++) a.push(NET.frames[f]);
+    connSend(c, { t: 'fr', g: NET.gid, f: from, a, k: NET.hAck[idx] });
+  });
 }
 
 // ---------- 参加する人 ----------
 function netJoin(code) {
   netClose(); NET.isHost = false; NET.code = code; NET.status = 'loading'; NET.err = ''; NET.t0 = performance.now();
+  NET.tok = Math.random().toString(36).slice(2) + Date.now().toString(36);
   netLoad(err => {
     if (err) { NET.status = 'error'; NET.err = '通信ライブラリを読み込めませんでした（インターネット接続を確認してね）'; return; }
     const peer = NET.peer = new Peer(PEER_OPTIONS);
     peer.on('open', () => {
       if (NET.peer !== peer || NET.hostConn) return;   // つなぎ直しただけのときは、ホストへの接続はそのまま
       NET.status = 'connecting';
-      const c = NET.hostConn = peer.connect(PEER_PREFIX + code, { reliable: true });
-      c.on('open', () => connSend(c, { t: 'hello', ch: NET.myCh }));
+      const c = NET.hostConn = peer.connect(PEER_PREFIX + code, { reliable: true, serialization: 'json' });
+      c.on('open', () => connSend(c, { t: 'hello', ch: NET.myCh, tok: NET.tok }));
       c.on('data', d => { if (NET.hostConn === c) netRecv(d); });
       c.on('close', () => { if (NET.hostConn === c && NET.status !== 'error') NET.status = 'closed'; });
       c.on('error', () => { if (NET.hostConn === c && NET.status !== 'error') NET.status = 'closed'; });
@@ -3521,10 +3575,23 @@ function netJoin(code) {
     peer.on('error', e => { if (NET.peer !== peer) return; if (NET.status !== 'open') { NET.status = 'error'; NET.err = netErrText(e); } });
   });
 }
+// 入ったあと：対戦用の通信路（順番待ちなし）を開き、ping を測りはじめる
+function netAfterWelcome() {
+  const peer = NET.peer; if (!peer) return;
+  const g = NET.gameConn = peer.connect(PEER_PREFIX + NET.code, { reliable: false, serialization: 'json' });
+  g.on('open', () => connSend(g, { t: 'g', tok: NET.tok }));
+  g.on('data', d => { if (NET.gameConn === g) netRecv(d); });
+  g.on('close', () => { if (NET.gameConn === g) NET.gameConn = null; });
+  g.on('error', () => {});
+  clearInterval(NET.pingTimer);
+  NET.pingTimer = setInterval(() => connSend(NET.hostConn, { t: 'ping', ts: performance.now(), rtt: NET.rtt }), 500);
+}
 function netRecv(d) {
   if (!d || typeof d !== 'object') return;
   switch (d.t) {
-    case 'welcome': if (Number.isInteger(d.slot) && d.slot > 0 && d.slot < NET_MAX) { NET.mySlot = d.slot; NET.status = 'open'; } break;
+    case 'welcome':
+      if (Number.isInteger(d.slot) && d.slot > 0 && d.slot < NET_MAX && NET.status !== 'open') { NET.mySlot = d.slot; NET.status = 'open'; netAfterWelcome(); }
+      break;
     case 'deny': NET.status = 'error'; NET.err = String(d.msg || 'ルームに入れませんでした'); break;
     case 'lobby':
       if (!Array.isArray(d.players)) break;
@@ -3534,17 +3601,44 @@ function netRecv(d) {
       if (Number.isInteger(d.stocks) && d.stocks > 0 && d.stocks < 100) NET.stocks = d.stocks;
       NET.busy = !!d.busy;
       break;
+    case 'pong': {
+      if (!Number.isFinite(d.ts)) break;
+      const s = performance.now() - d.ts;
+      // 悪くなったときはすぐ、良くなったときはゆっくり反映する
+      NET.rtt = !NET.rtt ? s : s > NET.rtt ? NET.rtt * 0.5 + s * 0.5 : NET.rtt * 0.9 + s * 0.1;
+      if (Number.isFinite(d.m) && d.m >= 0) NET.maxRtt = Math.min(2000, d.m);
+      break;
+    }
     case 'start': NET.startMsg = d; break;
-    case 'fr': if (Number.isInteger(d.f) && Array.isArray(d.a)) NET.frames[d.f] = d.a.map(v => Number.isInteger(v) ? v : 0); break;
+    case 'fr': {
+      if (d.g !== NET.gid || !Number.isInteger(d.f) || !Array.isArray(d.a)) break;
+      for (let i = 0; i < d.a.length && i < NET_WIN * 2; i++) {
+        const fr = d.f + i, a = d.a[i];
+        if (NET.frames[fr] === undefined && Array.isArray(a) && a.every(isIn)) NET.frames[fr] = a;
+      }
+      while (NET.frames[NET.recvTo + 1]) NET.recvTo++;
+      if (Number.isInteger(d.k) && d.k > NET.ackMine) NET.ackMine = d.k;
+      break;
+    }
     case 'chk': NET.chk[d.f] = d.h; if (NET.myChk[d.f] !== undefined && NET.myChk[d.f] !== d.h) NET.desync = true; break;
     case 'left': if (Number.isInteger(d.slot) && d.slot >= 0 && d.slot < NET_MAX) netNotice(NCOL[d.slot].tag + ' が抜けました'); break;
     case 'bye': NET.status = 'closed'; break;
   }
 }
-function netResetFrames(n) {
-  NET.frame = 0; NET.local = {}; NET.frames = {}; NET.inbuf = {}; NET.dropped = new Set(); NET.nextOut = NET_DELAY;
+// 毎フレーム、ホストに「まだ受け取ってもらえていない自分の入力」をまとめて送る
+function netClientSendInputs() {
+  const from = Math.max(NET.ackMine + 1, NET_START), to = Math.min(NET.sentTo, from + NET_WIN - 1);
+  const a = []; for (let f = from; f <= to; f++) a.push(NET.local[f]);
+  const g = NET.gameConn && NET.gameConn.open ? NET.gameConn : NET.hostConn;
+  connSend(g, { t: 'in', g: NET.gid, f: from, a, k: NET.recvTo });
+}
+function netResetFrames(n, gid) {
+  NET.gid = gid; NET.frame = 0; NET.local = {}; NET.frames = {}; NET.inbuf = {}; NET.dropped = new Set(); NET.nextOut = NET_START;
+  NET.hAck = new Array(n).fill(NET_START - 1); NET.cAck = {};
+  NET.sentTo = NET.recvTo = NET.ackMine = NET_START - 1;
+  NET.delay = netTargetDelay(); NET.delayT = 0;
   NET.chk = {}; NET.myChk = {}; NET.desync = false;
-  for (let f = 0; f < NET_DELAY; f++) { NET.local[f] = 0; NET.frames[f] = new Array(n).fill(0); }
+  for (let f = 0; f < NET_START; f++) { NET.local[f] = 0; NET.frames[f] = new Array(n).fill(0); }
 }
 // 同期ズレ検出用：全員の状態を数値でまとめて、ホストの値と比べる
 function netCheck(f, h) {
@@ -4516,7 +4610,7 @@ SC_.battle = (o) => {
         const pl = st.plats.find(q => p.x >= q.x1 && p.x <= q.x2 && p.y >= q.y && p.y - p.vy <= q.y + 2);
         if (pl) { p.life = 0; B.parts.push({ x: p.x, y: pl.y, stuck: 1, rot: Math.atan2(p.vy, p.vx), life: 50, max: 50 }); B.dust(p.x, pl.y, 2); continue; }
       }
-      if (!['arrow', 'hammer', 'shock', 'note', 'wave'].includes(p.type) && p.life % 2 === 0) B.parts.push({ x: p.x, y: p.y, vx: 0, vy: 0, life: 10, max: 10, col: p.type === 'x' ? 'rgba(255,140,180,.7)' : p.type === 'ink' ? 'rgba(50,15,70,.75)' : p.type === 'psy' ? 'rgba(160,100,255,.7)' : 'rgba(110,130,255,.8)', size: 9, g: 0, smoke: 1 });
+      if (!['arrow', 'hammer', 'shock', 'note', 'wave'].includes(p.type) && p.life % 2 === 0) B.parts.push({ x: p.x, y: p.y, vx: 0, vy: 0, life: 10, max: 10, col: p.type === 'x' ? 'rgba(255,140,180,.7)' : p.type === 'ink' ? 'rgba(246,246,240,.75)' : p.type === 'psy' ? 'rgba(160,100,255,.7)' : 'rgba(110,130,255,.8)', size: 9, g: 0, smoke: 1 });
       for (const T of fs) {
         if (T === p.owner || !T.alive) continue;
         // サイコバリアではね返す
@@ -4969,10 +5063,10 @@ SC_.battle = (o) => {
     for (const p of B.proj) {
       if (p.type === 'ink') {   // 墨の玉
         ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(Math.atan2(p.vy, p.vx));
-        ctx.fillStyle = '#2a0f38'; ctx.strokeStyle = '#14121f'; ctx.lineWidth = 2;
+        ctx.fillStyle = '#f6f6f1'; ctx.strokeStyle = '#b9b9b0'; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.ellipse(0, 0, 18, 13, 0, 0, TAU); ctx.fill(); ctx.stroke();
         ctx.beginPath(); ctx.ellipse(-16, 0, 9, 6, 0, 0, TAU); ctx.fill();
-        ctx.fillStyle = 'rgba(194,122,216,.7)'; ctx.beginPath(); ctx.ellipse(4, -5, 6, 3, -0.3, 0, TAU); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.beginPath(); ctx.ellipse(4, -5, 6, 3, -0.3, 0, TAU); ctx.fill();
         ctx.restore(); continue;
       }
       if (p.type === 'wave') {   // 声の衝撃波（進む向きに開いた弧が重なる）
@@ -5044,10 +5138,10 @@ SC_.battle = (o) => {
     // 岩のかけら
     for (const p of B.parts) {
       if (p.splat) {   // 床に飛び散った墨
-        ctx.save(); ctx.globalAlpha = Math.min(1, p.life / p.max * 2); ctx.fillStyle = '#2a0f38';
+        ctx.save(); ctx.globalAlpha = Math.min(1, p.life / p.max * 2); ctx.fillStyle = '#f6f6f1';
         ctx.beginPath(); ctx.ellipse(p.x, p.y + 2, 26, 6, 0, 0, TAU); ctx.fill();
         for (let i = 0; i < 5; i++) { const a = p.rot + i * 1.3; ctx.beginPath(); ctx.arc(p.x + Math.cos(a) * 30, p.y - Math.abs(Math.sin(a)) * 6, 3 + (i % 2) * 2, 0, TAU); ctx.fill(); }
-        ctx.fillStyle = 'rgba(194,122,216,.5)'; ctx.beginPath(); ctx.ellipse(p.x - 6, p.y, 10, 2.5, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.ellipse(p.x - 6, p.y, 10, 2.5, 0, 0, TAU); ctx.fill();
         ctx.restore(); continue;
       }
       if (p.stuck) {   // 床に刺さった矢
@@ -5240,6 +5334,12 @@ SC_.battle = (o) => {
   }
 
   return {
+    // オンライン：確定フレームがたまっている（自分だけ遅れている）ときは、まとめて進めて追いつく
+    extra() {
+      if (!ON || B.netLost || !netOpen()) return 0;
+      const ready = (NET.isHost ? NET.nextOut - 1 : NET.recvTo) - NET.frame;
+      return ready > NET.delay + 2 ? Math.min(3, ready - NET.delay - 1) : 0;
+    },
     update() {
       if (ON) {
         // ---- オンライン：相手の入力がそろったフレームだけ進める ----
@@ -5254,18 +5354,19 @@ SC_.battle = (o) => {
         }
         if (B.leaveT > 0) B.leaveT--;
         const f = NET.frame;
-        if (NET.local[f + NET_DELAY] === undefined) {
-          const m = packIn(readHuman()), ff = f + NET_DELAY;
-          NET.local[ff] = m;
-          if (NET.isHost) { (NET.inbuf[ff] || (NET.inbuf[ff] = []))[myIdx] = m; netHostFlush(); }
-          else netSend({ t: 'in', f: ff, i: m });
+        // 遅らせ幅は通信状況に合わせて少しずつ（20フレームに1ずつ）変える
+        if (++NET.delayT >= 20) { NET.delayT = 0; const td = netTargetDelay(); NET.delay += td > NET.delay ? 1 : td < NET.delay ? -1 : 0; }
+        const m = packIn(readHuman());
+        while (NET.sentTo < f + NET.delay) {
+          NET.sentTo++; NET.local[NET.sentTo] = m;
+          if (NET.isHost && NET.sentTo >= NET.nextOut) (NET.inbuf[NET.sentTo] || (NET.inbuf[NET.sentTo] = []))[myIdx] = m;
         }
+        if (NET.isHost) { netHostFlush(); netHostSendFrames(); } else netClientSendInputs();
         const a = NET.frames[f];
         if (!a) { B.stall++; return; }
         B.stall = 0;
         B.netIn = fs.map((F, i) => unpackIn(a[i] === undefined ? 0 : a[i]));
         fs.forEach((F, i) => { if (a[i] < 0) B.forfeit(F); });
-        delete NET.local[f - 60]; delete NET.frames[f - 60];
         if (f % 60 === 0) netCheck(f, stateHash());
         NET.frame++;
       } else {
@@ -5331,9 +5432,10 @@ SC_.battle = (o) => {
       if (B.sup && B.sup.t <= SUP_CUT) drawCutIn(B.sup);
       // オンラインの状態表示
       if (ON) {
-        ctx.fillStyle = 'rgba(0,0,0,.45)'; rr(14, 12, 230, 34, 17); ctx.fill();
-        ctx.fillStyle = B.stall > 20 ? '#ffb020' : '#3ed68a'; ctx.beginPath(); ctx.arc(34, 29, 7, 0, TAU); ctx.fill();
-        text(B.stall > 20 ? '通信待ち…' : 'オンライン対戦中', 50, 30, 17, '#fff', 'left', 'bold');
+        const ping = Math.round(NET.isHost ? NET.maxRtt : NET.rtt);
+        ctx.fillStyle = 'rgba(0,0,0,.45)'; rr(14, 12, 300, 34, 17); ctx.fill();
+        ctx.fillStyle = B.stall > 20 ? '#ffb020' : ping > 200 ? '#ffd34e' : '#3ed68a'; ctx.beginPath(); ctx.arc(34, 29, 7, 0, TAU); ctx.fill();
+        text((B.stall > 20 ? '通信待ち…' : 'オンライン対戦中') + '　ping ' + ping + 'ms', 50, 30, 17, '#fff', 'left', 'bold');
         if (NET.desync) text('※同期のズレを検出しました', 18, 62, 15, '#ffb020', 'left', 'bold', '#000', 3);
         if (B.leaveT > 0) text(NET.isHost ? 'もう一度 Esc で退出します（ホストが抜けるとルームが閉じます）' : 'もう一度 Esc で退出します', VW / 2, 90, 26, '#fff', 'center', '900', '#000', 6);
         if (NET.notice && performance.now() < NET.noticeUntil) text(NET.notice, VW / 2, 130, 24, '#ffe680', 'center', '900', '#000', 5);
@@ -5389,11 +5491,11 @@ SC_.online = (o) => {
     && m.chars.length >= 2 && m.chars.length <= NET_MAX
     && m.chars.every(c => Number.isInteger(c) && c >= 0 && c < CHARS.length)
     && m.slots.every(s => Number.isInteger(s) && s >= 0 && s < NET_MAX) && m.slots.includes(NET.mySlot)
-    && Number.isInteger(m.stage) && m.stage >= 0 && m.stage < STAGES.length && Number.isInteger(m.stocks) && m.stocks > 0 && m.stocks < 100;
+    && Number.isInteger(m.seed) && Number.isInteger(m.stage) && m.stage >= 0 && m.stage < STAGES.length && Number.isInteger(m.stocks) && m.stocks > 0 && m.stocks < 100;
   const begin = msg => {
     if (started) return;   // 開始は1回だけ（同じ乱数の種で全員が始めるため）
     started = true; mode = 'starting';
-    netResetFrames(msg.chars.length); NET.startMsg = null; SET.stage = msg.stage;
+    netResetFrames(msg.chars.length, msg.seed); NET.startMsg = null; SET.stage = msg.stage;
     go('vs', { stage: msg.stage, online: true, seed: msg.seed, chars: msg.chars, slots: msg.slots, stocks: msg.stocks });
   };
   const topMenu = new Menu([
@@ -5641,6 +5743,7 @@ function frame(now) {
     }
     for (const k in KP) delete KP[k];
     mouse.click = false; mouse.moved = false;
+    if (fadeDir === 0 && !nextScene && scene.extra) { let n = scene.extra(); while (n-- > 0 && !nextScene) scene.update(); }
   }
   ctx.setTransform(SC * DPR, 0, 0, SC * DPR, 0, 0);
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
