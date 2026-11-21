@@ -1252,6 +1252,127 @@ Object.assign(SMOVES, {
 });
 for (const k in SMOVES) SMOVES[k].K = SMOVES[k].keys.map(([f, o]) => [f, mk(o)]);
 
+// =====================================================================
+//  キャラごとの通常ワザのモーション（当たり判定・タイミングはそのまま、動きだけ個性を出す）
+// =====================================================================
+const A_ = (s, e) => ({ s, e }), G_ = (h, k) => ({ h, k });
+function restyle(M, defs) {
+  for (const k in defs) {
+    const d = Array.isArray(defs[k]) ? { keys: defs[k] } : defs[k];
+    M[k] = { ...M[k], ...d };
+    M[k].K = M[k].keys.map(([f, o]) => [f, mk(o)]);
+  }
+}
+// ヘンリー：けり技と回転、すばやいワンツー
+restyle(HEMOVES, {
+  jab: [[0, {}], [2, { lean: 0.25, fa: A_(1.65, 0), ba: A_(0.5, 1.6), fl: G_(0.45, -0.2), bl: G_(-0.4, -0.1) }], [5, { lean: 0.3, fa: A_(1.1, 1.5), ba: A_(1.65, 0), fl: G_(0.45, -0.2), bl: G_(-0.4, -0.1) }], [9, { lean: 0.25, fa: A_(1.65, 0), ba: A_(0.6, 1.6) }], [18, {}]],
+  ftilt: [[0, {}], [5, { lean: 0.1, fl: G_(0.9, -2.2), fa: A_(1.2, 1.4), ba: A_(0.9, 1.6) }], [9, { lean: -0.55, fl: G_(1.8, 0.05), bl: G_(-0.25, -0.3), fa: A_(-1.2, 0.6), ba: A_(-0.6, 0.8) }], [16, { lean: -0.55, fl: G_(1.8, 0.05), bl: G_(-0.25, -0.3), fa: A_(-1.2, 0.6), ba: A_(-0.6, 0.8) }], [26, {}]],
+  utilt: [[0, {}], [5, { by: 8, lean: 0.2, fl: G_(0.9, -1.8) }], [9, { lean: -0.45, hd: -0.3, fl: G_(3.0, 0), bl: G_(-0.2, -0.4), fa: A_(-1.4, 0.4), ba: A_(-1.8, 0.4) }], [15, { lean: -0.45, fl: G_(3.0, 0), bl: G_(-0.2, -0.4), fa: A_(-1.4, 0.4), ba: A_(-1.8, 0.4) }], [26, {}]],
+  dtilt: [[0, {}], [4, { by: 24, lean: 0.5, fa: A_(0.8, 0.4), ba: A_(0.4, 0.4), fl: G_(1.4, -2.2), bl: G_(0.4, -2) }], [7, { by: 30, lean: 0.6, fl: G_(1.7, 0), bl: G_(0.3, -2.3), fa: A_(2.5, 0), ba: A_(2.3, 0) }], [13, { by: 30, lean: 0.6, fl: G_(1.7, 0), bl: G_(0.3, -2.3), fa: A_(2.5, 0), ba: A_(2.3, 0) }], [22, {}]],
+  dash: [[0, { lean: 0.5 }], [6, { lean: -0.9, by: 26, fl: G_(1.65, 0), bl: G_(0.6, -2.1), fa: A_(-0.5, 0.4), ba: A_(2.3, 0) }], [16, { lean: -0.9, by: 26, fl: G_(1.65, 0), bl: G_(0.6, -2.1), fa: A_(-0.5, 0.4), ba: A_(2.3, 0) }], [34, {}]],
+  fsmash: [[0, {}], [8, { lean: 0.3, by: 6, fl: G_(-0.3, -1.9), bl: G_(-0.2, -0.3), fa: A_(-1.2, 1.3), ba: A_(1.4, 1.5) }], [14, { lean: -0.65, hd: 0.1, fl: G_(1.85, 0), bl: G_(-0.15, -0.2), fa: A_(-1.9, 0.4), ba: A_(-1.3, 0.6) }], [30, { lean: -0.65, fl: G_(1.85, 0), bl: G_(-0.15, -0.2), fa: A_(-1.9, 0.4), ba: A_(-1.3, 0.6) }], [52, {}]],
+  usmash: [[0, {}], [8, { by: 16, fl: G_(1.0, -2.1), bl: G_(0.6, -1.9), fa: A_(0.6, 1.4), ba: A_(0.4, 1.4) }], [13, { rot: 0, fl: G_(3.0, 0), bl: G_(0.3, -0.6), fa: A_(-1.2, 0.4), ba: A_(-1.5, 0.4) }], [24, { rot: -TAU, fl: G_(3.0, 0), bl: G_(0.3, -0.6), fa: A_(-1.2, 0.4), ba: A_(-1.5, 0.4) }], [48, { rot: -TAU }]],
+  dsmash: [[0, {}], [8, { by: 24, lean: 0.6, fa: A_(2.4, 0), ba: A_(2.2, 0), fl: G_(1.2, -2), bl: G_(0.2, -1.8) }], [11, { by: 30, lean: 0.95, fa: A_(2.7, 0), ba: A_(2.5, 0), fl: G_(1.65, 0), bl: G_(-1.6, 0) }], [26, { by: 30, lean: 0.95, fa: A_(2.7, 0), ba: A_(2.5, 0), fl: G_(1.65, 0), bl: G_(-1.6, 0) }], [48, {}]],
+  nair: { ball: [4, 20], keys: [[0, {}], [4, { by: 14, lean: 0.6, fl: G_(1.2, -2.2), bl: G_(0.6, -2), fa: A_(0.9, 1.8), ba: A_(0.7, 1.8) }], [20, { by: 14, lean: 0.6, fl: G_(1.2, -2.2), bl: G_(0.6, -2), fa: A_(0.9, 1.8), ba: A_(0.7, 1.8) }], [32, {}]] },
+  fair: [[0, {}], [7, { lean: 0.3, fl: G_(1.0, -2), bl: G_(0.8, -1.8) }], [10, { lean: -1.15, fl: G_(1.75, 0), bl: G_(1.55, 0), fa: A_(-1.3, 0.4), ba: A_(-1.0, 0.4) }], [19, { lean: -1.15, fl: G_(1.75, 0), bl: G_(1.55, 0), fa: A_(-1.3, 0.4), ba: A_(-1.0, 0.4) }], [36, {}]],
+  bair: [[0, {}], [6, { lean: 0.4, bl: G_(0.5, -2), fl: G_(0.7, -1.6) }], [8, { lean: 0.95, hd: 0.2, bl: G_(-2.1, 0), fl: G_(0.8, -1.7), fa: A_(2.2, 0.3), ba: A_(1.9, 0.3) }], [16, { lean: 0.95, bl: G_(-2.1, 0), fl: G_(0.8, -1.7), fa: A_(2.2, 0.3), ba: A_(1.9, 0.3) }], [30, {}]],
+  uair: [[0, {}], [6, { lean: -0.6, fl: G_(2.7, -0.1), bl: G_(1.2, -1.8), fa: A_(-1, 0.5), ba: A_(-1.3, 0.5) }], [9, { lean: -0.7, fl: G_(1.3, -1.7), bl: G_(2.9, 0), fa: A_(-1, 0.5), ba: A_(-1.3, 0.5) }], [12, { lean: -0.65, fl: G_(2.9, 0), bl: G_(1.2, -1.8), fa: A_(-1, 0.5), ba: A_(-1.3, 0.5) }], [30, {}]],
+  dair: { ball: [12, 18], keys: [[0, {}], [10, { by: 10, fl: G_(0.9, -2), bl: G_(0.7, -1.9), fa: A_(1.2, 1.6), ba: A_(1, 1.6) }], [13, { fl: G_(0.05, 0), bl: G_(-0.05, 0), fa: A_(2.8, 0), ba: A_(2.7, 0) }], [22, { fl: G_(0.05, 0), bl: G_(-0.05, 0), fa: A_(2.8, 0), ba: A_(2.7, 0) }], [40, {}]] },
+});
+// 朕太：マイクを振る・ロックなポーズ・ひざスライディング
+restyle(CMOVES, {
+  jab: [[0, {}], [3, { lean: 0.25, fa: A_(1.6, 0.1), ba: A_(-0.4, 0.4), fl: G_(0.5, -0.2), bl: G_(-0.4, -0.1) }], [8, { lean: 0.25, fa: A_(1.6, 0.1), ba: A_(-0.4, 0.4), fl: G_(0.5, -0.2), bl: G_(-0.4, -0.1) }], [18, {}]],
+  ftilt: [[0, {}], [6, { lean: -0.25, fa: A_(-1.3, 0.4), ba: A_(-1.0, 0.5), fl: G_(0.3, -0.2) }], [9, { lean: 0.4, fa: A_(1.75, 0), ba: A_(1.5, 0), fl: G_(0.7, -0.3), bl: G_(-0.6, 0) }], [16, { lean: 0.4, fa: A_(1.75, 0), ba: A_(1.5, 0), fl: G_(0.7, -0.3), bl: G_(-0.6, 0) }], [26, {}]],
+  utilt: [[0, {}], [6, { by: 10, fa: A_(0.4, 1.8), ba: A_(-0.4, 0.4) }], [9, { by: -4, lean: -0.2, hd: -0.4, fa: A_(3.1, 0), ba: A_(-0.7, 0.6), fl: G_(0.2, -0.3), bl: G_(-0.3, -0.1) }], [15, { by: -4, lean: -0.2, hd: -0.4, fa: A_(3.1, 0), ba: A_(-0.7, 0.6) }], [26, {}]],
+  dtilt: [[0, {}], [4, { by: 20, lean: -0.2, fl: G_(1.0, -2.4), bl: G_(-0.3, -2.2) }], [7, { by: 32, lean: -0.4, hd: -0.35, fl: G_(1.3, -2.7), bl: G_(-0.5, -2.5), fa: A_(2.7, 0.2), ba: A_(-1.9, 0.4) }], [12, { by: 32, lean: -0.4, hd: -0.35, fl: G_(1.3, -2.7), bl: G_(-0.5, -2.5), fa: A_(2.7, 0.2), ba: A_(-1.9, 0.4) }], [22, {}]],
+  dash: [[0, { lean: 0.4 }], [6, { lean: 0.75, hd: 0.2, fa: A_(-1.5, 0.3), ba: A_(-1.8, 0.3), fl: G_(1.2, -0.4), bl: G_(-0.6, -0.3) }], [16, { lean: 0.75, fa: A_(-1.5, 0.3), ba: A_(-1.8, 0.3), fl: G_(1.2, -0.4), bl: G_(-0.6, -0.3) }], [34, {}]],
+  fsmash: [[0, {}], [8, { lean: -0.55, by: 4, fa: A_(-2.7, 0.2), ba: A_(-2.5, 0.2), fl: G_(0.6, -0.5), bl: G_(-0.4, -0.1) }], [14, { lean: 0.65, hd: 0.15, fa: A_(1.3, 0), ba: A_(1.2, 0), fl: G_(0.95, -0.1), bl: G_(-0.85, 0) }], [30, { lean: 0.65, fa: A_(1.3, 0), ba: A_(1.2, 0), fl: G_(0.95, -0.1), bl: G_(-0.85, 0) }], [52, {}]],
+  usmash: [[0, {}], [8, { by: 18, lean: 0.2, fa: A_(0.3, 1.9), ba: A_(-0.3, 1.9), fl: G_(0.7, -1.4), bl: G_(-0.5, -1.2) }], [13, { by: -10, hd: -0.45, fa: A_(2.7, 0), ba: A_(-2.7, 0), fl: G_(0.25, -0.2), bl: G_(-0.25, -0.2) }], [26, { by: -10, hd: -0.45, fa: A_(2.7, 0), ba: A_(-2.7, 0) }], [48, {}]],
+  dsmash: [[0, {}], [8, { by: 6, fl: G_(1.6, -1.2), bl: G_(-0.4, -0.2), fa: A_(1.6, 1.6) }], [11, { by: 24, hd: 0.2, fl: G_(1.2, 0), bl: G_(-1.2, 0), fa: A_(0.9, 0.2), ba: A_(-0.9, 0.2) }], [26, { by: 24, fl: G_(1.2, 0), bl: G_(-1.2, 0), fa: A_(0.9, 0.2), ba: A_(-0.9, 0.2) }], [48, {}]],
+  nair: [[0, {}], [4, { rot: 0, hd: -0.2, fa: A_(1.6, 0), ba: A_(-1.6, 0), fl: G_(0.9, -0.6), bl: G_(-0.9, -0.6) }], [20, { rot: TAU, fa: A_(1.6, 0), ba: A_(-1.6, 0), fl: G_(0.9, -0.6), bl: G_(-0.9, -0.6) }], [32, { rot: TAU }]],
+  fair: [[0, {}], [7, { lean: -0.3, fa: A_(-2.6, 0.2), ba: A_(2.6, 0.3) }], [10, { lean: 0.5, fa: A_(1.0, 0), ba: A_(2.0, 0.4), fl: G_(0.6, -0.8), bl: G_(-0.2, -0.5) }], [19, { lean: 0.5, fa: A_(1.0, 0), ba: A_(2.0, 0.4) }], [36, {}]],
+  bair: [[0, {}], [6, { lean: 0.2, fa: A_(1.2, 1.2) }], [8, { lean: 0.55, hd: -0.3, fa: A_(-2.0, 0.2), ba: A_(-1.6, 0.2), bl: G_(-1.4, -0.4), fl: G_(0.6, -1.2) }], [16, { lean: 0.55, fa: A_(-2.0, 0.2), ba: A_(-1.6, 0.2), bl: G_(-1.4, -0.4), fl: G_(0.6, -1.2) }], [30, {}]],
+  uair: [[0, {}], [5, { lean: 0.4, hd: 0.4, fa: A_(1, 1.4) }], [8, { lean: -0.4, hd: -0.6, fa: A_(2.9, 0.2), ba: A_(2.7, 0.2), fl: G_(0.6, -1.4), bl: G_(0.2, -1.2) }], [14, { lean: -0.4, hd: -0.6, fa: A_(2.9, 0.2), ba: A_(2.7, 0.2), fl: G_(0.6, -1.4), bl: G_(0.2, -1.2) }], [30, {}]],
+  dair: [[0, {}], [10, { fl: G_(1.1, -2.2), bl: G_(0.9, -2.0), fa: A_(1.5, 1.9), ba: A_(-1, 0) }], [13, { by: 6, hd: 0.3, fl: G_(0.3, 0), bl: G_(-0.3, 0), fa: A_(1.5, 1.9), ba: A_(2.6, 0) }], [22, { by: 6, fl: G_(0.3, 0), bl: G_(-0.3, 0), fa: A_(1.5, 1.9), ba: A_(2.6, 0) }], [40, {}]],
+});
+// バーサーカー：ハンマーパンチ・両手たたきつけ・タックル
+restyle(BMOVES, {
+  jab: [[0, {}], [2, { lean: -0.1, fa: A_(2.6, 0.4) }], [4, { lean: 0.35, by: 6, fa: A_(1.2, 0), ba: A_(0.3, 0.5) }], [9, { lean: 0.35, by: 6, fa: A_(1.2, 0), ba: A_(0.3, 0.5) }], [18, {}]],
+  ftilt: [[0, {}], [6, { lean: -0.15, fa: A_(-0.9, 1.3), ba: A_(0.9, 0.6) }], [9, { lean: 0.45, fa: A_(1.9, 0.05), ba: A_(-0.4, 0.5), fl: G_(0.6, -0.3), bl: G_(-0.5, 0) }], [16, { lean: 0.45, fa: A_(1.9, 0.05), ba: A_(-0.4, 0.5) }], [26, {}]],
+  utilt: [[0, {}], [6, { by: 12, fa: A_(0.6, 0.5), ba: A_(0.4, 0.5) }], [9, { by: -4, hd: -0.3, fa: A_(3.0, 0.3), ba: A_(2.8, 0.3) }], [15, { by: -4, hd: -0.3, fa: A_(3.0, 0.3), ba: A_(2.8, 0.3) }], [26, {}]],
+  dtilt: [[0, {}], [4, { by: 16, lean: 0.5, fa: A_(2.2, 0.3) }], [7, { by: 22, lean: 0.85, fa: A_(1.25, 0), ba: A_(0.4, 0.5), fl: G_(1.1, -1.6), bl: G_(-0.3, -0.8) }], [12, { by: 22, lean: 0.85, fa: A_(1.25, 0), ba: A_(0.4, 0.5), fl: G_(1.1, -1.6), bl: G_(-0.3, -0.8) }], [22, {}]],
+  dash: [[0, { lean: 0.3 }], [6, { lean: 0.6, by: 6, hd: 0.2, fa: A_(0.9, 1.6), ba: A_(0.6, 1.6), fl: G_(1.0, -0.6), bl: G_(-0.7, -0.2) }], [16, { lean: 0.6, by: 6, fa: A_(0.9, 1.6), ba: A_(0.6, 1.6), fl: G_(1.0, -0.6), bl: G_(-0.7, -0.2) }], [34, {}]],
+  fsmash: [[0, {}], [8, { lean: -0.45, by: 4, fa: A_(-2.9, 0.2), ba: A_(-2.7, 0.2), fl: G_(0.5, -0.4), bl: G_(-0.5, -0.1) }], [14, { lean: 0.75, by: 12, fa: A_(1.15, 0), ba: A_(1.0, 0), fl: G_(0.95, -0.5), bl: G_(-0.8, 0) }], [30, { lean: 0.75, by: 12, fa: A_(1.15, 0), ba: A_(1.0, 0), fl: G_(0.95, -0.5), bl: G_(-0.8, 0) }], [52, {}]],
+  usmash: [[0, {}], [8, { by: 20, lean: 0.3, fa: A_(0.4, 1.2), ba: A_(0.2, 1.2), fl: G_(0.8, -1.4), bl: G_(-0.5, -1.2) }], [13, { by: -8, lean: -0.2, hd: -0.5, fa: A_(2.9, 1.3), ba: A_(-2.9, -1.3) }], [26, { by: -8, lean: -0.2, hd: -0.5, fa: A_(2.9, 1.3), ba: A_(-2.9, -1.3) }], [48, {}]],
+  dsmash: [[0, {}], [8, { by: 6, lean: -0.3, fa: A_(-2.8, 0.2), ba: A_(-2.6, 0.2) }], [11, { by: 28, lean: 0.95, fa: A_(1.0, 0), ba: A_(0.85, 0), fl: G_(1.2, -1.8), bl: G_(-0.5, -0.8) }], [26, { by: 28, lean: 0.95, fa: A_(1.0, 0), ba: A_(0.85, 0), fl: G_(1.2, -1.8), bl: G_(-0.5, -0.8) }], [48, {}]],
+  nair: [[0, {}], [4, { rot: 0, fa: A_(1.6, 0.2), ba: A_(-1.6, 0.2), fl: G_(0.6, -0.8), bl: G_(-0.6, -0.8) }], [20, { rot: -TAU, fa: A_(1.6, 0.2), ba: A_(-1.6, 0.2), fl: G_(0.6, -0.8), bl: G_(-0.6, -0.8) }], [32, { rot: -TAU }]],
+  fair: [[0, {}], [7, { lean: -0.4, fa: A_(-2.9, 0.3), ba: A_(-2.7, 0.3), fl: G_(0.9, -1.4) }], [11, { lean: 0.6, fa: A_(1.0, 0), ba: A_(0.85, 0), fl: G_(0.5, -1.2), bl: G_(-0.2, -0.8) }], [19, { lean: 0.6, fa: A_(1.0, 0), ba: A_(0.85, 0) }], [36, {}]],
+  bair: [[0, {}], [6, { lean: 0.2, ba: A_(1.4, 1.8) }], [8, { lean: 0.5, ba: A_(-1.8, 1.4), fa: A_(0.8, 0.6), bl: G_(-0.5, -0.8), fl: G_(0.7, -1.3) }], [16, { lean: 0.5, ba: A_(-1.8, 1.4), fa: A_(0.8, 0.6) }], [30, {}]],
+  uair: [[0, {}], [5, { fa: A_(1.2, 0.2), ba: A_(-1.2, 0.2) }], [8, { lean: -0.2, hd: -0.3, fa: A_(2.9, 0.1), ba: A_(3.2, 0.1), fl: G_(0.7, -1.6), bl: G_(0.3, -1.2) }], [14, { lean: -0.2, fa: A_(2.9, 0.1), ba: A_(3.2, 0.1) }], [30, {}]],
+  dair: [[0, {}], [10, { fl: G_(1.2, -2.2), bl: G_(0.9, -2.0), fa: A_(2.2, 0.8), ba: A_(2, 0.8) }], [13, { by: -6, fl: G_(0.1, 0), bl: G_(-0.1, 0), fa: A_(2.7, 0.3), ba: A_(2.6, 0.3) }], [22, { by: -6, fl: G_(0.1, 0), bl: G_(-0.1, 0), fa: A_(2.7, 0.3), ba: A_(2.6, 0.3) }], [40, {}]],
+});
+// おうち：ハンマーを横・上・下へ大きく振る
+restyle(HMOVES, {
+  jab: [[0, {}], [3, { lean: 0.3, fa: A_(1.5, 0.1), ba: A_(1.2, 0.6), fl: G_(0.5, -0.2), bl: G_(-0.4, 0) }], [8, { lean: 0.3, fa: A_(1.5, 0.1), ba: A_(1.2, 0.6) }], [18, {}]],
+  ftilt: [[0, {}], [6, { lean: -0.2, fa: A_(-1.5, 0.2), ba: A_(0.3, 0.6) }], [9, { lean: 0.45, fa: A_(1.55, 0), ba: A_(0.9, 0.6), fl: G_(0.6, -0.3), bl: G_(-0.55, 0) }], [16, { lean: 0.45, fa: A_(1.55, 0), ba: A_(0.9, 0.6) }], [26, {}]],
+  utilt: [[0, {}], [6, { lean: 0.25, fa: A_(0.3, 0), ba: A_(0.6, 0.5) }], [9, { lean: -0.25, hd: -0.2, fa: A_(3.1, 0), ba: A_(2.4, 0.4) }], [15, { lean: -0.25, fa: A_(3.1, 0), ba: A_(2.4, 0.4) }], [26, {}]],
+  dtilt: [[0, {}], [4, { by: 16, lean: 0.4, fa: A_(-0.6, 0) }], [7, { by: 22, lean: 0.6, fa: A_(1.05, 0), ba: A_(0.6, 0.6), fl: G_(1.1, -1.8), bl: G_(-0.2, -1.2) }], [12, { by: 22, lean: 0.6, fa: A_(1.05, 0), ba: A_(0.6, 0.6), fl: G_(1.1, -1.8), bl: G_(-0.2, -1.2) }], [22, {}]],
+  dash: [[0, { lean: 0.3 }], [6, { lean: 0.5, fa: A_(1.6, 0), ba: A_(1.3, 0.4), fl: G_(1.1, -0.5), bl: G_(-0.6, -0.3) }], [16, { lean: 0.5, fa: A_(1.6, 0), ba: A_(1.3, 0.4), fl: G_(1.1, -0.5), bl: G_(-0.6, -0.3) }], [34, {}]],
+  fsmash: [[0, {}], [8, { lean: -0.5, by: 4, fa: A_(-2.6, -0.3), ba: A_(-2.4, 0.3), fl: G_(0.6, -0.5), bl: G_(-0.5, -0.1) }], [14, { lean: 0.7, by: 14, fa: A_(1.05, 0), ba: A_(0.9, 0.3), fl: G_(1.0, -0.7), bl: G_(-0.8, 0) }], [30, { lean: 0.7, by: 14, fa: A_(1.05, 0), ba: A_(0.9, 0.3), fl: G_(1.0, -0.7), bl: G_(-0.8, 0) }], [52, {}]],
+  usmash: [[0, {}], [8, { by: 18, lean: 0.4, fa: A_(0.1, 0), ba: A_(0.4, 0.6), fl: G_(0.8, -1.5), bl: G_(-0.4, -1.2) }], [13, { by: -6, lean: -0.25, hd: -0.3, fa: A_(3.15, 0), ba: A_(2.8, 0.3) }], [26, { by: -6, lean: -0.25, fa: A_(3.15, 0), ba: A_(2.8, 0.3) }], [48, {}]],
+  dsmash: [[0, {}], [8, { by: 6, lean: -0.35, fa: A_(3.0, 0.2), ba: A_(2.8, 0.3) }], [11, { by: 26, lean: 0.8, fa: A_(0.75, 0), ba: A_(0.6, 0.3), fl: G_(1.2, -1.8), bl: G_(-0.6, -0.9) }], [26, { by: 26, lean: 0.8, fa: A_(0.75, 0), ba: A_(0.6, 0.3), fl: G_(1.2, -1.8), bl: G_(-0.6, -0.9) }], [48, {}]],
+  nair: [[0, {}], [4, { rot: 0, fa: A_(1.6, 0), ba: A_(1.5, 0.2), fl: G_(0.6, -1.2), bl: G_(-0.2, -1.0) }], [20, { rot: -TAU, fa: A_(1.6, 0), ba: A_(1.5, 0.2), fl: G_(0.6, -1.2), bl: G_(-0.2, -1.0) }], [32, { rot: -TAU }]],
+  fair: [[0, {}], [7, { lean: -0.4, fa: A_(-2.7, -0.2), ba: A_(-2.4, 0.2), fl: G_(0.8, -1.4) }], [11, { lean: 0.55, fa: A_(1.1, 0), ba: A_(0.9, 0.3), fl: G_(0.6, -1.2), bl: G_(-0.1, -0.8) }], [19, { lean: 0.55, fa: A_(1.1, 0), ba: A_(0.9, 0.3) }], [36, {}]],
+  bair: [[0, {}], [6, { lean: -0.1, fa: A_(1.5, 0.3) }], [8, { lean: 0.4, fa: A_(-1.6, 0), ba: A_(-1.2, 0.4), bl: G_(-0.6, -0.8), fl: G_(0.8, -1.4) }], [16, { lean: 0.4, fa: A_(-1.6, 0), ba: A_(-1.2, 0.4) }], [30, {}]],
+  uair: [[0, {}], [5, { fa: A_(1.0, 0), ba: A_(0.8, 0.4) }], [9, { lean: -0.3, hd: -0.3, fa: A_(3.3, 0), ba: A_(2.9, 0.4), fl: G_(0.7, -1.6), bl: G_(0.2, -1.2) }], [14, { lean: -0.3, fa: A_(3.3, 0), ba: A_(2.9, 0.4) }], [30, {}]],
+  dair: [[0, {}], [10, { fa: A_(2.9, 0.1), ba: A_(2.6, 0.3), fl: G_(1.0, -2), bl: G_(0.8, -1.8) }], [13, { by: -4, fa: A_(0.1, 0), ba: A_(0.3, 0.2), fl: G_(0.6, -1.4), bl: G_(0.2, -1.2) }], [22, { by: -4, fa: A_(0.1, 0), ba: A_(0.3, 0.2), fl: G_(0.6, -1.4), bl: G_(0.2, -1.2) }], [40, {}]],
+});
+// 今井：体はひょろっと、腕で触手をあやつる指揮者のような動き
+restyle(TMOVES, {
+  jab: [[0, {}], [3, { lean: 0.2, hd: 0.1, fa: A_(1.3, 0.2), ba: A_(-0.2, 0.2) }], [8, { lean: 0.2, fa: A_(1.3, 0.2), ba: A_(-0.2, 0.2) }], [18, {}]],
+  ftilt: [[0, {}], [6, { lean: -0.25, fa: A_(-0.6, 0.8), ba: A_(-0.4, 0.3) }], [9, { lean: 0.35, fa: A_(1.7, 0), ba: A_(-0.6, 0.3), fl: G_(0.5, -0.2), bl: G_(-0.4, 0) }], [16, { lean: 0.35, fa: A_(1.7, 0), ba: A_(-0.6, 0.3) }], [26, {}]],
+  utilt: [[0, {}], [6, { lean: 0.3, fa: A_(0.4, 0.3) }], [9, { lean: -0.25, hd: -0.35, fa: A_(2.9, 0.2), ba: A_(2.6, 0.3) }], [15, { lean: -0.25, hd: -0.35, fa: A_(2.9, 0.2), ba: A_(2.6, 0.3) }], [26, {}]],
+  dtilt: [[0, {}], [4, { by: 14, lean: 0.4 }], [7, { by: 20, lean: 0.55, hd: 0.2, fa: A_(0.9, 0.1), ba: A_(0.6, 0.1), fl: G_(0.9, -1.6), bl: G_(-0.3, -1.2) }], [12, { by: 20, lean: 0.55, fa: A_(0.9, 0.1), ba: A_(0.6, 0.1), fl: G_(0.9, -1.6), bl: G_(-0.3, -1.2) }], [22, {}]],
+  dash: [[0, { lean: 0.4 }], [6, { lean: 0.15, hd: -0.1, fa: A_(1.6, 0), ba: A_(1.5, 0), fl: G_(0.8, -0.4), bl: G_(-0.4, -0.6) }], [16, { lean: 0.15, fa: A_(1.6, 0), ba: A_(1.5, 0), fl: G_(0.8, -0.4), bl: G_(-0.4, -0.6) }], [34, {}]],
+  fsmash: [[0, {}], [8, { lean: -0.45, hd: -0.3, fa: A_(2.4, 0.6), ba: A_(-2.4, 0.6), fl: G_(0.5, -0.3), bl: G_(-0.4, -0.1) }], [14, { lean: 0.4, fa: A_(1.6, 0), ba: A_(1.4, 0), fl: G_(0.8, -0.2), bl: G_(-0.7, 0) }], [30, { lean: 0.4, fa: A_(1.6, 0), ba: A_(1.4, 0), fl: G_(0.8, -0.2), bl: G_(-0.7, 0) }], [52, {}]],
+  usmash: [[0, {}], [8, { by: 16, lean: 0.35, fa: A_(0.2, 0.4), ba: A_(0.1, 0.4), fl: G_(0.7, -1.4), bl: G_(-0.4, -1.2) }], [13, { by: -4, lean: -0.2, hd: -0.4, fa: A_(2.5, 0), ba: A_(-2.5, 0) }], [26, { by: -4, lean: -0.2, hd: -0.4, fa: A_(2.5, 0), ba: A_(-2.5, 0) }], [48, {}]],
+  dsmash: [[0, {}], [8, { by: 12, fa: A_(2.2, 1), ba: A_(-2.2, 1) }], [11, { by: 20, lean: 0.1, fa: A_(0.4, 0), ba: A_(-0.4, 0), fl: G_(0.8, -0.6), bl: G_(-0.8, -0.6) }], [26, { by: 20, lean: 0.1, fa: A_(0.4, 0), ba: A_(-0.4, 0), fl: G_(0.8, -0.6), bl: G_(-0.8, -0.6) }], [48, {}]],
+  nair: [[0, {}], [4, { by: -2, hd: -0.2, fa: A_(2.2, 0.3), ba: A_(-2.2, 0.3), fl: G_(0.8, -0.6), bl: G_(-0.8, -0.6) }], [20, { by: -2, fa: A_(2.2, 0.3), ba: A_(-2.2, 0.3), fl: G_(0.8, -0.6), bl: G_(-0.8, -0.6) }], [32, {}]],
+  fair: [[0, {}], [7, { lean: -0.2, fa: A_(2.6, 0.4) }], [10, { lean: 0.4, fa: A_(1.5, 0), ba: A_(1.2, 0.2), fl: G_(0.5, -1), bl: G_(-0.2, -0.7) }], [19, { lean: 0.4, fa: A_(1.5, 0), ba: A_(1.2, 0.2) }], [36, {}]],
+  bair: [[0, {}], [6, { lean: 0.3 }], [8, { lean: -0.3, hd: 0.3, fa: A_(-1.8, 0.2), ba: A_(-1.4, 0.2), fl: G_(0.6, -1), bl: G_(-0.4, -0.6) }], [16, { lean: -0.3, fa: A_(-1.8, 0.2), ba: A_(-1.4, 0.2) }], [30, {}]],
+  uair: [[0, {}], [5, { fa: A_(1.2, 0.2) }], [8, { lean: -0.35, hd: -0.5, fa: A_(3.0, 0.1), ba: A_(2.8, 0.1), fl: G_(0.5, -1.2), bl: G_(0.2, -1) }], [14, { lean: -0.35, fa: A_(3.0, 0.1), ba: A_(2.8, 0.1) }], [30, {}]],
+  dair: [[0, {}], [10, { lean: 0.2, fa: A_(1.8, 0.4), ba: A_(1.6, 0.4), fl: G_(0.8, -1.6), bl: G_(0.6, -1.4) }], [13, { lean: 0.3, hd: 0.4, fa: A_(0.3, 0), ba: A_(0.1, 0), fl: G_(0.4, -1), bl: G_(0.2, -0.8) }], [22, { lean: 0.3, fa: A_(0.3, 0), ba: A_(0.1, 0) }], [40, {}]],
+});
+// 恵授：弓でなぐる・けり・弓を回す
+restyle(AMOVES, {
+  jab: [[0, {}], [3, { lean: 0.25, fa: A_(1.6, 0), ba: A_(1.2, 0.3), fl: G_(0.4, -0.2), bl: G_(-0.4, 0) }], [8, { lean: 0.25, fa: A_(1.6, 0), ba: A_(1.2, 0.3) }], [18, {}]],
+  ftilt: [[0, {}], [6, { lean: -0.25, fa: A_(-0.8, 0.4), ba: A_(0.6, 1.2) }], [9, { lean: 0.45, fa: A_(1.8, -0.1), ba: A_(0.3, 1.3), fl: G_(0.65, -0.2), bl: G_(-0.55, 0) }], [16, { lean: 0.45, fa: A_(1.8, -0.1), ba: A_(0.3, 1.3) }], [26, {}]],
+  utilt: [[0, {}], [6, { lean: 0.2, fa: A_(0.6, 0.2) }], [9, { lean: -0.2, hd: -0.25, fa: A_(3.05, 0), ba: A_(1.0, 1.4), fl: G_(0.3, -0.2), bl: G_(-0.3, 0) }], [15, { lean: -0.2, fa: A_(3.05, 0), ba: A_(1.0, 1.4) }], [26, {}]],
+  dtilt: [[0, {}], [4, { by: 18, lean: 0.2, fl: G_(1.0, -2.0), bl: G_(0.2, -1.8) }], [7, { by: 24, lean: -0.1, fl: G_(1.6, 0), bl: G_(-0.1, -2.2), fa: A_(1.2, 0.6), ba: A_(-0.6, 0.4) }], [12, { by: 24, lean: -0.1, fl: G_(1.6, 0), bl: G_(-0.1, -2.2), fa: A_(1.2, 0.6), ba: A_(-0.6, 0.4) }], [22, {}]],
+  dash: [[0, { lean: 0.4 }], [6, { lean: -0.4, by: 22, fl: G_(1.6, 0), bl: G_(0.5, -2), fa: A_(1.4, 0), ba: A_(-1.2, 0.4) }], [16, { lean: -0.4, by: 22, fl: G_(1.6, 0), bl: G_(0.5, -2), fa: A_(1.4, 0), ba: A_(-1.2, 0.4) }], [34, {}]],
+  fsmash: [[0, {}], [8, { lean: -0.4, fa: A_(-1.8, 0.4), ba: A_(-1.2, 0.6), fl: G_(0.6, -0.4), bl: G_(-0.5, -0.1) }], [14, { lean: 0.55, fa: A_(1.55, 0), ba: A_(1.5, 0.2), fl: G_(0.85, -0.1), bl: G_(-0.8, 0) }], [30, { lean: 0.55, fa: A_(1.55, 0), ba: A_(1.5, 0.2), fl: G_(0.85, -0.1), bl: G_(-0.8, 0) }], [52, {}]],
+  usmash: [[0, {}], [8, { by: 14, fa: A_(0.3, 0.2), ba: A_(-0.3, 0.4), fl: G_(0.7, -1.3), bl: G_(-0.4, -1.1) }], [13, { rot: 0, by: -4, fa: A_(3.0, 0), ba: A_(2.9, 0), fl: G_(0.2, -0.2), bl: G_(-0.2, -0.2) }], [24, { rot: TAU, by: -4, fa: A_(3.0, 0), ba: A_(2.9, 0) }], [48, { rot: TAU }]],
+  dsmash: [[0, {}], [8, { by: 14, fl: G_(0.8, -1.4), bl: G_(-0.4, -1.2) }], [11, { by: 30, lean: 0.1, fl: G_(1.55, 0), bl: G_(-1.55, 0), fa: A_(1.5, 0), ba: A_(-1.5, 0) }], [26, { by: 30, lean: 0.1, fl: G_(1.55, 0), bl: G_(-1.55, 0), fa: A_(1.5, 0), ba: A_(-1.5, 0) }], [48, {}]],
+  nair: [[0, {}], [4, { rot: 0, fa: A_(1.55, 0), ba: A_(-1.55, 0), fl: G_(1.2, 0), bl: G_(-1.2, 0) }], [20, { rot: -TAU, fa: A_(1.55, 0), ba: A_(-1.55, 0), fl: G_(1.2, 0), bl: G_(-1.2, 0) }], [32, { rot: -TAU }]],
+  fair: [[0, {}], [7, { lean: -0.3, fa: A_(2.8, 0.1), ba: A_(2.2, 0.6) }], [11, { lean: 0.5, fa: A_(1.0, 0), ba: A_(0.8, 0.6), fl: G_(0.6, -1), bl: G_(-0.2, -0.6) }], [19, { lean: 0.5, fa: A_(1.0, 0), ba: A_(0.8, 0.6) }], [36, {}]],
+  bair: [[0, {}], [6, { lean: 0.2, bl: G_(0.6, -1.8) }], [8, { lean: 0.55, bl: G_(-1.85, 0), fl: G_(0.8, -1.5), fa: A_(1.4, 0), ba: A_(0.6, 0.6) }], [16, { lean: 0.55, bl: G_(-1.85, 0), fl: G_(0.8, -1.5), fa: A_(1.4, 0) }], [30, {}]],
+  uair: [[0, {}], [5, { fa: A_(1.4, 0) }], [8, { lean: -0.25, fa: A_(3.1, 0), ba: A_(2.4, 1.0), fl: G_(0.6, -1.4), bl: G_(0.2, -1.1) }], [14, { lean: -0.25, fa: A_(3.1, 0), ba: A_(2.4, 1.0) }], [30, {}]],
+  dair: [[0, {}], [10, { fl: G_(1.0, -2.1), bl: G_(0.8, -1.9), fa: A_(1.4, 0.2) }], [13, { fl: G_(0.1, 0), bl: G_(0.6, -1.6), fa: A_(2.4, 0.2), ba: A_(-1.4, 0.4) }], [22, { fl: G_(0.1, 0), bl: G_(0.6, -1.6), fa: A_(2.4, 0.2), ba: A_(-1.4, 0.4) }], [40, {}]],
+});
+// しまりん：４本の腕で念力の掌底
+restyle(SMOVES, {
+  ftilt: [[0, {}], [6, { lean: -0.15, fa: A_(0.6, 1.6), ba: A_(0.4, 1.6), fa2: A_(0.4, 1.4), ba2: A_(0.2, 1.4) }], [9, { lean: 0.35, fa: A_(1.6, 0), ba: A_(1.5, 0), fa2: A_(1.3, 0), ba2: A_(1.2, 0), fl: G_(0.5, -0.4), bl: G_(-0.3, -0.6) }], [16, { lean: 0.35, fa: A_(1.6, 0), ba: A_(1.5, 0), fa2: A_(1.3, 0), ba2: A_(1.2, 0), fl: G_(0.5, -0.4), bl: G_(-0.3, -0.6) }], [26, {}]],
+  utilt: [[0, {}], [6, { by: 8, fa: A_(0.6, 1.2), ba: A_(-0.6, 1.2), fa2: A_(0.4, 1.2), ba2: A_(-0.4, 1.2) }], [9, { by: -6, hd: -0.3, fa: A_(2.8, 0), ba: A_(-2.8, 0), fa2: A_(2.2, 0.4), ba2: A_(-2.2, 0.4) }], [15, { by: -6, hd: -0.3, fa: A_(2.8, 0), ba: A_(-2.8, 0), fa2: A_(2.2, 0.4), ba2: A_(-2.2, 0.4) }], [26, {}]],
+  dtilt: [[0, {}], [4, { by: 20, lean: 0.4, fl: G_(0.9, -1.8), bl: G_(0.2, -1.6) }], [7, { by: 24, lean: 0.6, fa: A_(1.2, 0), ba: A_(1.0, 0), fa2: A_(0.9, 0), ba2: A_(0.8, 0), fl: G_(0.9, -1.8), bl: G_(0.2, -1.6) }], [12, { by: 24, lean: 0.6, fa: A_(1.2, 0), ba: A_(1.0, 0), fa2: A_(0.9, 0), ba2: A_(0.8, 0), fl: G_(0.9, -1.8), bl: G_(0.2, -1.6) }], [22, {}]],
+  dash: [[0, { lean: 0.3 }], [6, { lean: 0.55, by: -4, fa: A_(1.7, 0), ba: A_(1.6, 0), fa2: A_(-1.2, 0.4), ba2: A_(-1.4, 0.4), fl: G_(0.2, -0.6), bl: G_(-0.1, -0.8) }], [16, { lean: 0.55, by: -4, fa: A_(1.7, 0), ba: A_(1.6, 0), fa2: A_(-1.2, 0.4), ba2: A_(-1.4, 0.4), fl: G_(0.2, -0.6), bl: G_(-0.1, -0.8) }], [34, {}]],
+  dsmash: [[0, {}], [8, { by: -10, fa: A_(2.8, 0.4), ba: A_(-2.8, 0.4), fa2: A_(2.2, 0.6), ba2: A_(-2.2, 0.6), fl: G_(0.2, -0.6), bl: G_(-0.2, -0.6) }], [11, { by: 20, fa: A_(1.3, 0), ba: A_(-1.3, 0), fa2: A_(0.7, 0), ba2: A_(-0.7, 0), fl: G_(0.6, -1.2), bl: G_(-0.6, -1.2) }], [26, { by: 20, fa: A_(1.3, 0), ba: A_(-1.3, 0), fa2: A_(0.7, 0), ba2: A_(-0.7, 0), fl: G_(0.6, -1.2), bl: G_(-0.6, -1.2) }], [48, {}]],
+  nair: [[0, {}], [4, { hd: -0.2, fa: A_(1.6, 0), ba: A_(-1.6, 0), fa2: A_(0.9, 0), ba2: A_(-0.9, 0), fl: G_(0.3, -0.8), bl: G_(-0.3, -0.8) }], [20, { fa: A_(1.6, 0), ba: A_(-1.6, 0), fa2: A_(0.9, 0), ba2: A_(-0.9, 0), fl: G_(0.3, -0.8), bl: G_(-0.3, -0.8) }], [32, {}]],
+  fair: [[0, {}], [7, { lean: -0.2, fa: A_(2.7, 0.4), ba: A_(2.5, 0.4), fa2: A_(2.2, 0.6), ba2: A_(2.0, 0.6) }], [11, { lean: 0.5, fa: A_(1.2, 0), ba: A_(1.1, 0), fa2: A_(0.9, 0), ba2: A_(0.8, 0), fl: G_(0.4, -1), bl: G_(-0.1, -0.8) }], [19, { lean: 0.5, fa: A_(1.2, 0), ba: A_(1.1, 0), fa2: A_(0.9, 0), ba2: A_(0.8, 0) }], [36, {}]],
+  bair: [[0, {}], [6, { lean: 0.2 }], [8, { lean: 0.3, fa: A_(-1.6, 0), ba: A_(-1.5, 0), fa2: A_(-1.3, 0), ba2: A_(-1.2, 0), fl: G_(0.6, -1.2), bl: G_(0.2, -1) }], [16, { lean: 0.3, fa: A_(-1.6, 0), ba: A_(-1.5, 0), fa2: A_(-1.3, 0), ba2: A_(-1.2, 0) }], [30, {}]],
+  uair: [[0, {}], [5, { fa: A_(1.2, 1), ba: A_(-1.2, 1) }], [8, { lean: -0.2, hd: -0.4, fa: A_(3.0, 0), ba: A_(3.2, 0), fa2: A_(2.5, 0.3), ba2: A_(-2.5, 0.3), fl: G_(0.4, -1), bl: G_(0.1, -0.8) }], [14, { lean: -0.2, fa: A_(3.0, 0), ba: A_(3.2, 0), fa2: A_(2.5, 0.3), ba2: A_(-2.5, 0.3) }], [30, {}]],
+  dair: [[0, {}], [10, { by: -6, fa: A_(2.6, 0.3), ba: A_(2.5, 0.3), fa2: A_(2.0, 0.5), ba2: A_(1.9, 0.5) }], [13, { by: 4, fa: A_(0.15, 0), ba: A_(-0.1, 0), fa2: A_(0.4, 0), ba2: A_(-0.4, 0), fl: G_(0.3, -1), bl: G_(-0.1, -0.8) }], [22, { by: 4, fa: A_(0.15, 0), ba: A_(-0.1, 0), fa2: A_(0.4, 0), ba2: A_(-0.4, 0) }], [40, {}]],
+});
+
 const CHARS = [
   { key: 'shimarin', name: 'しまりん', kana: 'PSYCHIC', img: FACE, ar: FACE_AR, eyes: true, scale: 1, run: 7.0, airs: 5.8, jv: -14.6, shv: -10, djv: -13.4, airJumps: 2,
     kbTake: 0.95, swords: false, arms4: true, psychic: true, hand: '#c9c3f2', moves: SMOVES,
@@ -1470,7 +1591,7 @@ class Fighter {
     }
     if (hx) {
       this.dir = hx; this.vx += (hx * this.ch.run * (this.inkT > 0 ? 0.6 : 1) - this.vx) * 0.22;
-      if (this.state !== 'run') this.setState('run');
+      if (this.state !== 'run') { this.setState('run'); if (BT) BT.dust(this.x - this.dir * 12, this.y, 6); }
     } else {
       this.vx *= 0.75; if (Math.abs(this.vx) < 0.3) this.vx = 0;
       if (this.state !== 'idle') this.setState('idle');
@@ -1488,6 +1609,7 @@ class Fighter {
     }
     if (c.p.jump && this.jumps > 0) {
       this.jumps--; this.vy = this.ch.djv; this.vx = hx * this.ch.airs; this.ff = false; this.djT = 22;
+      if (BT) { BT.parts.push({ x: this.x, y: this.y - 6, ring: 1, r: 12, life: 14, max: 14, col: '#ffffff' }); BT.parts.push({ x: this.x, y: this.y - 6, shock: 1, r: 8, vr: 8, life: 12, max: 12, col: this.col.light, w: 5 }); }
       if (hx) this.dir = hx;
       Snd.jumpC(this.ch); BT.burst(this.x, this.y, '#ffffff', 6);
       BT.parts.push({ x: this.x, y: this.y - 4, ring: 1, r: 8, life: 12, max: 12, col: this.ch.psychic ? '#b89cff' : 'rgba(255,255,255,.85)' });
@@ -1631,7 +1753,7 @@ class Fighter {
   landOn(p, vyb) {
     this.ground = p; this.vy = 0; this.jumps = this.ch.airJumps || 1; this.usedSideB = false; this.ff = false; this.ledgeInvOK = true;
     const s = this.state;
-    if (vyb > 7 && s !== 'hitstun' && BT) { BT.dust(this.x, this.y, 5); Snd.landC(this.ch); }
+    if (vyb > 7 && s !== 'hitstun' && BT) { BT.dust(this.x, this.y, 5); Snd.landC(this.ch); if (vyb > 12) BT.parts.push({ x: this.x, y: this.y, shock: 1, r: 10, vr: 9, life: 14, max: 14, col: 'rgba(255,255,255,.8)', w: 5 }); }
     if (s === 'move') {
       const m = this.move;
       if (m.onLand) { m.onLand(this); return; }
@@ -1654,10 +1776,12 @@ class Fighter {
     let tgt;
     switch (s) {
       case 'idle': case 'respawn': {
-        const b = Math.sin(t * 0.08);
-        tgt = mk({ by: b * 1.5, fa: { s: 0.35 + b * 0.05, e: 0.5 }, ba: { s: -0.25 - b * 0.05, e: 0.45 } }); break;
+        const b = Math.sin(t * 0.08), S = STANCE[this.ch.key];
+        tgt = mk(S ? S.idle(t, b) : { by: b * 1.5, fa: { s: 0.35 + b * 0.05, e: 0.5 }, ba: { s: -0.25 - b * 0.05, e: 0.45 } }); break;
       }
       case 'run': {
+        const S = STANCE[this.ch.key];
+        if (S) { tgt = mk(S.run(t)); break; }
         const ph = t * 0.32, a = Math.sin(ph);
         tgt = mk({ lean: 0.32, by: -Math.abs(Math.cos(ph)) * 3,
           fl: { h: a * 0.9, k: -0.6 - Math.max(0, -a) * 0.8 }, bl: { h: -a * 0.9, k: -0.6 - Math.max(0, a) * 0.8 },
@@ -2356,17 +2480,17 @@ function drawSoftPlat(st, p, i, t) {
 // =====================================================================
 // 体の骨格（等身を上げた版：脚・胴・腕を長くして頭の比率を下げる。約2.8頭身）
 const BODY = { hip: 62, torso: 44, sh: 37, arm1: 25, arm2: 23, leg1: 31, leg2: 31, sh2: 23, arm2a: 22, arm2b: 21, head: 34, face: 66, pivot: 84, height: 168 };
-function joints(P) {
-  const hip = { x: 0, y: -BODY.hip + P.by };
+function joints(P, B = BODY) {
+  const hip = { x: 0, y: -B.hip + P.by };
   const at = d => ({ x: hip.x + Math.sin(P.lean) * d, y: hip.y - Math.cos(P.lean) * d });
-  const neck = at(BODY.torso), sh = at(BODY.sh), sh2 = at(BODY.sh2);
+  const neck = at(B.torso), sh = at(B.sh), sh2 = at(B.sh2);
   const limb = (o, a, b, l1, l2) => {
     const m = { x: o.x + Math.sin(a) * l1, y: o.y + Math.cos(a) * l1 };
     return [o, m, { x: m.x + Math.sin(a + b) * l2, y: m.y + Math.cos(a + b) * l2 }];
   };
-  return { hip, neck, sh, sh2, fa: limb(sh, P.fa.s, P.fa.e, BODY.arm1, BODY.arm2), ba: limb(sh, P.ba.s, P.ba.e, BODY.arm1, BODY.arm2),
-    fa2: limb(sh2, P.fa2.s, P.fa2.e, BODY.arm2a, BODY.arm2b), ba2: limb(sh2, P.ba2.s, P.ba2.e, BODY.arm2a, BODY.arm2b),
-    fl: limb(hip, P.fl.h, P.fl.k, BODY.leg1, BODY.leg2), bl: limb(hip, P.bl.h, P.bl.k, BODY.leg1, BODY.leg2) };
+  return { hip, neck, sh, sh2, fa: limb(sh, P.fa.s, P.fa.e, B.arm1, B.arm2), ba: limb(sh, P.ba.s, P.ba.e, B.arm1, B.arm2),
+    fa2: limb(sh2, P.fa2.s, P.fa2.e, B.arm2a, B.arm2b), ba2: limb(sh2, P.ba2.s, P.ba2.e, B.arm2a, B.arm2b),
+    fl: limb(hip, P.fl.h, P.fl.k, B.leg1, B.leg2), bl: limb(hip, P.bl.h, P.bl.k, B.leg1, B.leg2) };
 }
 function polyPath(pts, ox = 0, oy = 0) {
   ctx.beginPath(); ctx.moveTo(pts[0].x + ox, pts[0].y + oy);
@@ -2722,13 +2846,219 @@ function drawScarf(S, cfg, SCL) {
   ctx.restore();
 }
 // 胴体（ジャケット）
-function drawTorso(J, P, C, CH, t) {
+// =====================================================================
+//  キャラごとの体つき・衣装（体の長さ・太さ・服・くつ・頭の小物）
+//  look：robe=法衣 / gi=道着とはかま / cloak=マント / overalls=作業着 /
+//        coat=ロングコート / track=スピードスーツ / leather=革ジャン
+// =====================================================================
+const BUILD = {
+  shimarin: { torso: 48, sh: 41, sh2: 27, arm1: 26, arm2: 24, leg1: 34, leg2: 34, head: 36, shW: 17, waW: 10, hiW: 13, aw: 0.85, lw: 0.8, look: 'robe', shoe: 'pointed' },
+  ichigo: { torso: 44, sh: 37, arm1: 25, arm2: 24, leg1: 31, leg2: 31, head: 34, shW: 19, waW: 12.5, hiW: 15, aw: 1, lw: 1, look: 'gi', shoe: 'tabi' },
+  archer: { torso: 46, sh: 39, arm1: 27, arm2: 25, leg1: 35, leg2: 34, head: 35, shW: 16, waW: 10.5, hiW: 13, aw: 0.85, lw: 0.85, look: 'cloak', shoe: 'boot' },
+  hammer: { torso: 40, sh: 33, arm1: 23, arm2: 22, leg1: 25, leg2: 23, head: 33, shW: 24, waW: 22, hiW: 21, aw: 1.4, lw: 1.4, look: 'overalls', shoe: 'work' },
+  imai: { torso: 50, sh: 43, arm1: 28, arm2: 27, leg1: 36, leg2: 35, head: 37, shW: 15, waW: 11, hiW: 12.5, aw: 0.78, lw: 0.78, look: 'coat', shoe: 'pointed' },
+  henry: { torso: 43, sh: 36, arm1: 25, arm2: 24, leg1: 34, leg2: 33, head: 34, shW: 18, waW: 10.5, hiW: 13, aw: 0.95, lw: 1, look: 'track', shoe: 'wing' },
+  chinta: { torso: 44, sh: 37, arm1: 25, arm2: 23, leg1: 31, leg2: 30, head: 34, shW: 20, waW: 13, hiW: 15, aw: 1.05, lw: 1.05, look: 'leather', shoe: 'boot' },
+};
+const BD_CACHE = new Map();
+function bodyOf(CH) {
+  let b = BD_CACHE.get(CH.key); if (b) return b;
+  b = { ...BODY, shW: 19, waW: 12.5, hiW: 15, aw: 1, lw: 1, look: 'jacket', shoe: 'sneaker', ...(BUILD[CH.key] || {}) };
+  b.hip = b.leg1 + b.leg2; b.pivot = b.hip + 22;
+  BD_CACHE.set(CH.key, b); return b;
+}
+const LEGC = {
+  robe: ['#2a2050', '#191232'], gi: ['#1d2340', '#121630'], cloak: ['#1c1c24', '#0e0e14'], overalls: ['#3d6096', '#2c4874'],
+  coat: ['#1d1628', '#110c19'], track: null, leather: ['#36548a', '#27406c'], jacket: ['#2a2f4a', '#1b1f33'],
+};
+function legCol(CH, BD, front) {
+  const c = LEGC[BD.look];
+  if (!c) return front ? (CH.outfit ? CH.outfit.main : '#2a2f4a') : (CH.outfit ? CH.outfit.dark : '#1b1f33');
+  return front ? c[0] : c[1];
+}
+// 2色の手足（上と下で色がちがう：まくった袖など）
+function limb2(L, r0, r1, r2, c1, c2) {
+  ctx.fillStyle = '#14121f';
+  capsulePath(L[0], L[1], r0 + 2.6, r1 + 2.6); ctx.fill(); capsulePath(L[1], L[2], r1 + 2.6, r2 + 2.6); ctx.fill();
+  ctx.fillStyle = c2; capsulePath(L[1], L[2], r1, r2); ctx.fill();
+  ctx.fillStyle = c1; capsulePath(L[0], L[1], r0, r1 * 1.05); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.22)'; capsulePath({ x: L[0].x - r0 * 0.35, y: L[0].y - r0 * 0.35 }, { x: L[2].x - r2 * 0.35, y: L[2].y - r2 * 0.35 }, r0 * 0.3, r2 * 0.3); ctx.fill();
+}
+// 手足にそった線（スーツの線・ジーンズの縫い目）
+function limbLine(L, off, col, w) {
+  ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.beginPath();
+  for (let i = 0; i < 3; i++) {
+    const a = L[Math.max(0, i - 1)], b = L[Math.min(2, i + 1)], d = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+    const nx = -(b.y - a.y) / d * off, ny = (b.x - a.x) / d * off;
+    i ? ctx.lineTo(L[i].x + nx, L[i].y + ny) : ctx.moveTo(L[i].x + nx, L[i].y + ny);
+  }
+  ctx.stroke();
+}
+// くつ：形を変えられる版（scale：大きさ / toe：つま先のとがり / sole：ソールの色）
+function shoeShape(p, col, sole, scale = 1, toe = 0) {
+  ctx.save(); ctx.translate(p.x, p.y); ctx.scale(scale, scale);
+  ctx.fillStyle = '#14121f';
+  ctx.beginPath(); ctx.moveTo(-9, -8); ctx.quadraticCurveTo(-2, -12, 6, -6); ctx.quadraticCurveTo(17 + toe, -3, 17 + toe, 4 - toe * 0.2); ctx.lineTo(17 + toe * 0.6, 7); ctx.lineTo(-11, 7); ctx.quadraticCurveTo(-13, -2, -9, -8); ctx.fill();
+  ctx.fillStyle = col;
+  ctx.beginPath(); ctx.moveTo(-7.5, -5.5); ctx.quadraticCurveTo(-2, -9, 5, -4); ctx.quadraticCurveTo(14 + toe, -1.5, 14.5 + toe, 2.5); ctx.lineTo(-9.5, 2.5); ctx.quadraticCurveTo(-10.5, -2, -7.5, -5.5); ctx.fill();
+  ctx.fillStyle = sole; ctx.fillRect(-9.5, 2.5, 24 + toe * 0.6, 3.2);
+  ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.beginPath(); ctx.ellipse(-3, -4, 4, 1.5, -0.2, 0, TAU); ctx.fill();
+  ctx.restore();
+}
+function drawFoot(L, BD, CH, front) {
+  const p = L[2], k = L[1], s = BD.lw;
+  const shin = { x: lerp(k.x, p.x, 0.42), y: lerp(k.y, p.y, 0.42) };
+  switch (BD.shoe) {
+    case 'boot': {   // すねまである長いブーツ
+      const c = CH.outfit ? CH.outfit.shoe : '#1a1418';
+      ctx.fillStyle = '#14121f'; capsulePath(shin, p, 7.8 * s, 7.2 * s); ctx.fill();
+      ctx.fillStyle = c; capsulePath(shin, p, 5.6 * s, 5.2 * s); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.18)'; capsulePath({ x: shin.x - 2, y: shin.y }, { x: p.x - 2, y: p.y }, 1.6, 1.4); ctx.fill();
+      ctx.fillStyle = '#c9a24a'; ctx.beginPath(); ctx.arc(shin.x, shin.y + 2, 2.2 * s, 0, TAU); ctx.fill();
+      shoeShape(p, c, '#0a0a0c', 1.05);
+      break;
+    }
+    case 'work': {   // 安全ぐつ：ごつい茶色＋鉄のつま先
+      shoeShape(p, '#6b4a2a', '#22160a', 1.3);
+      ctx.fillStyle = '#9aa0ad'; ctx.strokeStyle = '#14121f'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(p.x + 14, p.y - 1, 6, 5, 0, Math.PI, TAU); ctx.fill(); ctx.stroke();
+      break;
+    }
+    case 'tabi': {   // 白い足袋とわらじ
+      ctx.fillStyle = '#14121f'; capsulePath({ x: lerp(k.x, p.x, 0.7), y: lerp(k.y, p.y, 0.7) }, p, 6.6, 6.4); ctx.fill();
+      ctx.fillStyle = '#f4f1ea'; capsulePath({ x: lerp(k.x, p.x, 0.7), y: lerp(k.y, p.y, 0.7) }, p, 4.4, 4.2); ctx.fill();
+      ctx.save(); ctx.translate(p.x, p.y);
+      ctx.fillStyle = '#14121f'; ctx.beginPath(); ctx.ellipse(3, 0, 12, 7, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#f4f1ea'; ctx.beginPath(); ctx.ellipse(3, -1, 10, 5, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#b08a4a'; ctx.fillRect(-9, 4, 24, 3.5);
+      ctx.strokeStyle = '#d7191f'; ctx.lineWidth = 2; line(8, -4, 4, 4); line(8, -4, 12, 4);
+      ctx.restore();
+      break;
+    }
+    case 'pointed': shoeShape(p, CH.outfit ? CH.outfit.shoe : '#1d1438', '#000', 1, 9); break;
+    case 'wing': {   // つばさつきのスニーカー
+      shoeShape(p, CH.outfit ? CH.outfit.shoe : '#ffd23a', '#f2f2f6', 1);
+      ctx.save(); ctx.translate(p.x - 8, p.y - 6);
+      ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#14121f'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-12, -8, -16, -2); ctx.quadraticCurveTo(-10, -2, -12, 3); ctx.quadraticCurveTo(-6, 1, 0, 3); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.restore();
+      break;
+    }
+    default: shoe(p, CH.outfit ? CH.outfit.shoe : '#2a2233');
+  }
+}
+function drawLeg(L, BD, CH, front, t) {
+  const s = BD.lw, col = legCol(CH, BD, front);
+  if (BD.look === 'gi') {   // はかま：太くて、すそが広がる
+    limbC(L, 12, 12.5, 11.5, col);
+    ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 2;
+    limbLine(L, 4, 'rgba(255,255,255,.16)', 2); limbLine(L, -4, 'rgba(0,0,0,.25)', 2);
+  } else if (BD.look === 'overalls') {
+    limbC(L, 8.4 * s / 1.1, 7.2 * s / 1.1, 6 * s / 1.1, col);
+    limbLine(L, 3, 'rgba(255,220,140,.55)', 1.4);   // 黄色い縫い目
+  } else if (BD.look === 'leather') {
+    limbC(L, 7.8 * s, 6.2 * s, 4.9 * s, col);
+    ctx.fillStyle = 'rgba(220,235,255,.55)'; ctx.beginPath(); ctx.ellipse(L[1].x, L[1].y, 4.5, 3, 0, 0, TAU); ctx.fill();   // ひざの破れ
+    limbLine(L, -3, 'rgba(255,255,255,.2)', 1.2);
+  } else if (BD.look === 'track') {
+    limbC(L, 7.6 * s, 6 * s, 4.5 * s, col);
+    limbLine(L, 4.5, '#ffd23a', 2.2);
+  } else limbC(L, 7.8 * s, 6.2 * s, 4.7 * s, col);
+  drawFoot(L, BD, CH, front);
+}
+function drawArm(L, BD, CH, C, front) {
+  const s = BD.aw, col = front ? C.main : C.dark, acc = C.accent || 'rgba(255,255,255,.55)';
+  switch (BD.look) {
+    case 'overalls':   // まくった袖（シャツ＝プレイヤー色）＋太い前腕
+      limb2(L, 6.2 * s, 5.4 * s, 4.6 * s, front ? (C.accent || C.main) : shade(C.accent || C.main, -40), CH.hand);
+      break;
+    case 'leather':
+      limbC(L, 6 * s, 5 * s, 4.2 * s, front ? '#23232b' : '#141418', { stripe: acc });
+      for (let i = 0; i < 2; i++) { const q = { x: lerp(L[0].x, L[1].x, 0.3 + i * 0.25), y: lerp(L[0].y, L[1].y, 0.3 + i * 0.25) }; ctx.fillStyle = '#d0d4dc'; ctx.beginPath(); ctx.arc(q.x, q.y, 1.6, 0, TAU); ctx.fill(); }
+      break;
+    case 'track':
+      limbC(L, 5.8 * s, 4.7 * s, 3.9 * s, col); limbLine(L, 3.6, '#ffd23a', 1.8);
+      break;
+    case 'robe': case 'gi': {   // 広いそで
+      limbC(L, 6 * s, 5 * s, 4.2 * s, col);
+      const e = L[1], w = L[2], d = Math.hypot(w.x - e.x, w.y - e.y) || 1, nx = -(w.y - e.y) / d, ny = (w.x - e.x) / d;
+      const a = { x: lerp(e.x, w.x, 0.15), y: lerp(e.y, w.y, 0.15) }, b = { x: lerp(e.x, w.x, 0.8), y: lerp(e.y, w.y, 0.8) };
+      const R1 = 7 * s, R2 = 12 * s;
+      ctx.beginPath(); ctx.moveTo(a.x + nx * R1, a.y + ny * R1); ctx.lineTo(b.x + nx * R2, b.y + ny * R2 + 4); ctx.lineTo(b.x - nx * R2, b.y - ny * R2 + 4); ctx.lineTo(a.x - nx * R1, a.y - ny * R1); ctx.closePath();
+      ctx.lineWidth = 4; ctx.strokeStyle = '#14121f'; ctx.stroke(); ctx.fillStyle = col; ctx.fill();
+      ctx.strokeStyle = BD.look === 'robe' ? '#e8c45a' : '#f4f1ea'; ctx.lineWidth = 2.2;
+      line(b.x + nx * R2, b.y + ny * R2 + 4, b.x - nx * R2, b.y - ny * R2 + 4);
+      break;
+    }
+    case 'cloak':
+      limbC(L, 5.6 * s, 4.6 * s, 3.8 * s, col);
+      if (front) { ctx.fillStyle = '#14121f'; capsulePath({ x: lerp(L[1].x, L[2].x, 0.35), y: lerp(L[1].y, L[2].y, 0.35) }, { x: lerp(L[1].x, L[2].x, 0.85), y: lerp(L[1].y, L[2].y, 0.85) }, 6.5, 6); ctx.fill();
+        ctx.fillStyle = '#6b4a2a'; capsulePath({ x: lerp(L[1].x, L[2].x, 0.35), y: lerp(L[1].y, L[2].y, 0.35) }, { x: lerp(L[1].x, L[2].x, 0.85), y: lerp(L[1].y, L[2].y, 0.85) }, 4.6, 4.2); ctx.fill(); }
+      break;
+    default: limbC(L, 6 * s, 4.9 * s, 4 * s, col, { stripe: acc });
+  }
+}
+// 色を明るく / 暗く（16進）
+function shade(hex, d) {
+  const n = parseInt(String(hex).slice(1, 7), 16);
+  if (isNaN(n)) return hex;
+  const c = v => clamp(v + d, 0, 255) | 0;
+  return `rgb(${c(n >> 16)},${c((n >> 8) & 255)},${c(n & 255)})`;
+}
+// 体の後ろ側：マント・コートのすそ・法衣のすそ
+function drawBackLayer(J, P, C, CH, t, BD) {
+  const h = J.hip, sw = Math.sin(t * 0.09) * 4, kb = J.bl[1];
+  if (BD.look === 'cloak') {   // マント：肩からふくらはぎまで、うしろへなびく
+    const ax = Math.sin(P.lean), ay = -Math.cos(P.lean);
+    const s1 = { x: J.neck.x - 4 + ax * -4, y: J.neck.y + 2 }, s2 = { x: J.neck.x - 12, y: J.neck.y + 4 };
+    ctx.beginPath(); ctx.moveTo(s1.x + 8, s1.y);
+    ctx.quadraticCurveTo(h.x - 30 + sw, h.y - 10, h.x - 40 + sw * 1.6, h.y + 54);
+    ctx.lineTo(h.x - 4 + sw, h.y + 60);
+    ctx.quadraticCurveTo(h.x - 8, h.y + 10, s2.x + 6, s2.y);
+    ctx.closePath();
+    ctx.lineWidth = 5; ctx.strokeStyle = '#050508'; ctx.lineJoin = 'round'; ctx.stroke();
+    ctx.fillStyle = CH.outfit ? CH.outfit.dark : C.dark; ctx.fill();
+    ctx.strokeStyle = C.accent || '#c8143c'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(h.x - 40 + sw * 1.6, h.y + 54); ctx.lineTo(h.x - 4 + sw, h.y + 60); ctx.stroke();
+  } else if (BD.look === 'coat' || BD.look === 'robe') {   // うしろのすそ
+    const robe = BD.look === 'robe', len = robe ? 0.55 : 0.75;
+    const bot = { x: lerp(kb.x, J.bl[2].x, len - 0.4) - 8 + sw * 0.6, y: lerp(kb.y, J.bl[2].y, len - 0.4) + 4 };
+    ctx.beginPath(); ctx.moveTo(h.x + 6, h.y - 6); ctx.lineTo(h.x - BD.hiW - 2, h.y - 4);
+    ctx.quadraticCurveTo(bot.x - 16, (h.y + bot.y) / 2, bot.x - 14 + sw, bot.y); ctx.lineTo(bot.x + 12, bot.y + 2); ctx.closePath();
+    ctx.lineWidth = 4.5; ctx.strokeStyle = '#14121f'; ctx.stroke();
+    ctx.fillStyle = robe ? C.dark : (CH.outfit ? CH.outfit.dark : C.dark); ctx.fill();
+  }
+}
+// 体の前側：法衣のすそ・コートの前すそ（脚の上にかかる）
+function drawFrontLayer(J, P, C, CH, t, BD) {
+  if (BD.look !== 'robe' && BD.look !== 'coat') return;
+  const h = J.hip, robe = BD.look === 'robe', sw = Math.sin(t * 0.09 + 1) * 3;
+  const kf = J.fl[1], kb = J.bl[1], len = robe ? 0.25 : 0.5;
+  const fb = { x: lerp(kf.x, J.fl[2].x, len) + 10 + sw, y: lerp(kf.y, J.fl[2].y, len) + 6 };
+  const bb = { x: lerp(kb.x, J.bl[2].x, len) - 8, y: lerp(kb.y, J.bl[2].y, len) + 6 };
+  const wl = { x: h.x + BD.hiW, y: h.y - 8 }, wr = { x: h.x - BD.hiW, y: h.y - 8 };
+  ctx.beginPath(); ctx.moveTo(wr.x, wr.y); ctx.lineTo(wl.x, wl.y);
+  ctx.quadraticCurveTo(fb.x + 4, (wl.y + fb.y) / 2, fb.x, fb.y);
+  ctx.quadraticCurveTo((fb.x + bb.x) / 2, Math.max(fb.y, bb.y) + 8, bb.x, bb.y);
+  ctx.quadraticCurveTo(bb.x - 6, (wr.y + bb.y) / 2, wr.x, wr.y); ctx.closePath();
+  ctx.lineWidth = 4.5; ctx.lineJoin = 'round'; ctx.strokeStyle = '#14121f'; ctx.stroke();
+  const g = ctx.createLinearGradient(h.x, h.y, h.x, fb.y);
+  if (robe) { g.addColorStop(0, C.main); g.addColorStop(1, C.dark); } else { g.addColorStop(0, CH.outfit.main); g.addColorStop(1, CH.outfit.dark); }
+  ctx.fillStyle = g; ctx.fill();
+  // すその飾り
+  ctx.save(); ctx.clip();
+  ctx.strokeStyle = robe ? '#e8c45a' : 'rgba(255,255,255,.12)'; ctx.lineWidth = robe ? 3 : 2;
+  ctx.beginPath(); ctx.moveTo(fb.x, fb.y - 4); ctx.quadraticCurveTo((fb.x + bb.x) / 2, Math.max(fb.y, bb.y) + 4, bb.x, bb.y - 4); ctx.stroke();
+  if (robe) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35 + 0.2 * Math.sin(t * 0.15); ctx.lineWidth = 8; ctx.strokeStyle = '#9a6bff'; ctx.stroke(); }
+  else { ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 2; line(h.x + 2, h.y - 6, (fb.x + bb.x) / 2 + 2, Math.max(fb.y, bb.y)); }
+  ctx.restore();
+}
+function drawTorso(J, P, C, CH, t, BD) {
   const ax = Math.sin(P.lean), ay = -Math.cos(P.lean), px = -ay, py = ax;
   const pt = (b, a, p) => ({ x: b.x + ax * a + px * p, y: b.y + ay * a + py * p });
-  const h = J.hip, n = J.neck, T = BODY.torso;
-  // 逆三角形のシルエット：肩幅が広く、腰でしぼり、すそが少し広がる
-  const s1 = pt(n, -4, 19), s2 = pt(n, -4, -19), w1 = pt(h, T * 0.42, 12.5), w2 = pt(h, T * 0.42, -12.5);
-  const h1 = pt(h, -7, 15), h2 = pt(h, -7, -15), top = pt(n, 6, 0), bot = pt(h, -12, 0);
+  const h = J.hip, n = J.neck, T = BD.torso, SW = BD.shW, WW = BD.waW, HW = BD.hiW, look = BD.look;
+  const s1 = pt(n, -4, SW), s2 = pt(n, -4, -SW), w1 = pt(h, T * 0.42, WW), w2 = pt(h, T * 0.42, -WW);
+  const h1 = pt(h, -7, HW), h2 = pt(h, -7, -HW), top = pt(n, 6, 0), bot = pt(h, -12, 0);
   const torsoPath = () => {
     ctx.beginPath(); ctx.moveTo(h1.x, h1.y);
     ctx.quadraticCurveTo(w1.x, w1.y, s1.x, s1.y);
@@ -2736,76 +3066,308 @@ function drawTorso(J, P, C, CH, t) {
     ctx.quadraticCurveTo(w2.x, w2.y, h2.x, h2.y);
     ctx.quadraticCurveTo(bot.x, bot.y, h1.x, h1.y); ctx.closePath();
   };
+  const base = look === 'leather' ? { main: '#2a2a33', dark: '#121216', light: '#4a4a58' }
+    : look === 'overalls' ? { main: C.accent || C.main, dark: shade(C.accent || C.main, -60), light: shade(C.accent || C.main, 50) } : C;
   torsoPath(); ctx.lineJoin = 'round'; ctx.lineWidth = 5.5; ctx.strokeStyle = '#14121f'; ctx.stroke();
   const g = ctx.createLinearGradient(s1.x, s1.y, s2.x, s2.y);
-  g.addColorStop(0, C.light); g.addColorStop(0.3, C.main); g.addColorStop(1, C.dark);
+  g.addColorStop(0, base.light); g.addColorStop(0.3, base.main); g.addColorStop(1, base.dark);
   ctx.fillStyle = g; ctx.fill();
   ctx.save(); torsoPath(); ctx.clip();
-  // 胸の陰影（上から光が当たる）
   const vg = ctx.createLinearGradient(n.x, n.y, h.x, h.y); vg.addColorStop(0, 'rgba(255,255,255,.18)'); vg.addColorStop(0.55, 'rgba(255,255,255,0)'); vg.addColorStop(1, 'rgba(0,0,20,.28)');
-  ctx.fillStyle = vg; ctx.fillRect(Math.min(s1.x, s2.x, h1.x, h2.x) - 10, n.y - 20, 80, T + 40);
-  // 白いシャツのVネック
-  const v1 = pt(n, 1, 7), v2 = pt(n, -16, 0), v3 = pt(n, 1, -7);
-  ctx.fillStyle = '#f4f2f8'; ctx.beginPath(); ctx.moveTo(v1.x, v1.y); ctx.lineTo(v2.x, v2.y); ctx.lineTo(v3.x, v3.y); ctx.closePath(); ctx.fill();
-  // えり（ラペル）
-  ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 2;
-  for (const sd of [1, -1]) { const l1 = pt(n, 1, 9 * sd), l2 = pt(n, -20, 2 * sd), l3 = pt(n, -9, 12 * sd); ctx.beginPath(); ctx.moveTo(l1.x, l1.y); ctx.lineTo(l3.x, l3.y); ctx.lineTo(l2.x, l2.y); ctx.stroke(); }
-  // 前のファスナー（中心線）とすそのライン
-  const z1 = pt(n, -16, 0), z2 = pt(h, -8, 0);
-  ctx.strokeStyle = 'rgba(0,0,0,.3)'; ctx.lineWidth = 1.8; line(z1.x, z1.y, z2.x, z2.y);
-  const e1 = pt(h, -3, 15), e2 = pt(h, -3, -15);
-  ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = 2.5; line(e1.x, e1.y, e2.x, e2.y);
-  ctx.restore();
-  // 肩パッド（丸みを出す）
-  for (const sd of [1, -1]) {
-    const sp = pt(n, -6, 16 * sd);
-    ctx.fillStyle = '#14121f'; ctx.beginPath(); ctx.arc(sp.x, sp.y, 9.5, 0, TAU); ctx.fill();
-    ctx.fillStyle = sd > 0 ? C.light : C.main; ctx.beginPath(); ctx.arc(sp.x, sp.y, 7, 0, TAU); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.beginPath(); ctx.arc(sp.x - 2, sp.y - 2, 3, 0, TAU); ctx.fill();
+  ctx.fillStyle = vg; ctx.fillRect(Math.min(s1.x, s2.x, h1.x, h2.x) - 30, n.y - 30, 120, T + 60);
+  const L = (a, b, col, w) => { ctx.strokeStyle = col; ctx.lineWidth = w; line(a.x, a.y, b.x, b.y); };
+  switch (look) {
+    case 'robe': {   // 法衣：金のふち・立てえり・中央の帯
+      L(pt(n, 4, 0), pt(h, -10, 0), '#e8c45a', 3);
+      for (const sd of [1, -1]) L(pt(n, 2, 7 * sd), pt(h, -8, 5 * sd), 'rgba(232,196,90,.55)', 1.6);
+      ctx.fillStyle = C.dark; ctx.fillRect(Math.min(h1.x, h2.x) - 10, pt(h, 4, 0).y - 4, 60, 8);
+      break;
+    }
+    case 'gi': {   // 道着：白い下着・重なったえり・帯
+      const v1 = pt(n, 2, 9), v2 = pt(n, -24, -6), v3 = pt(n, 2, -9);
+      ctx.fillStyle = '#f4f1ea'; ctx.beginPath(); ctx.moveTo(v1.x, v1.y); ctx.lineTo(v2.x, v2.y); ctx.lineTo(v3.x, v3.y); ctx.closePath(); ctx.fill();
+      L(pt(n, 2, -10), pt(h, 6, 8), '#f4f1ea', 4.5); L(pt(n, 2, -10), pt(h, 6, 8), 'rgba(0,0,0,.25)', 1);
+      L(pt(n, 2, 10), pt(n, -22, -4), 'rgba(0,0,0,.35)', 1.6);
+      break;
+    }
+    case 'cloak': {   // 矢筒のベルト
+      ctx.lineCap = 'butt'; L(pt(n, -2, -SW + 2), pt(h, 2, HW - 2), '#08080c', 7); L(pt(n, -2, -SW + 2), pt(h, 2, HW - 2), '#4a3420', 4.5);
+      const e = pt(n, -16, -2); ctx.fillStyle = '#d4a017'; ctx.strokeStyle = '#08080c'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(e.x, e.y - 6); ctx.lineTo(e.x + 5, e.y); ctx.lineTo(e.x, e.y + 6); ctx.lineTo(e.x - 5, e.y); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.lineCap = 'round';
+      break;
+    }
+    case 'overalls': {   // チェックのシャツ＋デニムの胸当て
+      ctx.strokeStyle = 'rgba(0,0,0,.18)'; ctx.lineWidth = 3;
+      for (let k = -40; k < 40; k += 9) { L(pt(n, 4, k), pt(h, -12, k), 'rgba(0,0,0,.15)', 3); L(pt(n, -k * 0.6 - 4, -40), pt(n, -k * 0.6 - 4, 40), 'rgba(255,255,255,.12)', 2.5); }
+      const b1 = pt(h, T * 0.62, HW * 0.62), b2 = pt(h, T * 0.62, -HW * 0.62), b3 = pt(h, -12, -HW - 6), b4 = pt(h, -12, HW + 6);
+      ctx.fillStyle = '#3d6096'; ctx.beginPath(); ctx.moveTo(b1.x, b1.y); ctx.lineTo(b2.x, b2.y); ctx.lineTo(b3.x, b3.y); ctx.lineTo(b4.x, b4.y); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#14121f'; ctx.lineWidth = 2.5; ctx.stroke();
+      const pk1 = pt(h, T * 0.42, 7), pk2 = pt(h, T * 0.22, -7);
+      ctx.strokeStyle = 'rgba(255,220,140,.7)'; ctx.lineWidth = 1.4; ctx.strokeRect(Math.min(pk1.x, pk2.x), Math.min(pk1.y, pk2.y), Math.abs(pk2.x - pk1.x), Math.abs(pk2.y - pk1.y));
+      for (const sd of [1, -1]) { L(pt(h, T * 0.6, HW * 0.55 * sd), pt(n, -2, (SW - 4) * sd), '#2c4874', 5); const bt = pt(h, T * 0.6, HW * 0.5 * sd); ctx.fillStyle = '#e8c45a'; ctx.beginPath(); ctx.arc(bt.x, bt.y, 2.6, 0, TAU); ctx.fill(); }
+      break;
+    }
+    case 'coat': {   // ロングコート：二列のボタン・ベルト
+      for (const sd of [1, -1]) for (let i = 0; i < 3; i++) { const b = pt(n, -12 - i * 10, 6 * sd); ctx.fillStyle = '#c9a24a'; ctx.beginPath(); ctx.arc(b.x, b.y, 2.2, 0, TAU); ctx.fill(); }
+      L(pt(n, 2, 0), pt(h, -10, 0), 'rgba(0,0,0,.45)', 1.6);
+      L(pt(h, 4, HW + 2), pt(h, 4, -HW - 2), '#14121f', 7); L(pt(h, 4, HW + 2), pt(h, 4, -HW - 2), C.accent || '#7a3a8a', 4);
+      break;
+    }
+    case 'track': {   // スピードスーツ：わきの稲妻ライン・ファスナー
+      for (const sd of [1, -1]) {
+        ctx.strokeStyle = '#ffd23a'; ctx.lineWidth = 3; ctx.beginPath();
+        const a = pt(n, -4, (SW - 3) * sd), b = pt(n, -T * 0.45, (WW + 2) * sd), c = pt(n, -T * 0.55, (WW - 3) * sd), d = pt(h, -6, (HW - 2) * sd);
+        ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c.x, c.y); ctx.lineTo(d.x, d.y); ctx.stroke();
+      }
+      L(pt(n, 4, 0), pt(n, -18, 0), 'rgba(255,255,255,.6)', 1.5);
+      break;
+    }
+    case 'leather': {   // 革ジャンを開けて白いTシャツ＋プレイヤー色の星
+      const v1 = pt(n, 2, 9), v2 = pt(h, -6, 7), v3 = pt(h, -6, -7), v4 = pt(n, 2, -9);
+      ctx.fillStyle = '#f2f0ea'; ctx.beginPath(); ctx.moveTo(v1.x, v1.y); ctx.lineTo(v2.x, v2.y); ctx.lineTo(v3.x, v3.y); ctx.lineTo(v4.x, v4.y); ctx.closePath(); ctx.fill();
+      const st = pt(n, -18, 0); star(st.x, st.y, 6, C.accent || '#d7191f');
+      for (const sd of [1, -1]) { L(pt(n, 2, 11 * sd), pt(n, -20, 6 * sd), '#14121f', 2.5); L(pt(n, -20, 6 * sd), pt(n, -8, 15 * sd), '#14121f', 2.5); }
+      break;
+    }
+    default: {   // ジャケット（もとの形）
+      const v1 = pt(n, 1, 7), v2 = pt(n, -16, 0), v3 = pt(n, 1, -7);
+      ctx.fillStyle = '#f4f2f8'; ctx.beginPath(); ctx.moveTo(v1.x, v1.y); ctx.lineTo(v2.x, v2.y); ctx.lineTo(v3.x, v3.y); ctx.closePath(); ctx.fill();
+      L(pt(n, -16, 0), pt(h, -8, 0), 'rgba(0,0,0,.3)', 1.8);
+    }
   }
-  // ベルト
-  const b1 = pt(h, 2, 14), b2 = pt(h, 2, -14);
-  ctx.lineCap = 'butt'; ctx.lineWidth = 8; ctx.strokeStyle = '#14121f'; line(b1.x, b1.y, b2.x, b2.y);
-  ctx.lineWidth = 5; ctx.strokeStyle = '#2b2f48'; line(b1.x, b1.y, b2.x, b2.y);
-  const bk = pt(h, 2, 3); ctx.fillStyle = '#ffd34e'; ctx.fillRect(bk.x - 3.5, bk.y - 3, 7, 6);
-  ctx.lineCap = 'round';
-  // 胸のエンブレム
+  ctx.restore();
+  // 肩
+  for (const sd of [1, -1]) {
+    const sp = pt(n, -6, (SW - 3) * sd), r = look === 'overalls' ? 10 : 7;
+    ctx.fillStyle = '#14121f'; ctx.beginPath(); ctx.arc(sp.x, sp.y, r + 2.5, 0, TAU); ctx.fill();
+    ctx.fillStyle = sd > 0 ? base.light : base.main; ctx.beginPath(); ctx.arc(sp.x, sp.y, r, 0, TAU); ctx.fill();
+    if (look === 'leather') for (let i = 0; i < 3; i++) { const q = pt(n, -2 - i * 4, (SW - 2) * sd); ctx.fillStyle = '#d0d4dc'; ctx.beginPath(); ctx.arc(q.x, q.y, 1.7, 0, TAU); ctx.fill(); }
+  }
+  // 帯・ベルト
+  if (look === 'gi') {   // 赤い帯と結び目
+    const b1 = pt(h, 3, HW + 1), b2 = pt(h, 3, -HW - 1);
+    ctx.lineCap = 'butt'; ctx.lineWidth = 11; ctx.strokeStyle = '#14121f'; line(b1.x, b1.y, b2.x, b2.y);
+    ctx.lineWidth = 8; ctx.strokeStyle = '#d7191f'; line(b1.x, b1.y, b2.x, b2.y); ctx.lineCap = 'round';
+    const k = pt(h, 2, 4), sw = Math.sin(t * 0.12) * 3;
+    ctx.fillStyle = '#d7191f'; ctx.strokeStyle = '#14121f'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(k.x, k.y); ctx.lineTo(k.x + 4 + sw, k.y + 20); ctx.lineTo(k.x + 10 + sw, k.y + 18); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(k.x, k.y); ctx.lineTo(k.x - 6 + sw, k.y + 18); ctx.lineTo(k.x + 1 + sw, k.y + 20); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(k.x, k.y, 4, 0, TAU); ctx.fill(); ctx.stroke();
+  } else if (look === 'overalls') {   // 道具ベルト
+    const b1 = pt(h, 0, HW + 4), b2 = pt(h, 0, -HW - 4);
+    ctx.lineCap = 'butt'; ctx.lineWidth = 9; ctx.strokeStyle = '#14121f'; line(b1.x, b1.y, b2.x, b2.y);
+    ctx.lineWidth = 6; ctx.strokeStyle = '#7a5230'; line(b1.x, b1.y, b2.x, b2.y); ctx.lineCap = 'round';
+    const w = pt(h, -4, -HW - 2); ctx.strokeStyle = '#9aa0ad'; ctx.lineWidth = 3; line(w.x, w.y, w.x - 2, w.y + 16); ctx.strokeStyle = '#14121f'; ctx.lineWidth = 1; line(w.x, w.y, w.x - 2, w.y + 16);
+  } else if (look !== 'coat') {
+    const b1 = pt(h, 2, HW - 1), b2 = pt(h, 2, -HW + 1);
+    ctx.lineCap = 'butt'; ctx.lineWidth = 8; ctx.strokeStyle = '#14121f'; line(b1.x, b1.y, b2.x, b2.y);
+    ctx.lineWidth = 5; ctx.strokeStyle = look === 'robe' ? '#e8c45a' : look === 'track' ? '#ffd23a' : '#2b2f48'; line(b1.x, b1.y, b2.x, b2.y);
+    const bk = pt(h, 2, 3); ctx.fillStyle = look === 'leather' ? '#d0d4dc' : '#ffd34e'; ctx.fillRect(bk.x - 3.5, bk.y - 3, 7, 6);
+    ctx.lineCap = 'round';
+  }
+  // 胸のマーク
   if (CH.psychic) {
-    const e = pt(n, -15, 5), r = 6;
+    const e = pt(n, -15, 0), r = 7;
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
-    ctx.drawImage(glowSprite('rgba(160,110,255,.9)'), e.x - 18, e.y - 18, 36, 36); ctx.restore();
+    ctx.drawImage(glowSprite('rgba(160,110,255,.9)'), e.x - 20, e.y - 20, 40, 40); ctx.restore();
     ctx.beginPath(); ctx.moveTo(e.x, e.y - r * 1.3); ctx.lineTo(e.x + r, e.y); ctx.lineTo(e.x, e.y + r * 1.3); ctx.lineTo(e.x - r, e.y); ctx.closePath();
     const eg = ctx.createLinearGradient(e.x, e.y - r, e.x, e.y + r); eg.addColorStop(0, '#f0e6ff'); eg.addColorStop(1, '#7b4dff');
     ctx.fillStyle = eg; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#14121f'; ctx.stroke();
-  } else if (CH.voice) {
-    // 白いラインのジャージ＋胸の音符マーク
-    for (const sd of [1, -1]) { const a1 = pt(n, -3, 15 * sd), a2 = pt(h, -2, 12 * sd); ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 2; line(a1.x, a1.y, a2.x, a2.y); }
-    const e = pt(n, -16, 5);
-    drawNoteShape(e.x, e.y, 0.55, '#ff7ad9');
-  } else if (CH.tentacle) {
-    // 胸の深海色のうろこ模様
-    for (let i = 0; i < 3; i++) { const e = pt(n, -12 - i * 8, 4 - (i % 2) * 6); ctx.fillStyle = 'rgba(194,122,216,.55)'; ctx.beginPath(); ctx.arc(e.x, e.y, 3.5, 0, TAU); ctx.fill(); }
   } else if (CH.speedster) {
-    // 胸のいなずまマーク
     const e = pt(n, -16, 4);
     ctx.fillStyle = '#ffd23a'; ctx.strokeStyle = '#14121f'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(e.x + 2, e.y - 9); ctx.lineTo(e.x - 4, e.y + 1); ctx.lineTo(e.x, e.y + 1); ctx.lineTo(e.x - 2, e.y + 9); ctx.lineTo(e.x + 5, e.y - 2); ctx.lineTo(e.x + 1, e.y - 2); ctx.closePath(); ctx.fill(); ctx.stroke();
-  } else if (CH.bow) {
-    // 矢筒をさげる斜めのベルトと金の留め具
-    const a1 = pt(n, -2, -16), a2 = pt(h, 2, 13);
-    ctx.lineCap = 'butt'; ctx.strokeStyle = '#08080c'; ctx.lineWidth = 7; line(a1.x, a1.y, a2.x, a2.y);
-    ctx.strokeStyle = '#4a3420'; ctx.lineWidth = 4.5; line(a1.x, a1.y, a2.x, a2.y);
-    const e = pt(n, -16, -2); ctx.fillStyle = '#d4a017'; ctx.strokeStyle = '#08080c'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(e.x, e.y - 6); ctx.lineTo(e.x + 5, e.y); ctx.lineTo(e.x, e.y + 6); ctx.lineTo(e.x - 5, e.y); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.lineCap = 'round';
+  } else if (CH.tentacle) {
+    for (let i = 0; i < 3; i++) { const e = pt(n, -14 - i * 9, 9 - (i % 2) * 4); ctx.fillStyle = 'rgba(194,122,216,.7)'; ctx.beginPath(); ctx.arc(e.x, e.y, 3, 0, TAU); ctx.fill(); }
   } else if (CH.swords) {
-    const e = pt(n, -15, 5);
+    const e = pt(n, -15, 8);
     ctx.fillStyle = '#ff3d6e'; ctx.strokeStyle = '#14121f'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(e.x - 6, e.y - 3); ctx.quadraticCurveTo(e.x, e.y - 7, e.x + 6, e.y - 3); ctx.quadraticCurveTo(e.x + 5, e.y + 5, e.x, e.y + 8); ctx.quadraticCurveTo(e.x - 5, e.y + 5, e.x - 6, e.y - 3); ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#4fc35a'; ctx.beginPath(); ctx.ellipse(e.x, e.y - 6, 5, 2.2, 0, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#ffe9a0'; for (const [dx, dy] of [[-2, 0], [2, 1], [0, 4]]) ctx.fillRect(e.x + dx, e.y + dy, 1.4, 1.4);
+  }
+  // コートの立てえり
+  if (look === 'coat') {
+    for (const sd of [1, -1]) {
+      const a = pt(n, 0, 4 * sd), b = pt(n, 16, 13 * sd), c = pt(n, -6, 14 * sd);
+      ctx.fillStyle = CH.outfit.light; ctx.strokeStyle = '#14121f'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c.x, c.y); ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
   }
 }
+// 頭のうしろ（顔より先にかく）：念力の輪・ヘッドホン
+function headBack(J, hc, ha, C, CH, t, BD) {
+  if (CH.psychic) {
+    ctx.save(); ctx.translate(hc.x - 4, hc.y - 6); ctx.rotate(ha - 0.25);
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 2; i++) {
+      ctx.globalAlpha = 0.55 + 0.2 * Math.sin(t * 0.12 + i);
+      ctx.strokeStyle = i ? '#7fe8ff' : '#b89cff'; ctx.lineWidth = 3 - i;
+      ctx.beginPath(); ctx.ellipse(0, -10, 46 + i * 6, 14 + i * 3, Math.sin(t * 0.03) * 0.15, 0, TAU); ctx.stroke();
+    }
+    for (let i = 0; i < 4; i++) {
+      const a = t * 0.05 + i * TAU / 4, x = Math.cos(a) * 48, y = -10 + Math.sin(a) * 14;
+      ctx.globalAlpha = 0.9; ctx.drawImage(glowSprite('rgba(200,160,255,.9)'), x - 7, y - 7, 14, 14);
+    }
+    ctx.restore();
+  }
+  if (CH.voice) {   // 首にかけたヘッドホン
+    const nk = J.neck;
+    ctx.save(); ctx.translate(nk.x + 2, nk.y - 2);
+    ctx.strokeStyle = '#14121f'; ctx.lineWidth = 7; ctx.beginPath(); ctx.arc(0, -2, 15, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+    ctx.strokeStyle = '#3a3a44'; ctx.lineWidth = 4; ctx.stroke();
+    for (const sd of [1, -1]) {
+      ctx.fillStyle = '#14121f'; ctx.beginPath(); ctx.ellipse(sd * 14, 6, 7, 9, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = C.accent || '#ff7ad9'; ctx.beginPath(); ctx.ellipse(sd * 14, 6, 4.5, 6.5, 0, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+// 頭の前（顔のあとにかく）：はちまき・ゴーグル・ヘルメット
+function headFront(hc, ha, fh, C, CH, t, fsx = 1) {
+  ctx.save(); ctx.translate(hc.x, hc.y); ctx.rotate(ha); ctx.scale(fsx, 1);
+  const k = fh / 66;
+  if (CH.swords) {   // 赤いはちまき：うしろに2本の布がなびく
+    ctx.fillStyle = '#d7191f'; ctx.strokeStyle = '#14121f'; ctx.lineWidth = 2.2;
+    ctx.beginPath(); ctx.rect(-25 * k, -22 * k, 50 * k, 7 * k); ctx.fill(); ctx.stroke();
+    for (let i = 0; i < 2; i++) {
+      const fl = Math.sin(t * 0.22 + i * 1.3) * 5, y0 = -19 * k;
+      ctx.beginPath(); ctx.moveTo(-24 * k, y0); ctx.quadraticCurveTo(-40 * k, y0 + 2 + fl, -54 * k - i * 6, y0 + 8 + i * 8 + fl);
+      ctx.lineTo(-50 * k - i * 6, y0 + 13 + i * 8 + fl); ctx.quadraticCurveTo(-38 * k, y0 + 8 + fl * 0.5, -24 * k, y0 + 4); ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, -18.5 * k, 2.4 * k, 0, TAU); ctx.fill();
+  } else if (CH.speedster) {   // おでこのゴーグル
+    ctx.strokeStyle = '#14121f'; ctx.lineWidth = 6 * k; ctx.beginPath(); ctx.moveTo(-26 * k, -20 * k); ctx.lineTo(26 * k, -22 * k); ctx.stroke();
+    ctx.strokeStyle = '#3a3a44'; ctx.lineWidth = 3.5 * k; ctx.stroke();
+    for (const x of [-9, 11]) {
+      ctx.fillStyle = '#14121f'; ctx.beginPath(); ctx.ellipse(x * k, -24 * k, 10 * k, 7.5 * k, 0, 0, TAU); ctx.fill();
+      const g = ctx.createLinearGradient(x * k - 8, -30 * k, x * k + 8, -18 * k); g.addColorStop(0, '#fff7c0'); g.addColorStop(1, '#ff9a1a');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x * k, -24 * k, 7.5 * k, 5.2 * k, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.beginPath(); ctx.ellipse(x * k - 3, -26 * k, 2.4 * k, 1.4 * k, -0.4, 0, TAU); ctx.fill();
+    }
+  } else if (CH.hammer) {   // 黄色いヘルメット
+    const y = -fh * 0.5;
+    ctx.fillStyle = '#14121f'; ctx.beginPath(); ctx.ellipse(0, y + 4, 40 * k, 8 * k, 0, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, y + 2, 27 * k, Math.PI, TAU); ctx.fill();
+    ctx.fillStyle = '#ffc81e'; ctx.beginPath(); ctx.ellipse(0, y + 3, 37 * k, 5.5 * k, 0, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, y + 1, 24 * k, Math.PI, TAU); ctx.fill();
+    ctx.fillStyle = '#e0a400'; ctx.fillRect(-3 * k, y - 22 * k, 6 * k, 22 * k);
+    ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.beginPath(); ctx.ellipse(-10 * k, y - 10 * k, 6 * k, 3 * k, -0.6, 0, TAU); ctx.fill();
+  }
+  ctx.restore();
+}
+// ---- 強化したヒット演出の粒をかく ----
+function drawFx(p) {
+  const k = p.life / p.max;
+  if (p.flare) {   // 回転する光の星
+    const r = p.r * (0.5 + (1 - k) * 0.8);
+    ctx.globalAlpha = Math.min(1, k * 1.6);
+    ctx.drawImage(glowSprite(p.col), p.x - r * 1.4, p.y - r * 1.4, r * 2.8, r * 2.8);
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot + (1 - k) * 0.6);
+    for (let i = 0; i < p.n * 2; i++) {
+      ctx.rotate(Math.PI / p.n); const L2 = (i % 2 ? 0.5 : 1) * r * 1.6;
+      ctx.fillStyle = i % 2 ? p.col : '#ffffff';
+      ctx.beginPath(); ctx.moveTo(0, -r * 0.09); ctx.lineTo(L2, 0); ctx.lineTo(0, r * 0.09); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore(); return;
+  }
+  if (p.shock) {   // 広がる衝撃の輪
+    ctx.globalAlpha = k; ctx.strokeStyle = p.col; ctx.lineWidth = p.w * k + 1;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, TAU); ctx.stroke();
+    ctx.globalAlpha = k * 0.3; ctx.lineWidth = p.w * 2.5 * k; ctx.stroke(); return;
+  }
+  if (p.bolt) {   // 稲妻
+    const R = srand(p.seed), pts = [{ x: p.x, y: p.y }];
+    for (let i = 1; i <= 6; i++) pts.push({ x: p.x + Math.cos(p.rot) * p.len * i / 6 + (R() - 0.5) * 26, y: p.y + Math.sin(p.rot) * p.len * i / 6 + (R() - 0.5) * 26 });
+    ctx.globalAlpha = k; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (const [w, c] of [[10, 'rgba(255,210,60,.55)'], [4, '#fff7c0'], [1.6, '#ffffff']]) {
+      ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); pts.forEach((q, i) => i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)); ctx.stroke();
+    }
+    return;
+  }
+  if (p.note) { ctx.globalAlpha = Math.min(1, k * 2); drawNoteShape(p.x, p.y, p.size, p.col); return; }
+  if (p.spark) {   // 光る火花
+    ctx.globalAlpha = k; ctx.strokeStyle = p.col; ctx.lineWidth = p.size;
+    line(p.x, p.y, p.x - p.vx * 1.6, p.y - p.vy * 1.6);
+    const gr = p.size * 2.6; ctx.drawImage(glowSprite(p.col), p.x - gr, p.y - gr, gr * 2, gr * 2); return;
+  }
+  ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot || 0); ctx.globalAlpha = Math.min(1, k * 1.5); ctx.fillStyle = p.col;
+  if (p.drop) { ctx.beginPath(); ctx.arc(0, 0, p.size * (0.6 + k * 0.4), 0, TAU); ctx.fill(); }
+  else if (p.feather) { ctx.beginPath(); ctx.ellipse(0, 0, p.size, p.size * 0.3, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1; line(-p.size, 0, p.size, 0); }
+  else if (p.shard) { ctx.beginPath(); ctx.moveTo(0, -p.size); ctx.lineTo(p.size * 0.4, 0); ctx.lineTo(0, p.size); ctx.lineTo(-p.size * 0.4, 0); ctx.closePath(); ctx.fill(); }
+  ctx.restore();
+}
+// ---- バーサーカーの追加装備（トゲの肩当て・鎖・毛皮の腰巻き） ----
+function berserkGear(J, P, C, t) {
+  const ax = Math.sin(P.lean), ay = -Math.cos(P.lean), px = -ay, py = ax, hip = J.hip;
+  // 毛皮の腰巻き
+  ctx.fillStyle = '#5a3a24'; ctx.strokeStyle = '#14121f'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(hip.x + px * 18, hip.y + py * 18);
+  for (let i = 0; i <= 6; i++) { const q = i / 6, x = lerp(hip.x + px * 18, hip.x - px * 18, q), y = lerp(hip.y + py * 18, hip.y - py * 18, q); ctx.lineTo(x - ax * (i % 2 ? 14 : 22), y - ay * (i % 2 ? 14 : 22)); }
+  ctx.lineTo(hip.x - px * 18, hip.y - py * 18); ctx.closePath(); ctx.fill(); ctx.stroke();
+}
+function berserkPauldron(J, P) {
+  const s = { x: J.neck.x + 4, y: J.neck.y + 6 };
+  ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(P.lean * 0.6);
+  ctx.fillStyle = '#3a3e48'; ctx.strokeStyle = '#14121f'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.ellipse(10, 0, 22, 14, -0.3, Math.PI, TAU); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#c9ced8';
+  for (let i = 0; i < 3; i++) { const x = -2 + i * 11; ctx.beginPath(); ctx.moveTo(x - 4, -9 + i); ctx.lineTo(x, -24 + i * 2); ctx.lineTo(x + 4, -9 + i); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+  ctx.restore();
+}
+function berserkChain(p) {
+  ctx.save(); ctx.translate(p.x, p.y);
+  ctx.strokeStyle = '#14121f'; ctx.lineWidth = 4.5;
+  for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.ellipse(-6 + i * 6, 12 + i * 5, 5, 3.4, 0.6, 0, TAU); ctx.stroke(); }
+  ctx.strokeStyle = '#b8bcc6'; ctx.lineWidth = 2.2;
+  for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.ellipse(-6 + i * 6, 12 + i * 5, 5, 3.4, 0.6, 0, TAU); ctx.stroke(); }
+  ctx.restore();
+}
+
+// ---- キャラごとの構え（立ち・走り） ----
+function runPose(t, o) {
+  const ph = t * (o.sp || 0.32), a = Math.sin(ph), st = o.stride || 0.9;
+  return { lean: o.lean ?? 0.32, by: -Math.abs(Math.cos(ph)) * (o.bounce || 3) + (o.by || 0), hd: o.hd || 0,
+    fl: { h: a * st, k: -0.6 - Math.max(0, -a) * 0.8 }, bl: { h: -a * st, k: -0.6 - Math.max(0, a) * 0.8 },
+    fa: o.fa || { s: -a * (o.arm ?? 1) + (o.armB || 0), e: o.elb ?? 1.3 }, ba: o.ba || { s: a * (o.arm ?? 1) + (o.armB || 0), e: o.elb ?? 1.3 },
+    ...(o.extra || {}) };
+}
+const STANCE = {
+  shimarin: {
+    idle: (t, b) => ({ by: -2 + b * 2, lean: 0, hd: -0.05, fa: { s: 1.05 + b * 0.1, e: 0.75 }, ba: { s: -0.85 - b * 0.1, e: 0.65 },
+      fa2: { s: 0.45, e: 1.0 }, ba2: { s: -0.35, e: 1.0 }, fl: { h: 0.12, k: -0.55 }, bl: { h: -0.02, k: -0.7 } }),
+    run: t => runPose(t, { lean: 0.38, stride: 0.35, bounce: 1, fa: { s: -1.0, e: 0.3 }, ba: { s: -1.2, e: 0.3 }, extra: { fa2: { s: -0.6, e: 0.4 }, ba2: { s: -0.8, e: 0.4 } } }),
+  },
+  ichigo: {
+    idle: (t, b) => ({ by: 6 + b, lean: 0.12, fa: { s: 1.0, e: 0.45 }, ba: { s: 0.55, e: 1.35 }, fl: { h: 0.55, k: -0.45 }, bl: { h: -0.5, k: -0.15 } }),
+    run: t => runPose(t, { lean: 0.58, sp: 0.36, fa: { s: -1.5, e: 0.2 }, ba: { s: -1.7, e: 0.2 } }),
+  },
+  berserker: {
+    idle: (t, b) => ({ by: 8 + b * 2, lean: 0.28, hd: 0.1, fa: { s: 0.55 + b * 0.05, e: 0.5 }, ba: { s: 0.25, e: 0.6 }, fl: { h: 0.45, k: -0.5 }, bl: { h: -0.42, k: -0.3 } }),
+    run: t => runPose(t, { lean: 0.42, sp: 0.24, stride: 0.75, bounce: 6, arm: 1.3, elb: 0.9 }),
+  },
+  archer: {
+    idle: (t, b) => ({ by: b, lean: 0.02, fa: { s: 1.3, e: 0.05 }, ba: { s: 0.95, e: 1.7 }, fl: { h: 0.35, k: -0.15 }, bl: { h: -0.32, k: -0.05 } }),
+    run: t => runPose(t, { lean: 0.4, sp: 0.34, fa: { s: 0.5, e: 0.2 } }),
+  },
+  hammer: {
+    idle: (t, b) => ({ by: 4 + b, lean: 0.1, fa: { s: 2.3, e: 1.9 }, ba: { s: 0.35 + b * 0.05, e: 0.6 }, fl: { h: 0.5, k: -0.25 }, bl: { h: -0.5, k: -0.1 } }),
+    run: t => runPose(t, { lean: 0.3, sp: 0.26, stride: 0.7, bounce: 5, fa: { s: -0.7, e: 0.15 } }),
+  },
+  imai: {
+    idle: (t, b) => ({ by: 2, lean: 0.26 + b * 0.03, hd: 0.22, fa: { s: 0.12 + b * 0.05, e: 0.15 }, ba: { s: -0.05, e: 0.15 }, fl: { h: 0.14, k: -0.15 }, bl: { h: -0.1, k: -0.1 } }),
+    run: t => runPose(t, { lean: 0.5, sp: 0.28, stride: 1.1, fa: { s: -0.6, e: 0.1 }, ba: { s: -0.8, e: 0.1 }, hd: 0.2 }),
+  },
+  henry: {
+    idle: t => { const c = Math.sin(t * 0.25); return { by: -Math.abs(c) * 5, lean: 0.15, fa: { s: 1.3, e: 1.7 }, ba: { s: 1.0, e: 1.8 }, fl: { h: 0.32, k: -0.45 }, bl: { h: -0.35, k: -0.35 } }; },
+    run: t => runPose(t, { lean: 0.6, sp: 0.5, stride: 1.25, arm: 1.6, elb: 1.6, bounce: 2 }),
+  },
+  chinta: {
+    idle: t => { const s = Math.sin(t * 0.15); return { by: Math.abs(s) * 2, lean: -0.05 + s * 0.04, hd: s * 0.14, fa: { s: 1.45, e: 1.9 }, ba: { s: -0.3 + s * 0.2, e: 0.5 }, fl: { h: 0.4, k: -0.2 }, bl: { h: -0.4, k: -0.1 } }; },
+    run: t => runPose(t, { lean: 0.3, fa: { s: 1.45, e: 1.9 } }),
+  },
+};
+
 // 黒いフード（顔の後ろにかぶせる）
 function drawHood(hc, ha, C, t) {
   ctx.save(); ctx.translate(hc.x, hc.y); ctx.rotate(ha);
@@ -2918,7 +3480,7 @@ function drawFighter(F, t) {
   if (F.hitlag > 0 && (F.state === 'hitstun' || F.state === 'held')) { x += rnd(-5, 5); y += rnd(-3, 3); }
   if (CH.psychic && (F.state === 'idle' || F.state === 'respawn')) y += (-4 - Math.sin(t * 0.06) * 3) * SCL;   // 念力で少し浮く
   const rot = P.rot + (F.state === 'hitstun' && F.tumble ? F.spin * F.dir : 0);
-  const J = joints(P);
+  const BD = bodyOf(CH), J = joints(P, BD);
   const hidden = F.state === 'move' && F.move.hide && F.mf >= F.move.hide[0] && F.mf <= F.move.hide[1];
   ctx.save();
   if (CH.scarf && !hidden) {
@@ -2975,7 +3537,7 @@ function drawFighter(F, t) {
   else if (F.state === 'land') sq = 0.84 + 0.16 * Math.min(1, F.sf / Math.max(5, F.landLag));
   else if (F.state === 'air' && F.vy < -7 && F.sf < 10) sq = 1.1;
   if (sq !== 1) ctx.scale(1 / Math.sqrt(sq), sq);
-  if (rot) { ctx.translate(0, -BODY.pivot); ctx.rotate(rot); ctx.translate(0, BODY.pivot); }
+  if (rot) { ctx.translate(0, -BD.pivot); ctx.rotate(rot); ctx.translate(0, BD.pivot); }
   if (F.intangible && F.state !== 'respawn') ctx.globalAlpha = 0.55;
   if (F.inv > 0 && (t >> 2) % 2) ctx.globalAlpha = 0.6;
   if (hidden) ctx.globalAlpha = 0.1;
@@ -3000,7 +3562,8 @@ function drawFighter(F, t) {
   F._look = look;
   if (CH.muscle) { drawMuscle(F, P, J, C, t); drawSwoosh(F, CH, C); ctx.restore(); drawFighterExtras(F, t); return; }
   const sleeve = C.accent || 'rgba(255,255,255,.55)';
-  limbC(J.bl, 7.6, 6, 4.6, pantsD); shoe(J.bl[2], shoeC);
+  drawBackLayer(J, P, C, CH, t, BD);
+  drawLeg(J.bl, BD, CH, false, t);
   if (CH.bow) drawQuiver(J, P);
   // 今井：背中から生えた4本の触手（いつもうねっている）
   if (CH.tentacle) {
@@ -3013,21 +3576,24 @@ function drawFighter(F, t) {
   }
   if (CH.arms4) { limbC(J.ba2, 4.8, 4.2, 3.6, C.dark); glove(J.ba2, hand); }
   if (SW) { if (swinging) drawTrail(F.trail.b); const tp = drawSword(J.ba[2], P.ba.s + P.ba.e, SL); if (swinging) { F.trail.b.push(tp); if (F.trail.b.length > 7) F.trail.b.shift(); } }
-  limbC(J.ba, 5.8, 4.7, 3.9, C.dark, { stripe: sleeve }); glove(J.ba, hand);
+  drawArm(J.ba, BD, CH, C, false); glove(J.ba, hand);
   // 腰（骨盤）と前の脚
-  ctx.fillStyle = '#14121f'; ctx.beginPath(); ctx.ellipse(J.hip.x, J.hip.y + 2, 15.5, 10.5, P.lean, 0, TAU); ctx.fill();
-  ctx.fillStyle = pants; ctx.beginPath(); ctx.ellipse(J.hip.x, J.hip.y + 2, 13, 8, P.lean, 0, TAU); ctx.fill();
-  limbC(J.fl, 7.8, 6.2, 4.7, pants); shoe(J.fl[2], shoeC);
+  ctx.fillStyle = '#14121f'; ctx.beginPath(); ctx.ellipse(J.hip.x, J.hip.y + 2, BD.hiW + 0.5, 10.5, P.lean, 0, TAU); ctx.fill();
+  ctx.fillStyle = legCol(CH, BD, true); ctx.beginPath(); ctx.ellipse(J.hip.x, J.hip.y + 2, BD.hiW - 2, 8, P.lean, 0, TAU); ctx.fill();
+  drawLeg(J.fl, BD, CH, true, t);
+  drawFrontLayer(J, P, C, CH, t, BD);
   const ha = P.lean * 0.5 + P.hd + look;
-  const hc = { x: J.neck.x + Math.sin(ha) * BODY.head + (F.state === 'run' ? 3 : 0), y: J.neck.y - Math.cos(ha) * BODY.head };
+  const hc = { x: J.neck.x + Math.sin(ha) * BD.head + (F.state === 'run' ? 3 : 0), y: J.neck.y - Math.cos(ha) * BD.head };
   neckPart(J.neck, { x: J.neck.x + Math.sin(ha) * 14, y: J.neck.y - Math.cos(ha) * 14 }, hand);
-  drawTorso(J, P, C, CH, t);
+  drawTorso(J, P, C, CH, t, BD);
+  headBack(J, hc, ha, C, CH, t, BD);
   if (CH.arms4) { limbC(J.fa2, 4.8, 4.2, 3.6, C.main); glove(J.fa2, hand); }
   let glow = 0.25;
   if (F.state === 'move' && F.move.eye && F.mf >= F.move.eye[0] && F.mf <= F.move.eye[1]) glow = 1.1;
   const faceH = CH.faceH || BODY.face;
   if (CH.hood) { ctx.save(); ctx.translate(hc.x, hc.y); ctx.scale(faceH / 76 * F._fsx, faceH / 76); drawHood({ x: 0, y: 0 }, ha, C, t); ctx.restore(); }
   drawFace(hc.x, hc.y, faceH, ha, glow, t, F.ch, F._fsx);
+  headFront(hc, ha, faceH, C, CH, t, F._fsx);
   // 朕太：声のワザ中は口から音の波が広がる
   if (CH.voice && F.state === 'move' && F.move.mouth && F.mf >= F.move.mouth[0] && F.mf <= F.move.mouth[1]) {
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
@@ -3039,7 +3605,7 @@ function drawFighter(F, t) {
     }
     ctx.restore();
   }
-  limbC(J.fa, 6, 4.9, 4, C.main, { stripe: sleeve });
+  drawArm(J.fa, BD, CH, C, true);
   if (SW) { if (swinging) drawTrail(F.trail.f); const tp = drawSword(J.fa[2], P.fa.s + P.fa.e, SL); if (swinging) { F.trail.f.push(tp); if (F.trail.f.length > 7) F.trail.f.shift(); } }
   if (CH.bow) drawBow(J, P, F);
   if (CH.voice) drawMic(J, P);
@@ -3141,6 +3707,7 @@ function drawMuscle(F, P, J, C, t) {
   // ベルト（プレイヤー色）
   ctx.beginPath(); ctx.moveTo(hip.x + px * 17, hip.y + py * 17); ctx.lineTo(hip.x - px * 17, hip.y - py * 17);
   ctx.lineWidth = 9; ctx.strokeStyle = line; ctx.stroke(); ctx.lineWidth = 6; ctx.strokeStyle = C.main; ctx.stroke();
+  berserkGear(J, P, C, t);
   // 前脚（ボロボロのズボン）
   limb(J.fl, 21, 16, pants, false); dot(J.fl[2], 8, '#15151c');
   // 頭（体に対して小さめ）
@@ -3161,6 +3728,7 @@ function drawMuscle(F, P, J, C, t) {
   const fx = J.fa[1], fh = J.fa[2];
   const wb = { x: fx.x + (fh.x - fx.x) * 0.75, y: fx.y + (fh.y - fx.y) * 0.75 };
   dot(wb, 8, C.main);
+  berserkChain(wb); berserkPauldron(J, P);
 }
 function drawFighterExtras(F, t) {
   const C = F.col;
@@ -3910,6 +4478,27 @@ SC_.battle = (o) => {
   B.dust = (x, y, n = 8) => {
     for (let i = 0; i < n; i++) B.parts.push({ x: x + rnd(-10, 10), y: y - 4, vx: rnd(-4, 4), vy: rnd(-2.5, -0.5), life: 26, max: 26, col: 'rgba(230,230,240,.8)', size: rnd(6, 12), g: 0, smoke: 1 });
   };
+  B.fxHit = (A, T, x, y, dmg, kb) => {
+    const col = A.ch.psychic ? '#c9b8ff' : A.col.light, big = kb > 16, huge = kb > 24, ch = A.ch;
+    B.parts.push({ x, y, flare: 1, r: 34 + dmg * 4 + kb * 1.5, life: big ? 18 : 12, max: big ? 18 : 12, col, rot: rnd(0, TAU), n: big ? 8 : 6 });
+    B.parts.push({ x, y, shock: 1, r: 12, vr: 9 + kb * 0.5, life: 16, max: 16, col: '#ffffff', w: big ? 10 : 6 });
+    if (big) B.parts.push({ x, y, shock: 1, r: 6, vr: 15 + kb * 0.6, life: 20, max: 20, col, w: 14 });
+    for (let i = 0; i < 10 + dmg; i++) {
+      const a2 = rnd(0, TAU), s = rnd(4, 12 + kb * 0.4);
+      B.parts.push({ x, y, vx: Math.cos(a2) * s, vy: Math.sin(a2) * s - 2, life: rnd(18, 34) | 0, max: 34, col: i % 2 ? '#ffffff' : col, size: rnd(2, 4.5), g: 0.35, spark: 1 });
+    }
+    // キャラごとのヒット演出
+    if (ch.speedster) for (let i = 0; i < 3 + (dmg / 4 | 0); i++) B.parts.push({ x, y, bolt: 1, rot: rnd(0, TAU), len: rnd(50, 90) + dmg * 3, life: 10, max: 10, seed: Math.random() * 1e5 | 0 });
+    else if (ch.voice) {
+      for (let i = 0; i < 3; i++) B.parts.push({ x, y, vx: rnd(-3, 3), vy: rnd(-5, -2), life: 40, max: 40, note: 1, size: rnd(0.6, 1), col: i % 2 ? '#7fe8ff' : '#ff7ad9', g: -0.02 });
+      B.parts.push({ x, y, sonic: 1, r: 40 + dmg * 3, life: 14, max: 14 });
+    } else if (ch.tentacle) for (let i = 0; i < 8 + dmg; i++) B.parts.push({ x, y, vx: rnd(-6, 6), vy: rnd(-8, -1), life: 30, max: 30, drop: 1, size: rnd(3, 7), g: 0.45, col: '#b45be0' });
+    else if (ch.bow) for (let i = 0; i < 6; i++) B.parts.push({ x, y, vx: rnd(-5, 5), vy: rnd(-6, 1), life: 34, max: 34, feather: 1, rot: rnd(0, TAU), size: rnd(5, 9), g: 0.12, col: '#ffd34e' });
+    else if (ch.swords) for (let i = 0; i < 6; i++) B.parts.push({ x, y, vx: rnd(-4, 4), vy: rnd(-5, 1), life: 50, max: 50, petal: 1, rot: rnd(0, TAU), size: rnd(4, 7), g: 0.08, col: '#ffb7cc' });
+    else if (ch.psychic) for (let i = 0; i < 6; i++) B.parts.push({ x, y, vx: rnd(-7, 7), vy: rnd(-7, 7), life: 24, max: 24, shard: 1, rot: rnd(0, TAU), size: rnd(5, 10), g: 0, col: '#b89cff' });
+    if (big) { B.speed = { x, y, life: huge ? 16 : 10, max: huge ? 16 : 10, col }; B.zoomP = Math.max(B.zoomP, huge ? 0.13 : 0.08); }
+    if (huge) B.parts.push({ x, y, shock: 1, r: 20, vr: 26, life: 24, max: 24, col: '#ffffff', w: 22 });
+  };
   B.puff = (x, y, col) => { B.parts.push({ x, y, vx: rnd(-1, 1), vy: rnd(-1, 1), life: 18, max: 18, col, size: rnd(8, 14), g: 0, smoke: 1 }); };
 
   B.applyHit = (A, T, hb, charge, ds, isProj, hx, hy) => {
@@ -3933,7 +4522,9 @@ SC_.battle = (o) => {
       T.shieldHP -= hb.dmg * charge * 1.3; T.shieldStun = Math.floor(4 + hb.dmg * 0.6);
       T.vx = ds * (1.5 + hb.dmg * 0.2);
       const hl = Math.floor(3 + hb.dmg * 0.25); T.hitlag = hl; if (!isProj) A.hitlag = hl;
-      Snd.shield(); B.burst(hx, hy, T.col.light, 6);
+      Snd.shield(); B.burst(hx, hy, T.col.light, 12);
+      B.parts.push({ x: hx, y: hy, shock: 1, r: 10, vr: 7, life: 12, max: 12, col: T.col.light, w: 6 });
+      for (let i = 0; i < 6; i++) B.parts.push({ x: hx, y: hy, vx: rnd(-6, 6), vy: rnd(-6, 3), life: 20, max: 20, shard: 1, rot: rnd(0, TAU), size: rnd(4, 8), g: 0.2, col: T.col.light });
       if (T.shieldHP <= 0) T.breakShield();
       return true;
     }
@@ -3957,7 +4548,7 @@ SC_.battle = (o) => {
     let hl = Math.floor(4 + dmg * 0.4); if (kb > 20) hl = Math.floor(hl * 1.6);
     T.hitlag = hl; if (!isProj) A.hitlag = hl;
     T.flash = 10; T.pctShake = 14;
-    B.burst(hx, hy, '#fff6a0', 8 + (dmg | 0)); B.burst(hx, hy, A.col.light, 6);
+    B.burst(hx, hy, '#fff6a0', 14 + (dmg * 1.5 | 0)); B.burst(hx, hy, A.col.light, 12);
     B.parts.push({ x: hx, y: hy, ring: 1, r: 10, life: 14, max: 14, col: '#fff' });
     B.parts.push({ x: hx, y: hy, imp: 1, r: 22 + dmg * 2.4, life: 11, max: 11, col: A.ch.psychic ? '#c9b8ff' : A.col.light, rot: Math.random() * TAU });
     // キャラごとのヒット演出
@@ -3990,6 +4581,7 @@ SC_.battle = (o) => {
     if (kb > 12) B.shake = Math.max(B.shake, Math.min(22, kb * 0.6));
     if (kb > 16) B.zoomP = Math.max(B.zoomP, Math.min(0.09, kb * 0.0035));
     if (kb > 22) { B.flashScr = 6; B.flashRGB = '255,255,255'; }
+    B.fxHit(A, T, hx, hy, dmg, kb);
     Snd.hitC(A.ch, dmg, isProj);
     // 決定打：このまま撃墜されるならスローのカットイン演出
     if (kb > 15 && B.phase === 'fight' && !B.cine && willKO(T)) {
@@ -4652,6 +5244,8 @@ SC_.battle = (o) => {
     }
     for (const p of B.parts) {
       p.life--;
+      if (p.shock) { p.r += p.vr; p.vr *= 0.86; continue; }
+      if (p.feather || p.shard) p.rot += 0.18;
       if (p.ring) p.r += 6;
       else if (p.vx !== undefined) { if (p.rock) p.rot += p.vx * 0.05; if (p.petal) { p.rot += 0.1; p.vx += Math.sin(p.life * 0.15) * 0.15; } p.x += p.vx; p.y += p.vy; p.vy += p.g; p.vx *= 0.95; }
     }
@@ -4661,6 +5255,21 @@ SC_.battle = (o) => {
     for (const p of B.kosp) { p.life--; p.x += p.vx; p.y += p.vy; p.vx *= 0.94; p.vy = p.vy * 0.94 + 0.25; p.rot += 0.2; }
     B.kosp = B.kosp.filter(p => p.life > 0);
     for (const F of fs) { F.dispPct += (F.percent - F.dispPct) * 0.3; if (F.pctShake > 0) F.pctShake--; }
+    // 見た目だけの演出：ふっとび中の煙と火花・ためスマッシュに集まる光
+    for (const F of fs) {
+      if (!F.alive) continue;
+      if (F.state === 'hitstun' && F.hitlag <= 0) {
+        const sp = Math.hypot(F.vx, F.vy), cy = F.y - 70 * F.ch.scale;
+        if (sp > 11) {
+          B.parts.push({ x: F.x + rnd(-8, 8), y: cy + rnd(-8, 8), vx: rnd(-1, 1), vy: rnd(-1, 1), life: 26, max: 26, col: 'rgba(240,240,250,.7)', size: rnd(10, 18) + sp * 0.4, g: 0, smoke: 1 });
+          if (sp > 18) B.parts.push({ x: F.x, y: cy, vx: -F.vx * 0.1 + rnd(-2, 2), vy: -F.vy * 0.1 + rnd(-2, 2), life: 20, max: 20, col: F.lastHitBy ? F.lastHitBy.col.light : '#fff', size: rnd(3, 6), g: 0, spark: 1 });
+        }
+      }
+      if (F.state === 'move' && F.chargeT > 0 && B.t % 2 === 0) {
+        const a = rnd(0, TAU), r = rnd(60, 110), cy = F.y - 80 * F.ch.scale;
+        B.parts.push({ x: F.x + Math.cos(a) * r, y: cy + Math.sin(a) * r, vx: -Math.cos(a) * r / 12, vy: -Math.sin(a) * r / 12, life: 12, max: 12, col: F.ch.psychic ? '#c9b8ff' : '#fff27a', size: 3, g: 0, spark: 1 });
+      }
+    }
     updateCam();
   }
 
@@ -4689,6 +5298,18 @@ SC_.battle = (o) => {
 
   const toScreen = (x, y) => { const c = B.vcam || B.cam; return { x: (x - c.x) * c.z + VW / 2, y: (y - c.y) * c.z + VH / 2 }; };
 
+  // 強い一撃の集中線（画面の外側から当たった場所へ）
+  function drawSpeedLines(sp) {
+    const s = toScreen(sp.x, sp.y), k = sp.life / sp.max;
+    ctx.save(); ctx.globalAlpha = 0.7 * k;
+    for (let i = 0; i < 48; i++) {
+      const a = i / 48 * TAU + rnd(-0.05, 0.05), r0 = 150 + rnd(0, 140), r1 = 1600, w = rnd(0.004, 0.014);
+      ctx.fillStyle = i % 3 ? 'rgba(255,255,255,.9)' : sp.col;
+      ctx.beginPath(); ctx.moveTo(s.x + Math.cos(a) * r0, s.y + Math.sin(a) * r0);
+      ctx.lineTo(s.x + Math.cos(a - w) * r1, s.y + Math.sin(a - w) * r1); ctx.lineTo(s.x + Math.cos(a + w) * r1, s.y + Math.sin(a + w) * r1); ctx.fill();
+    }
+    ctx.restore();
+  }
   function drawHUD() {
     const n = fs.length, W = 300, gap = n > 2 ? 16 : 60, tot = n * W + (n - 1) * gap, x0 = VW / 2 - tot / 2;
     const hsc = Math.min(1, (VW - 30) / tot);
@@ -5159,6 +5780,7 @@ SC_.battle = (o) => {
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
     for (const p of B.parts) {
       if (p.smoke || p.rock || p.petal || p.stuck || p.splat) continue;
+      if (p.flare || p.shock || p.bolt || p.note || p.drop || p.feather || p.shard || p.spark) { drawFx(p); continue; }
       if (p.sonic) {   // 音の波（水色とピンクの同心円）
         const k2 = p.life / p.max, r = p.r * (0.4 + (1 - k2) * 0.9);
         for (let j = 0; j < 3; j++) {
@@ -5377,6 +5999,7 @@ SC_.battle = (o) => {
       if (B.cine && --B.cine.life <= 0) { B.cine = null; B.shake = Math.max(B.shake, 16); }
       if (B.fsGetPop && --B.fsGetPop.life <= 0) B.fsGetPop = null;
       if (B.impactF > 0) B.impactF--;
+      if (B.speed && --B.speed.life <= 0) B.speed = null;
       if (B.sup) {
         if (updSuper()) endSuper();
         if (B.sup && B.sup.t <= SUP_CUT) return;   // カットイン中は全員停止
@@ -5390,7 +6013,7 @@ SC_.battle = (o) => {
         B.endT++;
         if (B.endT === 80) Snd.go();
         if (B.endT > 230) {
-          go('result', { winner: B.winner ? B.winner.id : -1, team: B.winner ? B.winner.team : undefined, stats: fs.map(f => ({ ...f.stats, stocks: Math.max(0, f.stocks), tag: f.col.tag, col: f.col, level: f.level, cpu: f.cpu, ch: f.ch, team: f.team })), time: B.time, online: !!ON });
+          go(B.winner ? 'victory' : 'result', { winner: B.winner ? B.winner.id : -1, team: B.winner ? B.winner.team : undefined, stats: fs.map(f => ({ ...f.stats, stocks: Math.max(0, f.stocks), tag: f.col.tag, col: f.col, level: f.level, cpu: f.cpu, ch: f.ch, team: f.team })), time: B.time, online: !!ON });
           return;
         }
         if (B.endT < 80 && B.endT % 4 !== 0) return; // スローモーション
@@ -5403,6 +6026,7 @@ SC_.battle = (o) => {
     },
     draw() {
       drawWorld();
+      if (B.speed) drawSpeedLines(B.speed);
       // インパクトフレーム：最初の2フレームは色を反転、残りは白黒で強く光らせる
       if (B.impactF > 0) {
         ctx.save();
@@ -5644,6 +6268,238 @@ SC_.online = (o) => {
         if (mode === 'error') text(NET.err || '', VW / 2, 330, 20, UIC.red2, 'center', 'bold');
         text('Enter でもどる', VW / 2, 400, 20, UIC.grey, 'center', 'bold');
       }
+    },
+  };
+};
+
+// ----- 勝利演出（GAME SET のあと、勝った人がキャラごとの決めポーズ） -----
+// keys：決めポーズまでの動き / loop：そのあとくり返す動き / fx(f, E)：演出（f はポーズのフレーム）
+const VPOSE = {
+  shimarin: {
+    keys: [[0, { by: 10, fa: A_(0.3, 0.5), ba: A_(-0.3, 0.5), fa2: A_(0.2, 0.5), ba2: A_(-0.2, 0.5) }],
+      [30, { by: -34, hd: -0.25, fa: A_(2.6, 0.2), ba: A_(-2.6, 0.2), fa2: A_(1.6, 0.3), ba2: A_(-1.6, 0.3), fl: G_(0.1, -0.6), bl: G_(-0.05, -0.7) }]],
+    loop: [[0, { by: -34, hd: -0.25, fa: A_(2.6, 0.2), ba: A_(-2.6, 0.2), fa2: A_(1.6, 0.3), ba2: A_(-1.6, 0.3), fl: G_(0.1, -0.6), bl: G_(-0.05, -0.7) }],
+      [50, { by: -44, hd: -0.3, fa: A_(2.8, 0.1), ba: A_(-2.8, 0.1), fa2: A_(1.9, 0.2), ba2: A_(-1.9, 0.2), fl: G_(0.15, -0.5), bl: G_(0, -0.6) }],
+      [100, { by: -34, hd: -0.25, fa: A_(2.6, 0.2), ba: A_(-2.6, 0.2), fa2: A_(1.6, 0.3), ba2: A_(-1.6, 0.3), fl: G_(0.1, -0.6), bl: G_(-0.05, -0.7) }]],
+    fx(f, E) {
+      if (f === 30) { E.shock('#c9b8ff', 30, 3); E.burst('shard', '#b89cff', 24); E.flare('#c9b8ff', 160); }
+      if (f > 30 && f % 6 === 0) E.orbit('#c9b8ff');
+    },
+  },
+  ichigo: {
+    keys: [[0, {}], [12, { lean: -0.3, fa: A_(-2.6, 0.3), ba: A_(2.8, 0.2) }],
+      [24, { lean: 0.4, fa: A_(1.6, 0), ba: A_(-1.4, 0), fl: G_(0.9, -0.2), bl: G_(-0.7, 0) }],
+      [44, { lean: 0.05, hd: -0.1, fa: A_(2.95, 0.05), ba: A_(0.5, 1.4), fl: G_(0.45, -0.1), bl: G_(-0.4, 0) }]],
+    loop: [[0, { lean: 0.05, hd: -0.1, fa: A_(2.95, 0.05), ba: A_(0.5, 1.4), fl: G_(0.45, -0.1), bl: G_(-0.4, 0) }],
+      [60, { lean: 0.08, hd: -0.05, by: 3, fa: A_(2.85, 0.1), ba: A_(0.55, 1.4), fl: G_(0.45, -0.15), bl: G_(-0.4, 0) }],
+      [120, { lean: 0.05, hd: -0.1, fa: A_(2.95, 0.05), ba: A_(0.5, 1.4), fl: G_(0.45, -0.1), bl: G_(-0.4, 0) }]],
+    fx(f, E) {
+      if (f === 24) { E.slash('#ff8fb0', -0.7, 420); E.slash('#ffd0dc', 0.7, 380); E.flare('#ff8fb0', 140); }
+      if (f > 20 && f % 3 === 0) E.petal();
+    },
+  },
+  berserker: {
+    keys: [[0, { by: 12, lean: 0.4, fa: A_(0.4, 1.6), ba: A_(0.3, 1.6) }],
+      [26, { by: -6, lean: -0.35, hd: -0.5, fa: A_(2.5, 1.4), ba: A_(-2.5, -1.4) }]],
+    loop: [[0, { by: -6, lean: -0.35, hd: -0.5, fa: A_(2.5, 1.4), ba: A_(-2.5, -1.4) }],
+      [20, { by: 4, lean: 0.1, hd: 0, fa: A_(1.6, 2.2), ba: A_(-1.6, -2.2) }],
+      [40, { by: -6, lean: -0.35, hd: -0.5, fa: A_(2.5, 1.4), ba: A_(-2.5, -1.4) }]],
+    fx(f, E) {
+      if (f === 26) { E.shock('#ff9a3c', 40, 3); E.rocks(16); E.flare('#ff7a3c', 200); E.shake(22); }
+      if (f > 26 && f % 2 === 0) E.ember();
+    },
+  },
+  archer: {
+    keys: [[0, {}], [18, { lean: -0.15, hd: -0.3, fa: A_(2.9, 0), ba: A_(2.3, 1.4), fl: G_(0.4, -0.1), bl: G_(-0.4, 0) }],
+      [40, { lean: -0.15, hd: -0.3, fa: A_(2.9, 0), ba: A_(2.3, 1.4), fl: G_(0.4, -0.1), bl: G_(-0.4, 0) }],
+      [50, { lean: -0.05, hd: -0.2, fa: A_(2.9, 0), ba: A_(0.9, 0.6), fl: G_(0.4, -0.1), bl: G_(-0.4, 0) }]],
+    loop: [[0, { lean: -0.05, hd: -0.2, fa: A_(2.9, 0), ba: A_(0.9, 0.6), fl: G_(0.4, -0.1), bl: G_(-0.4, 0) }],
+      [60, { lean: -0.02, hd: -0.25, by: 2, fa: A_(2.85, 0), ba: A_(1.0, 0.6), fl: G_(0.4, -0.15), bl: G_(-0.4, 0) }],
+      [120, { lean: -0.05, hd: -0.2, fa: A_(2.9, 0), ba: A_(0.9, 0.6), fl: G_(0.4, -0.1), bl: G_(-0.4, 0) }]],
+    fx(f, E) {
+      if (f === 42) E.arrowUp();
+      if (f === 72 || f === 90 || f === 104) E.firework(f === 90 ? '#ff5fb8' : f === 104 ? '#7fe8ff' : '#ffd34e');
+    },
+  },
+  hammer: {
+    keys: [[0, { fa: A_(2.9, 0.3), ba: A_(2.6, 0.3), by: 4 }], [18, { by: 22, lean: 0.6, fa: A_(0.9, 0), ba: A_(0.7, 0.2) }],
+      [44, { by: 0, lean: 0, fa: A_(2.3, 1.9), ba: A_(1.0, 1.6), fl: G_(0.5, -0.2), bl: G_(-0.5, -0.1) }]],
+    loop: [[0, { by: 0, lean: 0, fa: A_(2.3, 1.9), ba: A_(1.0, 1.6), fl: G_(0.5, -0.2), bl: G_(-0.5, -0.1) }],
+      [50, { by: 4, lean: 0.06, fa: A_(2.25, 1.9), ba: A_(1.1, 1.7), fl: G_(0.5, -0.3), bl: G_(-0.5, -0.15) }],
+      [100, { by: 0, lean: 0, fa: A_(2.3, 1.9), ba: A_(1.0, 1.6), fl: G_(0.5, -0.2), bl: G_(-0.5, -0.1) }]],
+    fx(f, E) { if (f === 18) { E.shock('#ffd08a', 0, 2, true); E.rocks(24); E.dust(); E.shake(28); E.flare('#ffd08a', 180, 40); } },
+  },
+  imai: {
+    keys: [[0, { lean: 0.3, hd: 0.2 }], [30, { lean: -0.2, hd: -0.3, fa: A_(2.4, 0.4), ba: A_(-2.2, 0.5), fl: G_(0.3, -0.1), bl: G_(-0.3, 0) }]],
+    loop: [[0, { lean: -0.2, hd: -0.3, fa: A_(2.4, 0.4), ba: A_(-2.2, 0.5), fl: G_(0.3, -0.1), bl: G_(-0.3, 0) }],
+      [40, { lean: -0.1, hd: -0.2, fa: A_(2.6, 0.2), ba: A_(-2.4, 0.3), fl: G_(0.3, -0.1), bl: G_(-0.3, 0) }],
+      [80, { lean: -0.2, hd: -0.3, fa: A_(2.4, 0.4), ba: A_(-2.2, 0.5), fl: G_(0.3, -0.1), bl: G_(-0.3, 0) }]],
+    fx(f, E) {
+      if (f === 30) { E.burst('drop', '#b45be0', 40); E.shock('#b45be0', 30, 2); E.flare('#c27ad8', 150); }
+      if (f > 30 && f % 4 === 0) E.mist('#7a3a8a');
+    },
+  },
+  henry: {
+    slide: 22,   // 左から電光で走りこんでくる
+    keys: [[0, { lean: 0.6, fa: A_(-1.6, 1.6), ba: A_(1.6, 1.6), fl: G_(1.0, -0.6), bl: G_(-0.8, -0.8) }],
+      [22, { lean: 0.1, by: 10, fa: A_(1.3, 1.7), ba: A_(1.0, 1.8), fl: G_(0.6, -0.8), bl: G_(-0.6, -0.4) }],
+      [34, { lean: -0.1, by: -4, hd: -0.2, fa: A_(3.0, 0), ba: A_(0.6, 1.6), fl: G_(0.6, -0.3), bl: G_(-0.4, 0) }]],
+    loop: [[0, { lean: -0.1, by: -4, hd: -0.2, fa: A_(3.0, 0), ba: A_(0.6, 1.6), fl: G_(0.6, -0.3), bl: G_(-0.4, 0) }],
+      [12, { lean: -0.05, by: -10, hd: -0.25, fa: A_(3.1, 0), ba: A_(0.6, 1.6), fl: G_(0.6, -0.3), bl: G_(-0.4, 0) }],
+      [24, { lean: -0.1, by: -4, hd: -0.2, fa: A_(3.0, 0), ba: A_(0.6, 1.6), fl: G_(0.6, -0.3), bl: G_(-0.4, 0) }]],
+    fx(f, E) {
+      if (f < 22) E.zip();
+      if (f === 34) { E.bolts(8); E.flare('#ffd23a', 170); E.shock('#ffd23a', 40, 2); }
+      if (f > 34 && f % 10 === 0) E.bolts(1);
+    },
+  },
+  chinta: {
+    keys: [[0, { fa: A_(1.45, 1.9) }], [20, { lean: -0.25, hd: -0.4, fa: A_(1.7, 1.7), ba: A_(2.7, 0.2), fl: G_(0.55, -0.2), bl: G_(-0.5, 0) }]],
+    loop: [[0, { lean: -0.25, hd: -0.4, fa: A_(1.7, 1.7), ba: A_(2.7, 0.2), fl: G_(0.55, -0.2), bl: G_(-0.5, 0) }],
+      [15, { lean: -0.15, hd: -0.2, by: 4, fa: A_(1.7, 1.7), ba: A_(2.5, 0.4), fl: G_(0.55, -0.3), bl: G_(-0.5, -0.1) }],
+      [30, { lean: -0.25, hd: -0.4, fa: A_(1.7, 1.7), ba: A_(2.7, 0.2), fl: G_(0.55, -0.2), bl: G_(-0.5, 0) }]],
+    fx(f, E) {
+      if (f === 20) { E.sonic(); E.flare('#ff7ad9', 150); }
+      if (f > 20 && f % 5 === 0) E.note();
+      if (f > 20 && f % 30 === 0) E.sonic();
+    },
+  },
+};
+for (const k in VPOSE) { const v = VPOSE[k]; v.K = v.keys.map(([f, o]) => [f, mk(o)]); v.LK = v.loop.map(([f, o]) => [f, mk(o)]); v.end = v.keys[v.keys.length - 1][0]; v.len = v.loop[v.loop.length - 1][0]; }
+
+SC_.victory = (o) => {
+  let t = 0, shake = 0;
+  const ws = (o.team !== undefined ? o.stats.filter(s => s.team === o.team) : [o.stats[o.winner]]).slice(0, 4);
+  const n = ws.length, SCL = n === 1 ? 2.25 : n === 2 ? 1.75 : 1.4;
+  const figs = ws.map((s, i) => {
+    const F = new Fighter({ id: i, col: s.col, cpu: false, stocks: 1, x: 0, dir: 1, ch: s.ch });
+    F.state = 'victory'; F.ground = {};
+    const gx = n === 1 ? VW * 0.64 : lerp(VW * 0.5, VW * 0.82, i / (n - 1));
+    return { F, s, gx, gy: 640, sc: SCL / Math.max(1, s.ch.scale * 0.9), V: VPOSE[s.ch.key] || VPOSE.shimarin, delay: 34 + i * 8 };
+  });
+  const lead = ws[0], col = lead.col;
+  const P = [];   // 演出の粒（画面座標）
+  const conf = Array.from({ length: 90 }, () => ({ x: rnd(0, VW), y: rnd(-VH, 0), vx: rnd(-1, 1), vy: rnd(2, 5), r: rnd(0, TAU), vr: rnd(-0.2, 0.2), w: rnd(6, 12), h: rnd(10, 18),
+    c: [col.main, col.light, '#ffffff', '#d7191f', '#ffd34e'][Math.random() * 5 | 0] }));
+  // 演出の道具（g = どの人の位置か）
+  const E = g => {
+    const cx = g.gx, cy = g.gy - 120 * g.sc * g.s.ch.scale / 1.1, add = p => P.push(p);
+    return {
+      shock: (c, dy = 0, k = 2, ground = false) => { for (let i = 0; i < k; i++) add({ x: cx, y: ground ? g.gy : cy + dy, shock: 1, r: 20 + i * 30, vr: 22 + i * 6, life: 26 + i * 4, max: 26 + i * 4, col: i ? c : '#ffffff', w: 16 }); },
+      flare: (c, r, dy = 0) => add({ x: cx, y: cy + dy, flare: 1, r, life: 26, max: 26, col: c, rot: rnd(0, TAU), n: 8 }),
+      burst: (type, c, k) => { for (let i = 0; i < k; i++) { const a = rnd(0, TAU), sp = rnd(6, 16); add({ x: cx, y: cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 40, max: 40, [type]: 1, rot: rnd(0, TAU), size: rnd(6, 14), g: type === 'drop' ? 0.5 : 0, col: c }); } },
+      orbit: c => { const a = rnd(0, TAU); add({ x: cx + Math.cos(a) * 160, y: cy + Math.sin(a) * 120, vx: -Math.cos(a) * 4, vy: -Math.sin(a) * 3, life: 30, max: 30, spark: 1, size: 5, g: 0, col: c }); },
+      slash: (c, rot, len) => add({ x: cx + 60, y: cy, slash: 1, rot, len, life: 18, max: 18, col: c }),
+      petal: () => add({ x: rnd(0, VW), y: -20, vx: rnd(-2, 1), vy: rnd(2, 4), life: 200, max: 200, petal: 1, rot: rnd(0, TAU), size: rnd(6, 10), g: 0, col: '#ffb7cc' }),
+      rocks: k => { for (let i = 0; i < k; i++) add({ x: cx + rnd(-60, 60), y: g.gy - 10, vx: rnd(-9, 9), vy: rnd(-18, -6), life: 60, max: 60, rock: 1, rot: rnd(0, TAU), size: rnd(6, 14), g: 0.6, col: '#8a6a50' }); },
+      ember: () => add({ x: cx + rnd(-140, 140), y: g.gy - rnd(0, 60), vx: rnd(-1, 1), vy: rnd(-6, -3), life: 50, max: 50, spark: 1, size: rnd(3, 6), g: -0.02, col: Math.random() < 0.5 ? '#ff5a2e' : '#ffb03a' }),
+      dust: () => { for (let i = 0; i < 18; i++) add({ x: cx + rnd(-80, 80), y: g.gy - 6, vx: rnd(-8, 8), vy: rnd(-3, -0.5), life: 40, max: 40, smoke: 1, size: rnd(16, 30), g: 0, col: 'rgba(230,220,200,.8)' }); },
+      shake: k => { shake = Math.max(shake, k); },
+      arrowUp: () => add({ x: cx + 40, y: cy - 120, vx: 0, vy: -32, life: 18, max: 18, spark: 1, size: 7, g: 0, col: '#ffe680' }),
+      firework: c => {
+        const fx = cx + rnd(-200, 200), fy = rnd(110, 220);
+        add({ x: fx, y: fy, flare: 1, r: 90, life: 22, max: 22, col: c, rot: rnd(0, TAU), n: 6 });
+        for (let i = 0; i < 40; i++) { const a = i / 40 * TAU, sp = rnd(5, 10); add({ x: fx, y: fy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 50, max: 50, spark: 1, size: 4, g: 0.12, col: i % 2 ? c : '#ffffff' }); }
+      },
+      mist: c => add({ x: cx + rnd(-160, 160), y: g.gy - rnd(0, 40), vx: rnd(-0.5, 0.5), vy: rnd(-1.5, -0.5), life: 60, max: 60, smoke: 1, size: rnd(24, 40), g: 0, col: c }),
+      zip: () => { for (let i = 0; i < 2; i++) add({ x: cx - rnd(0, 400), y: cy + rnd(-60, 60), bolt: 1, rot: 0, len: rnd(120, 220), life: 8, max: 8, seed: Math.random() * 1e5 | 0 }); },
+      bolts: k => { for (let i = 0; i < k; i++) add({ x: cx, y: cy, bolt: 1, rot: rnd(0, TAU), len: rnd(140, 260), life: 12, max: 12, seed: Math.random() * 1e5 | 0 }); },
+      note: () => add({ x: cx + rnd(-30, 60), y: cy - 60, vx: rnd(-3, 3), vy: rnd(-4, -2), life: 70, max: 70, note: 1, size: rnd(1.2, 2), g: -0.01, col: Math.random() < 0.5 ? '#ff7ad9' : '#7fe8ff' }),
+      sonic: () => add({ x: cx + 50, y: cy - 60, sonic: 1, r: 260, life: 30, max: 30 }),
+    };
+  };
+  const done = () => { if (!nextScene) go('result', o); };
+  return {
+    update() {
+      t++;
+      if (shake > 0) shake--;
+      for (const g of figs) {
+        const f = t - g.delay;
+        g.F.t = t;
+        if (f < 0) continue;
+        const V = g.V;
+        g.F.pose = f <= V.end ? keyPose(V.K, f) : keyPose(V.LK, (f - V.end) % Math.max(1, V.len));
+        V.fx(f, E(g));
+      }
+      for (const p of P) {
+        p.life--;
+        if (p.shock) { p.r += p.vr; p.vr *= 0.9; continue; }
+        if (p.vx !== undefined) { p.x += p.vx; p.y += p.vy; p.vy += p.g || 0; if (p.rot !== undefined) p.rot += 0.12; if (!p.petal && !p.smoke) p.vx *= 0.97; }
+      }
+      for (let i = P.length - 1; i >= 0; i--) if (P[i].life <= 0) P.splice(i, 1);
+      for (const c of conf) { if (t < 40) continue; c.x += c.vx + Math.sin(t * 0.05 + c.r) * 0.6; c.y += c.vy; c.r += c.vr; if (c.y > VH + 20) { c.y = -20; c.x = rnd(0, VW); } }
+      if ((t > 70 && (MI.ok() || MI.back() || mouse.click)) || t > 480) done();
+    },
+    draw() {
+      ctx.save();
+      if (shake) ctx.translate(rnd(-1, 1) * shake * 0.5, rnd(-1, 1) * shake * 0.5);
+      // 背景：勝った人の色＋回る光の筋
+      const bg = ctx.createRadialGradient(VW * 0.64, 380, 40, VW * 0.64, 380, 900);
+      bg.addColorStop(0, col.main); bg.addColorStop(0.45, col.dark); bg.addColorStop(1, '#08080c');
+      ctx.fillStyle = bg; ctx.fillRect(-40, -40, VW + 80, VH + 80);
+      ctx.save(); ctx.translate(VW * 0.64, 420); ctx.rotate(t * 0.004); ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 18; i++) { ctx.rotate(TAU / 18); ctx.fillStyle = i % 2 ? 'rgba(255,255,255,.07)' : 'rgba(255,255,255,.03)'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(1400, -110); ctx.lineTo(1400, 110); ctx.fill(); }
+      ctx.restore();
+      // スポットライト
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (const g of figs) {
+        const sg = ctx.createLinearGradient(g.gx, 0, g.gx, g.gy);
+        sg.addColorStop(0, 'rgba(255,255,255,.0)'); sg.addColorStop(1, 'rgba(255,255,255,.22)');
+        ctx.fillStyle = sg; ctx.beginPath(); ctx.moveTo(g.gx - 40, -20); ctx.lineTo(g.gx + 40, -20); ctx.lineTo(g.gx + 200, g.gy + 20); ctx.lineTo(g.gx - 200, g.gy + 20); ctx.fill();
+      }
+      ctx.restore();
+      // 台
+      for (const g of figs) {
+        ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.beginPath(); ctx.ellipse(g.gx, g.gy + 6, 170 * SCL / 2.25, 30 * SCL / 2.25, 0, 0, TAU); ctx.fill();
+        ctx.strokeStyle = g.s.col.light; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(g.gx, g.gy + 2, 150 * SCL / 2.25, 24 * SCL / 2.25, 0, 0, TAU); ctx.stroke();
+      }
+      // 演出の粒（後ろ）：煙・岩
+      for (const p of P) {
+        if (p.smoke) { const k = p.life / p.max, r = p.size * (1.6 - k * 0.6); ctx.globalAlpha = k * 0.8; ctx.drawImage(puffSprite(p.col), p.x - r, p.y - r, r * 2, r * 2); }
+        else if (p.rock) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.globalAlpha = Math.min(1, p.life / 20); ctx.fillStyle = p.col; ctx.strokeStyle = '#14121f'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-p.size, 0); ctx.lineTo(0, -p.size * 0.8); ctx.lineTo(p.size, -p.size * 0.2); ctx.lineTo(p.size * 0.5, p.size * 0.7); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); }
+      }
+      ctx.globalAlpha = 1;
+      // 勝った人（ヘンリーは電光で走りこんでくる）
+      for (const g of figs) {
+        const f = t - g.delay;
+        if (f < 0 && !g.V.slide) continue;
+        let gx = g.gx;
+        if (g.V.slide) { if (f < 0) continue; gx = lerp(-200, g.gx, ease(clamp(f / g.V.slide, 0, 1))); }
+        const k = clamp((f + 8) / 14, 0, 1);
+        ctx.save(); ctx.translate(gx, g.gy); ctx.scale(g.sc * (0.7 + 0.3 * k), g.sc * (0.7 + 0.3 * k)); ctx.globalAlpha = k;
+        drawFighter(g.F, t);
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+      // 演出の粒（前）：加算合成
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+      for (const p of P) {
+        if (p.smoke || p.rock) continue;
+        if (p.petal) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.globalAlpha = 0.9; ctx.fillStyle = p.col; ctx.beginPath(); ctx.ellipse(0, 0, p.size, p.size * 0.55, 0, 0, TAU); ctx.fill(); ctx.restore(); continue; }
+        if (p.slash) { const k = p.life / p.max, L2 = p.len * (0.7 + (1 - k) * 0.5), dx = Math.cos(p.rot) * L2 / 2, dy = Math.sin(p.rot) * L2 / 2; ctx.globalAlpha = k; ctx.strokeStyle = p.col; ctx.lineWidth = 26 * k; line(p.x - dx, p.y - dy, p.x + dx, p.y + dy); ctx.strokeStyle = '#fff'; ctx.lineWidth = 8 * k; line(p.x - dx, p.y - dy, p.x + dx, p.y + dy); continue; }
+        if (p.sonic) { const k = p.life / p.max; for (let j = 0; j < 3; j++) { ctx.globalAlpha = k * (0.9 - j * 0.25); ctx.strokeStyle = j === 1 ? '#ff7ad9' : '#7fe8ff'; ctx.lineWidth = 6 - j * 1.5; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (1 - k) * (1 - j * 0.18) + 10, -0.8, 0.8); ctx.stroke(); } continue; }
+        drawFx(p);
+      }
+      ctx.restore(); ctx.globalAlpha = 1;
+      // 紙吹雪
+      for (const c of conf) { if (t < 40) break; ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.r); ctx.fillStyle = c.c; ctx.fillRect(-c.w / 2, -c.h / 2 * Math.abs(Math.cos(c.r * 2)), c.w, c.h * Math.abs(Math.cos(c.r * 2)) + 1); ctx.restore(); }
+      ctx.restore();
+      // 文字：WINNER と名前（左側に斜めの帯）
+      const k1 = ease(clamp((t - 10) / 24, 0, 1)), k2 = ease(clamp((t - 30) / 24, 0, 1));
+      ctx.save(); ctx.translate(-500 * (1 - k1), 0);
+      ctx.save(); ctx.transform(1, 0, -0.18, 1, 0, 0);
+      text('WINNER', 70, 140, 120, '#ffffff', 'left', '900', 'rgba(0,0,0,.6)', 14);
+      ctx.restore();
+      ctx.fillStyle = UIC.red; ctx.fillRect(40, 214, 520, 12);
+      ctx.restore();
+      ctx.save(); ctx.translate(-700 * (1 - k2), 0);
+      ctx.fillStyle = UIC.ink; uiPara(-20, 500, 640, 96, 34); ctx.fill();
+      ctx.fillStyle = UIC.red; uiPara(-20, 596, 560, 12, 6); ctx.fill();
+      const title = o.team !== undefined ? `${TEAM_NAME[o.team]}チームの勝ち！` : `${lead.tag} の勝ち！`;
+      text(title, 40, 548, o.team !== undefined ? 48 : 58, '#ffffff', 'left', '900');
+      text(ws.map(s => s.ch.name).join(' ・ '), 44, 640, 28, '#ffffff', 'left', '900', 'rgba(0,0,0,.6)', 6);
+      ctx.restore();
+      if (t > 70 && (t >> 5) % 2 === 0) text('Enter / クリックで結果へ', VW - 30, VH - 24, 18, 'rgba(255,255,255,.85)', 'right', 'bold', 'rgba(0,0,0,.5)', 4);
     },
   };
 };
