@@ -3295,21 +3295,42 @@ function pctColor(p) {
   }
   return 'rgb(150,10,25)';
 }
-function menuBG(t, c1, c2) {
-  const g = ctx.createLinearGradient(0, 0, VW, VH);
-  g.addColorStop(0, c1); g.addColorStop(1, c2);
-  ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
-  ctx.save(); ctx.globalAlpha = 0.06; ctx.fillStyle = '#fff';
-  for (let i = -2; i < 14; i++) {
-    const x = ((i * 140 + t * 0.8) % (VW + 400) + VW + 400) % (VW + 400) - 200;
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 60, 0); ctx.lineTo(x - 140, VH); ctx.lineTo(x - 200, VH); ctx.fill();
-  }
-  ctx.globalAlpha = 0.5;
-  for (let i = 0; i < 40; i++) {
-    const x = (i * 97 + t * 0.3 * (1 + i % 3)) % VW, y = ((i * 53 - t * (0.4 + (i % 5) * 0.1)) % VH + VH) % VH;
-    ctx.fillRect(x, y, 2, 2);
-  }
-  ctx.restore();
+// ---- 白・黒・赤の共通デザイン（Phaser の画面とそろえる） ----
+const UIC = { bg: '#efede8', ink: '#141414', red: '#d7191f', red2: '#a30f14', grey: '#6b6b6b', line: '#d9d6cf', mid: '#3a3a3a', paper: '#ffffff' };
+function uiBG() {
+  ctx.fillStyle = UIC.bg; ctx.fillRect(0, 0, VW, VH);
+  ctx.save(); ctx.strokeStyle = UIC.line; ctx.globalAlpha = 0.7; ctx.lineWidth = 2; ctx.beginPath();
+  for (let x = -VH; x < VW; x += 26) { ctx.moveTo(x, VH); ctx.lineTo(x + VH, 0); }
+  ctx.stroke(); ctx.restore();
+}
+function menuBG() { uiBG(); }   // 古い呼び出し用
+function uiHeader(title, right) {
+  ctx.fillStyle = UIC.ink; ctx.fillRect(0, 0, VW, 64);
+  ctx.fillStyle = UIC.red; ctx.fillRect(66, 20, 24, 24);
+  text(title, 104, 33, 28, '#fff', 'left', '900');
+  if (right) text(right, VW - 24, 33, 18, '#9a9a9a', 'right', 'bold');
+}
+function uiFooter(left, right) {
+  ctx.fillStyle = UIC.ink; ctx.fillRect(0, 654, VW, 66);
+  if (left) text(left, 36, 688, 20, '#fff', 'left', 'bold');
+  if (right) text(right, VW - 28, 688, 16, '#9a9a9a', 'right', 'bold');
+}
+function uiPara(x, y, w, h, sk) { ctx.beginPath(); ctx.moveTo(x + sk, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w - sk, y + h); ctx.lineTo(x, y + h); ctx.closePath(); }
+function uiPanel(x, y, w, h) {
+  ctx.fillStyle = 'rgba(0,0,0,.15)'; ctx.fillRect(x + 6, y + 6, w, h);
+  ctx.fillStyle = UIC.paper; ctx.fillRect(x, y, w, h);
+  ctx.lineWidth = 4; ctx.strokeStyle = UIC.ink; ctx.strokeRect(x, y, w, h);
+}
+// 斜めのボタン（えらばれていると赤）
+function uiButton(a, f, label, size = 24, sub) {
+  const sk = Math.min(24, a.h * 0.35);
+  ctx.fillStyle = 'rgba(0,0,0,.18)'; uiPara(a.x + 6, a.y + 6, a.w, a.h, sk); ctx.fill();
+  ctx.fillStyle = f ? UIC.red : UIC.ink; uiPara(a.x, a.y, a.w, a.h, sk); ctx.fill();
+  if (f) { ctx.lineWidth = 4; ctx.strokeStyle = UIC.ink; uiPara(a.x, a.y, a.w, a.h, sk); ctx.stroke(); }
+  if (sub) {
+    text(label, a.x + sk + 24, a.y + a.h * 0.4, size, '#fff', 'left', '900');
+    text(sub, a.x + sk + 26, a.y + a.h * 0.76, 18, f ? '#ffe0e0' : '#bbbbbb', 'left', 'bold');
+  } else text(label, a.x + a.w / 2, a.y + a.h / 2 + 1, size, '#fff', 'center', '900');
 }
 const inR = (p, a) => p.x >= a.x && p.x <= a.x + a.w && p.y >= a.y && p.y <= a.y + a.h;
 
@@ -3361,15 +3382,16 @@ class Menu {
     if (best >= 0) { this.i = best; Snd.move(); }
   }
 }
-function focusFrame(a, t, col = '#fff') {
-  ctx.save(); ctx.shadowColor = col; ctx.shadowBlur = 20 + Math.sin(t * 0.15) * 8;
-  ctx.lineWidth = 5; ctx.strokeStyle = col; rr(a.x - 4, a.y - 4, a.w + 8, a.h + 8, 16); ctx.stroke(); ctx.restore();
+function focusFrame(a) {   // えらんでいる所：赤い太枠
+  ctx.lineWidth = 6; ctx.strokeStyle = UIC.red; ctx.strokeRect(a.x - 5, a.y - 5, a.w + 10, a.h + 10);
 }
-function backBtn(onBack) { return { x: 24, y: 22, w: 150, h: 50, label: '◀ もどる', act: onBack, back: true }; }
-function drawBackBtn(a, f, t) {
-  ctx.fillStyle = 'rgba(0,0,0,.45)'; rr(a.x, a.y, a.w, a.h, 25); ctx.fill();
-  text(a.label, a.x + a.w / 2, a.y + a.h / 2 + 1, 20, '#fff', 'center');
-  if (f) focusFrame(a, t);
+// もどるボタン：ヘッダー左の赤い丸
+function backBtn(onBack) { return { x: 10, y: 8, w: 48, h: 48, label: 'もどる', act: onBack, back: true }; }
+function drawBackBtn(a, f) {
+  const cx = a.x + a.w / 2, cy = a.y + a.h / 2;
+  ctx.fillStyle = UIC.red; ctx.beginPath(); ctx.arc(cx, cy, 20, 0, TAU); ctx.fill();
+  if (f) { ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.beginPath(); ctx.arc(cx, cy, 23, 0, TAU); ctx.stroke(); }
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(cx - 8, cy); ctx.lineTo(cx + 6, cy - 10); ctx.lineTo(cx + 6, cy + 10); ctx.closePath(); ctx.fill();
 }
 
 // =====================================================================
@@ -3772,23 +3794,29 @@ SC_.howto = () => {
   return {
     update() { t++; if (MI.back() || MI.ok()) { Snd.back(); go('menu'); return; } M.update(); },
     draw() {
-      menuBG(t, '#0f2a5a', '#1d1450');
-      text('あそびかた', VW / 2, 60, 40, '#fff', 'center', '900', '#000', 6);
-      ctx.fillStyle = 'rgba(0,0,0,.45)'; rr(60, 110, 560, 560, 20); ctx.fill(); rr(650, 110, 570, 560, 20); ctx.fill();
-      text('操作（キーボード）', 90, 145, 26, '#ffd34e');
-      rows.forEach((r, i) => { const y = 195 + i * 46; text(r[0], 90, y, 20, '#fff'); text(r[1], 590, y, i === 9 ? 15 : 20, '#9fd0ff', 'right'); });
-      text('必殺ワザ', 680, 145, 26, '#ffd34e');
+      uiBG(); uiHeader('あそびかた', '大乱交しまりんブラザーズ');
+      uiPanel(36, 84, 560, 556); uiPanel(620, 84, 624, 556);
+      ctx.fillStyle = UIC.red; ctx.fillRect(36, 84, 560, 40); ctx.fillRect(620, 84, 624, 40);
+      text('操作（キーボード）', 56, 104, 22, '#fff', 'left', '900');
+      rows.forEach((r, i) => {
+        const y = 156 + i * 44;
+        if (i % 2 === 0) { ctx.fillStyle = '#f3f1ec'; ctx.fillRect(40, y - 20, 552, 40); }
+        text(r[0], 56, y, 18, UIC.ink, 'left', '900'); text(r[1], 578, y, i === 9 ? 14 : 18, UIC.red2, 'right', '900');
+      });
+      text('必殺ワザ', 640, 104, 22, '#fff', 'left', '900');
       CHARS.forEach((ch, ci) => {
-        // キャラが8人になったので、2列×4段のカードに並べる
-        const cx = 668 + (ci % 2) * 280, y0 = 164 + (ci >> 1) * 118;
-        drawFace(cx + 16, y0 + 12, 30, 0, 0, t, ch); text(ch.name, cx + 38, y0 + 12, 19, '#fff', 'left', '900');
-        if (ch.fsName) text('切り札：' + ch.fsName, cx + 6, y0 + 33, 12, '#ffd34e', 'left', 'bold');
+        // 2列×4段のカード
+        const cx = 632 + (ci % 2) * 304, y0 = 134 + (ci >> 1) * 124;
+        ctx.fillStyle = '#f3f1ec'; ctx.fillRect(cx, y0 - 6, 296, 118);
+        ctx.fillStyle = UIC.ink; ctx.fillRect(cx, y0 - 6, 296, 34);
+        drawFace(cx + 20, y0 + 11, 28, 0, 0, t, ch); text(ch.name, cx + 42, y0 + 11, 18, '#fff', 'left', '900');
+        if (ch.fsName) text('切り札：' + ch.fsName, cx + 290, y0 + 11, 11, '#ffb3b3', 'right', 'bold');
         ch.specials.forEach((m, i) => {
-          const y = y0 + 52 + i * 17;
-          text(m[1], cx + 6, y, 12, '#ff9aa0'); text(m[0], cx + 76, y, 14, '#fff');
+          const y = y0 + 42 + i * 19;
+          text(m[1], cx + 8, y, 12, UIC.red, 'left', '900'); text(m[0], cx + 82, y, 14, UIC.ink, 'left', '900');
         });
       });
-      text('相手を場外にふっとばすと撃墜！ストックが0になったら負け。', 680, 645, 16, '#fff');
+      uiFooter('相手を場外にふっとばすと撃墜！ストックが0になったら負け', 'Enter / Esc：もどる');
       drawBackBtn(back, true, t);
     },
   };
@@ -3799,7 +3827,7 @@ SC_.sss = () => {
   let t = 0;
   const items = [];
   const list = STAGES.map((s, i) => ({ s, i })).concat([{ s: null, i: -1 }]);
-  list.forEach((o, k) => items.push({ x: 70 + k * 290, y: 480, w: 270, h: 190, st: o.s, idx: o.i,
+  list.forEach((o, k) => items.push({ x: 70 + k * 290, y: 452, w: 270, h: 180, st: o.s, idx: o.i,
     act: () => { Snd.ok(); const idx = o.i < 0 ? (Math.random() * STAGES.length | 0) : o.i; SET.stage = idx; go('vs', buildOffline(idx)); } }));
   const back = backBtn(() => { Snd.back(); go('css'); });
   items.push(back);
@@ -3817,31 +3845,32 @@ SC_.sss = () => {
   return {
     update() { t++; if (MI.back()) { Snd.back(); go('css'); return; } M.update(); },
     draw() {
-      menuBG(t, '#10233d', '#2c1047');
-      text('ステージ選択', VW / 2, 47, 34, '#fff', 'center', '900', '#000', 6);
+      uiBG(); uiHeader('ステージ選択', '大乱交しまりんブラザーズ');
       const cur = M.cur;
-      const big = { x: 240, y: 95, w: 800, h: 330 };
+      const big = { x: 240, y: 82, w: 800, h: 344 };
+      ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(big.x + 8, big.y + 8, big.w, big.h);
       if (cur.st) preview(previews[cur.idx], big.x, big.y, big.w, big.h, 0.85);
       else {
-        ctx.fillStyle = '#1b1d33'; rr(big.x, big.y, big.w, big.h, 14); ctx.fill();
-        text('？', VW / 2, 260, 160, 'rgba(255,255,255,.2)', 'center', '900');
+        ctx.fillStyle = UIC.ink; ctx.fillRect(big.x, big.y, big.w, big.h);
+        text('?', VW / 2, 240, 180, UIC.red, 'center', '900');
       }
-      ctx.lineWidth = 4; ctx.strokeStyle = '#fff'; rr(big.x, big.y, big.w, big.h, 14); ctx.stroke();
+      ctx.lineWidth = 5; ctx.strokeStyle = UIC.ink; ctx.strokeRect(big.x, big.y, big.w, big.h);
       if (!cur.back) {
-        ctx.fillStyle = 'rgba(0,0,0,.65)'; ctx.fillRect(big.x, big.y + big.h - 64, big.w, 64);
-        text(cur.st ? cur.st.name : 'ランダム', big.x + 24, big.y + big.h - 40, 30, '#fff', 'left', '900');
-        text(cur.st ? cur.st.sub : 'どれかひとつを選びます', big.x + 24, big.y + big.h - 14, 17, '#ccc');
+        ctx.fillStyle = UIC.red; uiPara(big.x - 20, big.y + big.h - 66, 520, 56, 18); ctx.fill();
+        text(cur.st ? cur.st.name : 'ランダム', big.x + 16, big.y + big.h - 38, 30, '#fff', 'left', '900');
+        ctx.fillStyle = UIC.ink; ctx.fillRect(big.x, big.y + big.h - 10, big.w, 10);
       }
       items.forEach(a => {
         if (a.back) return drawBackBtn(a, M.cur === a, t);
-        if (a.st) preview(previews[a.idx], a.x, a.y, a.w, a.h, 0.75);
-        else { ctx.fillStyle = '#25284a'; rr(a.x, a.y, a.w, a.h, 14); ctx.fill(); text('？', a.x + a.w / 2, a.y + a.h / 2 - 10, 80, 'rgba(255,255,255,.3)', 'center', '900'); }
-        ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(a.x, a.y + a.h - 36, a.w, 36);
-        text(a.st ? a.st.name : 'ランダム', a.x + a.w / 2, a.y + a.h - 17, 20, '#fff', 'center', '900');
-        ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.3)'; rr(a.x, a.y, a.w, a.h, 14); ctx.stroke();
+        ctx.fillStyle = 'rgba(0,0,0,.15)'; ctx.fillRect(a.x + 6, a.y + 6, a.w, a.h);
+        if (a.st) { ctx.save(); preview(previews[a.idx], a.x, a.y, a.w, a.h, 0.75); ctx.restore(); }
+        else { ctx.fillStyle = UIC.ink; ctx.fillRect(a.x, a.y, a.w, a.h); text('?', a.x + a.w / 2, a.y + a.h / 2 - 14, 90, UIC.red, 'center', '900'); }
+        ctx.fillStyle = M.cur === a ? UIC.red : UIC.ink; ctx.fillRect(a.x, a.y + a.h - 34, a.w, 34);
+        text(a.st ? a.st.name : 'ランダム', a.x + a.w / 2, a.y + a.h - 16, 19, '#fff', 'center', '900');
+        ctx.lineWidth = 4; ctx.strokeStyle = UIC.ink; ctx.strokeRect(a.x, a.y, a.w, a.h);
         if (M.cur === a) focusFrame(a, t);
       });
-      text('←→ でえらんで Enter で決定', VW / 2, 450, 18, 'rgba(255,255,255,.7)', 'center');
+      uiFooter(cur.back ? 'キャラ選択にもどる' : cur.st ? cur.st.sub : 'どれかひとつを選びます', '←→：えらぶ　Enter：決定　Esc：もどる');
     },
   };
 };
@@ -5431,13 +5460,14 @@ SC_.battle = (o) => {
         ctx.globalAlpha = 1;
       }
       if (B.paused) {
-        ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(0, 0, VW, VH);
-        text('ポーズ', VW / 2, 220, 64, '#fff', 'center', '900', '#000', 8);
-        B.pm.items.forEach((a, i) => {
-          ctx.fillStyle = B.pm.i === i ? '#ff4b55' : 'rgba(255,255,255,.12)'; rr(a.x, a.y, a.w, a.h, 32); ctx.fill();
-          text(a.label, a.x + a.w / 2, a.y + a.h / 2 + 1, 26, '#fff', 'center', '900');
-        });
-        text('移動 ←→ ／ ジャンプ Space ／ 攻撃 Z ／ 必殺 X ／ シールド C ／ スマッシュ V', VW / 2, 600, 18, '#ddd', 'center');
+        ctx.fillStyle = 'rgba(20,20,20,.6)'; ctx.fillRect(0, 0, VW, VH);
+        uiPanel(VW / 2 - 260, 140, 520, 430);
+        ctx.fillStyle = UIC.ink; ctx.fillRect(VW / 2 - 260, 140, 520, 110);
+        ctx.fillStyle = UIC.red; ctx.fillRect(VW / 2 - 230, 182, 24, 24);
+        text('ポーズ', VW / 2 - 190, 196, 52, '#fff', 'left', '900');
+        B.pm.items.forEach((a, i) => uiButton(a, B.pm.i === i, a.label, 26));
+        ctx.fillStyle = UIC.ink; ctx.fillRect(0, 610, VW, 56);
+        text('移動 ←→ ／ ジャンプ Space ／ 攻撃 Z ／ 必殺 X ／ シールド C ／ スマッシュ V', VW / 2, 638, 18, '#fff', 'center', 'bold');
       }
     },
   };
@@ -5464,8 +5494,8 @@ SC_.online = (o) => {
     go('vs', { stage: msg.stage, online: true, seed: msg.seed, chars: msg.chars, slots: msg.slots, stocks: msg.stocks });
   };
   const topMenu = new Menu([
-    { x: VW / 2 - 300, y: 200, w: 600, h: 110, label: 'ルームを作る', sub: 'コードを友だちに伝えて入ってもらう', act: () => { Snd.ok(); NET.stage = SET.stage; netHost(); mode = 'host'; } },
-    { x: VW / 2 - 300, y: 340, w: 600, h: 110, label: 'ルームに入る', sub: '友だちから聞いたコードを入力する', act: () => { Snd.ok(); code = ''; mode = 'join'; } },
+    { x: VW / 2 - 320, y: 150, w: 640, h: 120, label: 'ルームを作る', sub: 'コードを友だちに伝えて入ってもらう', act: () => { Snd.ok(); NET.stage = SET.stage; netHost(); mode = 'host'; } },
+    { x: VW / 2 - 320, y: 300, w: 640, h: 120, label: 'ルームに入る', sub: '友だちから聞いたコードを入力する', act: () => { Snd.ok(); code = ''; mode = 'join'; } },
     backBtn(() => { Snd.back(); go('menu'); }),
   ]);
   const players = () => {
@@ -5528,93 +5558,91 @@ SC_.online = (o) => {
       }
     },
     draw() {
-      menuBG(t, '#1a0f3d', '#3b0f45');
-      ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.fillRect(0, 0, VW, 92);
-      text('オンライン対戦', VW / 2, 47, 34, '#fff', 'center', '900', '#000', 6);
-      const box = (x, y, w, h) => { ctx.fillStyle = 'rgba(0,0,0,.5)'; rr(x, y, w, h, 20); ctx.fill(); };
+      uiBG(); uiHeader('オンライン対戦', NET.code && mode !== 'top' && mode !== 'join' ? 'ルーム ' + NET.code : '大乱交しまりんブラザーズ');
+      const box = (x, y, w, h) => uiPanel(x, y, w, h);
       const dots = '.'.repeat(1 + ((t >> 4) % 3));
+      const codeBox = (x, ch, hl) => {
+        ctx.fillStyle = hl ? '#ffe0e0' : UIC.bg; ctx.fillRect(x, 250, 90, 120);
+        ctx.lineWidth = 4; ctx.strokeStyle = hl ? UIC.red : UIC.ink; ctx.strokeRect(x, 250, 90, 120);
+        if (ch) text(ch, x + 45, 312, 72, UIC.ink, 'center', '900');
+      };
       if (mode === 'top') {
         topMenu.items.forEach((a, i) => {
           if (a.back) return drawBackBtn(a, topMenu.i === i, t);
-          const f = topMenu.i === i;
-          const g = ctx.createLinearGradient(a.x, a.y, a.x + a.w, a.y + a.h);
-          g.addColorStop(0, i ? '#3fb6ff' : '#ff6a3d'); g.addColorStop(1, i ? '#1d5fd1' : '#c4123a');
-          ctx.fillStyle = g; rr(a.x, a.y, a.w, a.h, 22); ctx.fill();
-          text(a.label, a.x + 36, a.y + 44, 40, '#fff', 'left', '900', 'rgba(0,0,0,.4)', 6);
-          text(a.sub, a.x + 38, a.y + 86, 19, '#fff', 'left', 'bold');
-          if (f) focusFrame(a, t);
+          uiButton(a, topMenu.i === i, a.label, 44, a.sub);
         });
-        text('インターネット経由で、最大' + NET_MAX + '人で大乱闘できます', VW / 2, 520, 22, '#fff', 'center', 'bold', '#000', 4);
-        text('※ ルームを作った人のパソコンがサーバー役になります（作った人が抜けるとルームが閉じます）', VW / 2, 560, 17, '#ccc', 'center');
+        uiFooter('インターネット経由で、最大' + NET_MAX + '人で大乱闘できます', '↑↓：えらぶ　Enter：決定　Esc：もどる');
+        text('※ ルームを作った人のパソコンがサーバー役になります（作った人が抜けるとルームが閉じます）', VW / 2, 470, 17, UIC.grey, 'center', 'bold');
       } else if (mode === 'host') {
         box(VW / 2 - 360, 200, 720, 260);
-        text('ルームを準備中' + dots, VW / 2, 320, 32, '#fff', 'center', '900');
-        text('Esc：やめる', VW / 2, 400, 18, '#aaa', 'center');
+        text('ルームを準備中' + dots, VW / 2, 310, 32, UIC.ink, 'center', '900');
+        uiFooter('', 'Esc：やめる');
       } else if (mode === 'join') {
-        box(VW / 2 - 360, 150, 720, 400);
-        text('ルームコードを入力', VW / 2, 210, 28, '#ffd34e', 'center', '900');
-        for (let i = 0; i < CODE_LEN; i++) {
-          const x = VW / 2 - (CODE_LEN * 110) / 2 + i * 110 + 10;
-          ctx.fillStyle = i === code.length && (t >> 4) % 2 ? '#ffe680' : '#fff'; rr(x, 250, 90, 120, 14); ctx.fill();
-          if (code[i]) text(code[i], x + 45, 312, 72, '#2a1460', 'center', '900');
-        }
-        text(code.length === CODE_LEN ? 'Enter で接続！' : 'キーボードで入力（Backspace で消す）', VW / 2, 430, 22, '#fff', 'center', 'bold');
-        text('Esc：もどる', VW / 2, 520, 18, '#aaa', 'center');
+        box(VW / 2 - 360, 130, 720, 420);
+        ctx.fillStyle = UIC.ink; ctx.fillRect(VW / 2 - 360, 130, 720, 60);
+        text('ルームコードを入力', VW / 2, 161, 26, '#fff', 'center', '900');
+        for (let i = 0; i < CODE_LEN; i++) codeBox(VW / 2 - (CODE_LEN * 110) / 2 + i * 110 + 10, code[i], i === code.length && (t >> 4) % 2);
+        text(code.length === CODE_LEN ? 'Enter で接続！' : 'キーボードで入力（Backspace で消す）', VW / 2, 440, 22, code.length === CODE_LEN ? UIC.red : UIC.ink, 'center', '900');
+        uiFooter('友だちから聞いた5文字のコードを入れてね', 'Esc：もどる');
       } else if (mode === 'connecting') {
         box(VW / 2 - 360, 200, 720, 260);
-        text('ルーム ' + NET.code + ' に接続中' + dots, VW / 2, 320, 32, '#fff', 'center', '900');
-        text('Esc：やめる', VW / 2, 400, 18, '#aaa', 'center');
+        text('ルーム ' + NET.code + ' に接続中' + dots, VW / 2, 310, 32, UIC.ink, 'center', '900');
+        uiFooter('', 'Esc：やめる');
       } else if (mode === 'lobby' || mode === 'starting') {
         // ルームコード
-        ctx.fillStyle = 'rgba(0,0,0,.55)'; rr(VW / 2 - 250, 100, 500, 44, 22); ctx.fill();
-        text('ルームコード', VW / 2 - 120, 123, 20, '#ffd34e', 'center', '900');
-        text(NET.code, VW / 2 + 70, 123, 34, '#fff', 'center', '900', '#2a1460', 6);
+        ctx.fillStyle = UIC.ink; uiPara(VW / 2 - 270, 76, 540, 52, 18); ctx.fill();
+        text('ルームコード', VW / 2 - 140, 102, 20, '#ff9a9a', 'center', '900');
+        text(NET.code, VW / 2 + 70, 102, 34, '#fff', 'center', '900');
         // 8人ぶんの枠（4×2）
-        const ps = players(), PW = 282, PH = 196, GX = 16, GY = 14, X0 = (VW - (4 * PW + 3 * GX)) / 2, Y0 = 158;
+        const ps = players(), PW = 282, PH = 196, GX = 16, GY = 14, X0 = (VW - (4 * PW + 3 * GX)) / 2, Y0 = 142;
         for (let s = 0; s < NET_MAX; s++) {
           const p = ps[s], c = NCOL[s], x = X0 + (s % 4) * (PW + GX), y = Y0 + (s >> 2) * (PH + GY);
           if (!p) {
-            ctx.fillStyle = 'rgba(0,0,0,.35)'; rr(x, y, PW, PH, 18); ctx.fill();
-            ctx.setLineDash([10, 8]); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.25)'; rr(x + 2, y + 2, PW - 4, PH - 4, 16); ctx.stroke(); ctx.setLineDash([]);
-            text(c.tag, x + 16, y + 24, 20, 'rgba(255,255,255,.35)', 'left', '900');
-            text('あき', x + PW / 2, y + PH / 2, 26, 'rgba(255,255,255,.3)', 'center', '900');
+            ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fillRect(x, y, PW, PH);
+            ctx.setLineDash([12, 8]); ctx.lineWidth = 3; ctx.strokeStyle = '#9a9a9a'; ctx.strokeRect(x + 3, y + 3, PW - 6, PH - 6); ctx.setLineDash([]);
+            text(c.tag, x + 16, y + 24, 20, '#9a9a9a', 'left', '900');
+            text('あき', x + PW / 2, y + PH / 2, 26, '#b0aca4', 'center', '900');
             continue;
           }
           const ch = CHARS[p.ch], mine = s === NET.mySlot;
-          const g = ctx.createLinearGradient(x, y, x, y + PH); g.addColorStop(0, c.main); g.addColorStop(1, c.dark);
-          ctx.fillStyle = g; rr(x, y, PW, PH, 18); ctx.fill();
-          ctx.save(); rr(x, y, PW, PH, 18); ctx.clip();
-          drawFace(x + PW / 2, y + 108, 150, 0, p.ready ? 1 : 0.4, t, ch);
-          ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(x, y + PH - 44, PW, 44);
+          ctx.fillStyle = 'rgba(0,0,0,.15)'; ctx.fillRect(x + 6, y + 6, PW, PH);
+          ctx.fillStyle = UIC.paper; ctx.fillRect(x, y, PW, PH);
+          ctx.save(); ctx.beginPath(); ctx.rect(x, y, PW, PH); ctx.clip();
+          ctx.fillStyle = c.main; ctx.globalAlpha = 0.14; uiPara(x + PW * 0.45, y, PW * 0.55, PH, PW * 0.25); ctx.fill(); ctx.globalAlpha = 1;
+          drawFace(x + PW / 2, y + 104, 130, 0, p.ready ? 1 : 0.4, t, ch);
           ctx.restore();
-          if (mine) { ctx.lineWidth = 5; ctx.strokeStyle = '#ffe680'; rr(x, y, PW, PH, 18); ctx.stroke(); }
-          text(c.tag + (mine ? '（あなた）' : s === 0 ? '（ホスト）' : ''), x + 14, y + 22, 19, '#fff', 'left', '900', 'rgba(0,0,0,.5)', 4);
-          text(mine && !p.ready ? '◀ ' + ch.name + ' ▶' : ch.name, x + PW / 2, y + PH - 22, 22, '#fff', 'center', '900');
+          ctx.fillStyle = c.main; ctx.fillRect(x, y, PW, 34);
+          ctx.fillStyle = UIC.ink; ctx.fillRect(x, y + PH - 40, PW, 40);
+          ctx.lineWidth = 4; ctx.strokeStyle = mine ? UIC.red : UIC.ink; ctx.strokeRect(x, y, PW, PH);
+          if (mine) { ctx.lineWidth = 2; ctx.strokeStyle = UIC.ink; ctx.strokeRect(x - 4, y - 4, PW + 8, PH + 8); }
+          text(c.tag + (mine ? '（あなた）' : s === 0 ? '（ホスト）' : ''), x + 12, y + 18, 18, '#fff', 'left', '900');
+          text(mine && !p.ready ? '◀ ' + ch.name + ' ▶' : ch.name, x + PW / 2, y + PH - 20, 22, '#fff', 'center', '900');
           if (p.ready) {
-            ctx.save(); ctx.translate(x + PW - 52, y + 40); ctx.rotate(-0.2);
-            ctx.fillStyle = '#ffd34e'; rr(-44, -18, 88, 36, 10); ctx.fill();
-            text('OK!', 0, 1, 24, '#7a2a00', 'center', '900'); ctx.restore();
+            ctx.save(); ctx.translate(x + PW - 56, y + 64); ctx.rotate(-0.15);
+            ctx.fillStyle = UIC.red; uiPara(-48, -18, 96, 36, 10); ctx.fill();
+            text('OK!', 0, 1, 24, '#fff', 'center', '900'); ctx.restore();
           }
         }
         const all = ps.filter(Boolean), cnt = all.length, readyN = all.filter(p => p.ready).length;
-        box(VW / 2 - 330, 578, 660, 40);
-        text('ステージ：' + STAGES[NET.stage].name + (NET.isHost ? '　（↑↓で変更）' : '') + '　ストック ' + NET.stocks, VW / 2, 598, 20, '#fff', 'center', 'bold');
+        ctx.fillStyle = UIC.ink; uiPara(VW / 2 - 350, 568, 700, 40, 14); ctx.fill();
+        text('ステージ：' + STAGES[NET.stage].name + (NET.isHost ? '　（↑↓で変更）' : '') + '　ストック ' + NET.stocks, VW / 2, 588, 19, '#fff', 'center', 'bold');
         let msg;
         if (!NET.isHost && NET.busy) msg = 'いま対戦中です。終わるまでロビーで待ってね' + dots;
         else if (NET.myReady) msg = cnt < 2 ? '友だちが入るのを待っています' + dots + '（Esc：取り消し）'
           : readyN === cnt ? 'まもなく開始！' : 'みんなの準備を待っています（' + readyN + '/' + cnt + '）' + dots + '（Esc：取り消し）';
         else msg = '←→：キャラ選択　Enter：準備OK　Esc：ルームを出る';
-        text(msg, VW / 2, 646, 22, '#fff', 'center', 'bold', '#000', 4);
-        text(cnt + '/' + NET_MAX + '人　全員が準備OKで開始（2人以上）' + (NET.isHost ? '　※あなたがホストです' : ''), VW / 2, 690, 17, '#bbb', 'center');
+        text(msg, VW / 2, 630, 21, UIC.ink, 'center', '900');
+        uiFooter(cnt + '/' + NET_MAX + '人　全員が準備OKで開始（2人以上）', NET.isHost ? 'あなたがホストです' : '');
         if (NET.notice && performance.now() < NET.noticeUntil) {
-          ctx.fillStyle = 'rgba(0,0,0,.7)'; rr(VW - 300, 104, 280, 36, 18); ctx.fill();
-          text(NET.notice, VW - 160, 122, 18, '#ffe680', 'center', '900');
+          ctx.fillStyle = UIC.red; uiPara(VW - 320, 76, 300, 44, 14); ctx.fill();
+          text(NET.notice, VW - 175, 98, 18, '#fff', 'center', '900');
         }
       } else {
         box(VW / 2 - 400, 200, 800, 260);
-        text(mode === 'lost' ? 'ルームとの接続が切れました' : 'つながりませんでした', VW / 2, 290, 34, '#fff', 'center', '900');
-        if (mode === 'error') text(NET.err || '', VW / 2, 350, 20, '#ffb3b3', 'center', 'bold');
-        text('Enter でもどる', VW / 2, 410, 20, '#ccc', 'center');
+        ctx.fillStyle = UIC.red; ctx.fillRect(VW / 2 - 400, 200, 800, 60);
+        text(mode === 'lost' ? 'ルームとの接続が切れました' : 'つながりませんでした', VW / 2, 231, 30, '#fff', 'center', '900');
+        if (mode === 'error') text(NET.err || '', VW / 2, 330, 20, UIC.red2, 'center', 'bold');
+        text('Enter でもどる', VW / 2, 400, 20, UIC.grey, 'center', 'bold');
       }
     },
   };
@@ -5623,12 +5651,12 @@ SC_.online = (o) => {
 SC_.result = (o) => {
   let t = 0;
   const items = o.online ? [
-    { x: 320, y: 615, w: 300, h: 70, label: 'ロビーへもどる', act: () => { Snd.ok(); go('online', { lobby: true }); } },
-    { x: 660, y: 615, w: 300, h: 70, label: 'メインメニュー', act: () => { Snd.ok(); netSend({ t: 'bye' }); netClose(); go('menu'); } },
+    { x: 680, y: 600, w: 270, h: 70, label: 'ロビーへもどる', act: () => { Snd.ok(); go('online', { lobby: true }); } },
+    { x: 970, y: 600, w: 270, h: 70, label: 'メインメニュー', act: () => { Snd.ok(); netSend({ t: 'bye' }); netClose(); go('menu'); } },
   ] : [
-    { x: 150, y: 615, w: 300, h: 70, label: 'もう一度', act: () => { Snd.ok(); go('vs', buildOffline(SET.stage)); } },
-    { x: 490, y: 615, w: 300, h: 70, label: 'キャラ選択へ', act: () => { Snd.ok(); go('css'); } },
-    { x: 830, y: 615, w: 300, h: 70, label: 'メインメニュー', act: () => { Snd.ok(); go('menu'); } },
+    { x: 672, y: 600, w: 186, h: 70, label: 'もう一度', act: () => { Snd.ok(); go('vs', buildOffline(SET.stage)); } },
+    { x: 866, y: 600, w: 186, h: 70, label: 'キャラ選択', act: () => { Snd.ok(); go('css'); } },
+    { x: 1060, y: 600, w: 186, h: 70, label: 'メニュー', act: () => { Snd.ok(); go('menu'); } },
   ];
   const M = new Menu(items);
   const w = o.winner >= 0 ? o.stats[o.winner] : null;
@@ -5636,56 +5664,60 @@ SC_.result = (o) => {
     update() { t++; if (t > 30) M.update(); },
     draw() {
       const c = w ? w.col : COL[0];
-      menuBG(t, w ? c.dark : '#222', '#0b0a1c');
-      // 勝者
-      ctx.save(); ctx.translate(330, 330);
-      ctx.rotate(t * 0.005);
-      for (let i = 0; i < 12; i++) { ctx.rotate(TAU / 12); ctx.fillStyle = 'rgba(255,255,255,.06)'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(500, -60); ctx.lineTo(500, 60); ctx.fill(); }
+      uiBG();
+      // 左：勝者の色の斜めの面に勝者の顔
+      ctx.fillStyle = UIC.ink; uiPara(0, 0, 656, VH, 110); ctx.fill();
+      ctx.fillStyle = w ? c.main : '#8c8c8c'; uiPara(0, 0, 632, VH, 110); ctx.fill();
+      ctx.save(); uiPara(0, 0, 632, VH, 110); ctx.clip();
+      ctx.globalAlpha = 0.12; ctx.fillStyle = '#fff';
+      for (let x = -VH; x < 700; x += 40) { ctx.beginPath(); ctx.moveTo(x, VH); ctx.lineTo(x + 16, VH); ctx.lineTo(x + 16 + VH, 0); ctx.lineTo(x + VH, 0); ctx.fill(); }
+      ctx.globalAlpha = 1;
+      if (w) drawFace(310, 330 + Math.sin(t * 0.05) * 6, 360, 0.04, 1, t, w.ch);
       ctx.restore();
-      if (w) drawFace(330, 320 + Math.sin(t * 0.05) * 6, 380, 0.04, 1, t, w.ch);
+      ctx.fillStyle = UIC.ink; ctx.fillRect(0, 0, VW, 64); ctx.fillStyle = UIC.red; ctx.fillRect(24, 20, 24, 24);
+      text('リザルト', 62, 33, 28, '#fff', 'left', '900');
       const k = Math.min(1, t / 25);
-      ctx.save(); ctx.translate(330, 110); ctx.scale(0.5 + k * 0.5, 0.5 + k * 0.5); ctx.globalAlpha = k;
-      text(o.team !== undefined ? `${TEAM_NAME[o.team]}チームの勝ち！` : w ? `${w.tag} の勝ち！` : '引き分け', 0, 0, o.team !== undefined ? 56 : 72, '#fff', 'center', '900', c.main, 12);
+      ctx.save(); ctx.translate(40, 130); ctx.scale(0.5 + k * 0.5, 0.5 + k * 0.5); ctx.globalAlpha = k;
+      ctx.fillStyle = UIC.ink; uiPara(-20, -42, 600, 84, 26); ctx.fill();
+      text(o.team !== undefined ? `${TEAM_NAME[o.team]}チームの勝ち！` : w ? `${w.tag} の勝ち！` : '引き分け', 10, 2, o.team !== undefined ? 48 : 58, '#fff', 'left', '900');
       ctx.restore();
-      if (w) text(w.ch.name, 330, 545, 34, '#fff', 'center', '900', '#000', 6);
-      // 成績
-      const x0 = 640, y0 = 110;
-      ctx.fillStyle = 'rgba(0,0,0,.5)'; rr(x0, y0, 580, 470, 20); ctx.fill();
+      if (w) { ctx.fillStyle = UIC.ink; uiPara(40, 520, 420, 56, 18); ctx.fill(); text(w.ch.name, 70, 549, 30, '#fff', 'left', '900'); }
+      // 右：成績
+      const x0 = 672, y0 = 96;
+      uiPanel(x0, y0, 572, 476);
+      ctx.fillStyle = UIC.ink; ctx.fillRect(x0, y0, 572, 48);
       const sec = Math.floor(o.time / 60);
-      text(`バトル時間  ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`, x0 + 290, y0 + 40, 22, '#ddd', 'center');
+      text('成績', x0 + 20, y0 + 25, 22, '#fff', 'left', '900');
+      text(`バトル時間  ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`, x0 + 552, y0 + 25, 18, '#bbbbbb', 'right', 'bold');
       if (o.stats.length > 2) {
         const outT = s => s.outT === undefined ? 1e12 : s.outT;
         const rank = o.stats.map((s, i) => i).sort((a, b) => (o.stats[b].stocks - o.stats[a].stocks) || (outT(o.stats[b]) - outT(o.stats[a])) || (o.stats[b].ko - o.stats[a].ko));
-        const hy = y0 + 82, rh = Math.min(44, 360 / o.stats.length);
-        [['順位', x0 + 40, 'center'], ['プレイヤー', x0 + 80, 'left'], ['撃墜', x0 + 360, 'center'], ['落下', x0 + 420, 'center'], ['自滅', x0 + 475, 'center'], ['ダメージ', x0 + 560, 'right']]
-          .forEach(([l, x, al]) => text(l, x, hy, 16, '#bbb', al, 'bold'));
+        const hy = y0 + 76, rh = Math.min(44, 360 / o.stats.length);
+        [['順位', x0 + 36, 'center'], ['プレイヤー', x0 + 72, 'left'], ['撃墜', x0 + 360, 'center'], ['落下', x0 + 418, 'center'], ['自滅', x0 + 474, 'center'], ['ダメージ', x0 + 556, 'right']]
+          .forEach(([l, x, al]) => text(l, x, hy, 15, UIC.grey, al, 'bold'));
         rank.forEach((si, r) => {
           const s = o.stats[si], y = hy + 34 + r * rh;
-          text(String(r + 1), x0 + 40, y, 24, r === 0 ? '#ffd34e' : '#fff', 'center', '900');
-          ctx.fillStyle = s.col.main; rr(x0 + 70, y - rh / 2 + 3, 260, rh - 6, 10); ctx.fill();
-          text(s.tag + '  ' + s.ch.name + (s.left ? '（退出）' : ''), x0 + 82, y, 17, '#fff', 'left', '900', '#000', 4);
-          text(String(s.ko), x0 + 360, y, 22, '#fff', 'center', '900');
-          text(String(s.falls), x0 + 420, y, 22, '#fff', 'center', '900');
-          text(String(s.sd), x0 + 475, y, 22, '#fff', 'center', '900');
-          text(Math.floor(s.dmg) + '%', x0 + 560, y, 20, '#fff', 'right', '900');
+          text(String(r + 1), x0 + 36, y, 24, r === 0 ? UIC.red : UIC.ink, 'center', '900');
+          ctx.fillStyle = s.col.main; uiPara(x0 + 62, y - rh / 2 + 3, 270, rh - 6, 10); ctx.fill();
+          text(s.tag + '  ' + s.ch.name + (s.left ? '（退出）' : ''), x0 + 80, y, 17, '#fff', 'left', '900', 'rgba(0,0,0,.45)', 4);
+          text(String(s.ko), x0 + 360, y, 22, UIC.ink, 'center', '900');
+          text(String(s.falls), x0 + 418, y, 22, UIC.ink, 'center', '900');
+          text(String(s.sd), x0 + 474, y, 22, UIC.ink, 'center', '900');
+          text(Math.floor(s.dmg) + '%', x0 + 556, y, 20, UIC.ink, 'right', '900');
         });
       } else o.stats.forEach((s, i) => {
         const cx = x0 + 160 + i * 260;
-        ctx.fillStyle = s.col.main; rr(cx - 110, y0 + 80, 220, 54, 12); ctx.fill();
-        text(s.tag + (s.cpu ? ` Lv.${s.level}` : ''), cx, y0 + 108, 26, '#fff', 'center', '900', '#000', 5);
+        ctx.fillStyle = s.col.main; uiPara(cx - 115, y0 + 76, 230, 54, 14); ctx.fill();
+        text(s.tag + (s.cpu ? ` Lv.${s.level}` : ''), cx, y0 + 104, 26, '#fff', 'center', '900', 'rgba(0,0,0,.45)', 5);
         const rows = [['撃墜', s.ko], ['落下', s.falls], ['自滅', s.sd], ['与えたダメージ', Math.floor(s.dmg) + '%'], ['残りストック', s.stocks]];
         rows.forEach((r, j) => {
-          const y = y0 + 180 + j * 56;
-          text(r[0], cx - 100, y, 19, '#bbb');
-          text(String(r[1]), cx + 100, y, 26, '#fff', 'right', '900');
+          const y = y0 + 172 + j * 58;
+          if (j % 2 === 0) { ctx.fillStyle = '#f3f1ec'; ctx.fillRect(cx - 115, y - 22, 230, 44); }
+          text(r[0], cx - 104, y, 18, UIC.grey, 'left', 'bold');
+          text(String(r[1]), cx + 104, y, 26, UIC.ink, 'right', '900');
         });
       });
-      items.forEach((a, i) => {
-        const f = M.i === i;
-        ctx.fillStyle = f ? '#ff4b55' : 'rgba(255,255,255,.15)'; rr(a.x, a.y, a.w, a.h, 35); ctx.fill();
-        text(a.label, a.x + a.w / 2, a.y + a.h / 2 + 1, 26, '#fff', 'center', '900');
-        if (f) focusFrame(a, t);
-      });
+      items.forEach((a, i) => uiButton(a, M.i === i, a.label, 26));
     },
   };
 };
