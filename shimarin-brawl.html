@@ -1727,6 +1727,8 @@ const CHARS = [
     specials: [['ボイスキャノン', '必殺', 'ためるほど大きな声の衝撃波（押しっぱなし）'], ['エコーノーツ', '横＋必殺', 'はずむ音符を３つ飛ばす'],
       ['ジェットシャウト', '上＋必殺', '真下へ叫んだ反動で上昇（復帰用）'], ['ハウリング', '下＋必殺', '周りを連続攻撃し、最後にくらくらにする']] },
 ];
+// 復帰を強く：空中ジャンプを1回ふやし、高さも少し上げる
+for (const ch of CHARS) { ch.airJumps = (ch.airJumps || 1) + 1; ch.djv *= 1.12; }
 
 
 // =====================================================================
@@ -1765,7 +1767,8 @@ class Fighter {
   }
   setState(s) { this.state = s; this.sf = 0; }
   startMove(n) {
-    this.ctrl.clear();
+    this.ctrl.clear(); this.ubBoost = false;
+    if (n === 'dash' && BT) { BT.dust(this.x - this.dir * 20, this.y, 10); BT.parts.push({ x: this.x, y: this.y - 60 * this.ch.scale, shock: 1, r: 10, vr: 8, life: 12, max: 12, col: this.col.light, w: 5 }); }
     this.move = this.ch.moves[n]; this.moveName = n; this.mf = 0; this.hitIds = new Set(); this.psyFx = new Set(); this.charge = 1; this.chargeT = 0;
     this.setState('move');
   }
@@ -1807,6 +1810,7 @@ class Fighter {
         }
         break;
       case 'idle': case 'run': case 'crouch': this.groundAct(c); break;
+      case 'dashing': this.dashAct(c); break;
       case 'land': this.vx *= 0.8; if (this.sf >= this.landLag) this.setState('idle'); break;
       case 'jumpsquat':
         this.vx *= 0.9;
@@ -1817,7 +1821,7 @@ class Fighter {
         }
         break;
       case 'air': this.airAct(c); break;
-      case 'helpless': this.airDrift(hx, 0.6); break;
+      case 'helpless': this.airDrift(hx, 1.05); break;
       case 'move': grav = this.moveUpd(c, B); break;
       case 'hitstun':
         this.vx *= HS_DRAG;
@@ -1898,6 +1902,8 @@ class Fighter {
       if (this.state !== 'crouch') this.setState('crouch');
       this.vx *= 0.7; return;
     }
+    // ダッシュ開始：止まっている／しゃがみ中に方向を押した瞬間、または走っている向きと逆を押した瞬間
+    if (hx && (c.p.left || c.p.right) && (this.state !== 'run' || hx !== this.dir)) { this.startDash(hx); return; }
     if (hx) {
       this.dir = hx; this.vx += (hx * this.ch.run * (this.inkT > 0 ? 0.6 : 1) - this.vx) * 0.34;
       if (this.state !== 'run') { this.setState('run'); if (BT) BT.dust(this.x - this.dir * 12, this.y, 6); }
@@ -1907,6 +1913,27 @@ class Fighter {
     }
   }
 
+  startDash(hx) {
+    this.dir = hx; this.setState('dashing'); this.vx = hx * this.ch.run * 1.45 * (this.inkT > 0 ? 0.6 : 1);
+    if (BT) {
+      BT.dust(this.x - hx * 16, this.y, 9);
+      for (let i = 0; i < 6; i++) BT.parts.push({ x: this.x - hx * rnd(10, 40), y: this.y - rnd(20, 140) * this.ch.scale, vx: -hx * rnd(10, 18), vy: 0, life: 10, max: 10, streak: 1, col: i % 2 ? '#ffffff' : this.col.light, size: rnd(2, 4), g: 0 });
+    }
+    Snd.swing();
+  }
+  dashAct(c) {
+    const hx = c.hx;
+    if (c.p.special) return this.doSpecial(c);
+    if (c.p.smash) { if (hx) this.dir = hx; return this.startMove('fsmash'); }
+    if (c.p.grab || (c.h.shield && c.p.attack)) return this.startMove('grab');
+    if (c.p.attack) return this.startMove('dash');   // ダッシュ攻撃
+    if (c.p.jump) { this.ctrl.clear(); this.setState('jumpsquat'); return; }
+    if (c.h.shield) { this.setState('shield'); Snd.shield(); return; }
+    if (hx === -this.dir && (c.p.left || c.p.right)) { this.startDash(hx); return; }   // 反対向きにダッシュ（ダッシュダンス）
+    this.vx += (this.dir * this.ch.run * 1.45 * (this.inkT > 0 ? 0.6 : 1) - this.vx) * 0.5;
+    if (this.sf % 3 === 0 && BT) BT.dust(this.x - this.dir * 14, this.y, 2);
+    if (this.sf >= 11) this.setState(hx === this.dir ? 'run' : 'idle');
+  }
   airAct(c) {
     const hx = c.hx;
     if (c.p.special) return this.doSpecial(c);
@@ -1963,6 +1990,7 @@ class Fighter {
       if (c.p.down && this.vy > 0) this.ff = true;
     }
     if (m.sfx && this.mf === m.sfx) Snd.swingC(this.ch, m.hb.reduce((a, h) => Math.max(a, h.dmg), 0));
+    if (this.moveName === 'ub' && !this.ubBoost && this.vy < -8) { this.vy *= 1.3; this.ubBoost = true; }   // 復帰ワザの上昇を強く
     // ワザの終わりぎわ（攻撃が出おわったあと）は、次の行動でキャンセルできる
     if (!m.noCancel && m.after !== 'helpless' && this.move === m) {
       const last = m.hb.reduce((a, h) => Math.max(a, h.f1), 0);
@@ -1990,7 +2018,7 @@ class Fighter {
         if (stick) this.x = clamp(this.x, p.x1, p.x2);
         else {
           this.ground = null;
-          if (['idle', 'run', 'crouch'].includes(this.state)) this.setState('air');
+          if (['idle', 'run', 'crouch', 'dashing'].includes(this.state)) this.setState('air');
         }
       } else this.y = p.y;
       return;
@@ -2029,7 +2057,7 @@ class Fighter {
       if (BT.fs.some(o => o !== this && o.state === 'ledge' && o.ledgeSide === side)) continue;
       // 触手ロープ中は、かなり離れた崖もつかめる
       const teth = this.state === 'move' && this.move && this.move.tether;
-      if (Math.abs(this.x - hx) > (teth ? 170 : 46) || this.y < m.y + (teth ? -80 : 40) * sc || this.y > m.y + (teth ? 340 : 190) * sc) continue;
+      if (Math.abs(this.x - hx) > (teth ? 190 : 90) || this.y < m.y + (teth ? -80 : 10) * sc || this.y > m.y + (teth ? 360 : 250) * sc) continue;
       if ((this.x - lx) * side < -10) continue;   // ステージの内側からはつかまない
       this.move = null; this.setState('ledge'); this.ledgeSide = side;
       this.x = hx; this.y = m.y + 105 * sc; this.vx = 0; this.vy = 0; this.dir = -side;
@@ -2102,6 +2130,10 @@ class Fighter {
         tgt = mk({ lean: 0.32, by: -Math.abs(Math.cos(ph)) * 3,
           fl: { h: a * 0.9, k: -0.6 - Math.max(0, -a) * 0.8 }, bl: { h: -a * 0.9, k: -0.6 - Math.max(0, a) * 0.8 },
           fa: { s: -a * 1.0, e: 1.3 }, ba: { s: a * 1.0, e: 1.3 } }); break;
+      }
+      case 'dashing': {
+        const S = STANCE[this.ch.key], r = S ? S.run(t * 1.3) : { lean: 0.32, fa: { s: -1.2, e: 0.6 }, ba: { s: -1.5, e: 0.5 } };
+        tgt = mk({ ...r, lean: (r.lean ?? 0.32) + 0.28, by: 6, fl: { h: 1.05, k: -0.5 }, bl: { h: -1.0, k: -0.6 } }); break;
       }
       case 'crouch': tgt = P_CROUCH; break;
       case 'jumpsquat': tgt = mk({ by: 12, lean: 0.2, fl: { h: 0.7, k: -1.4 }, bl: { h: 0.3, k: -1.2 } }); break;
@@ -4841,6 +4873,7 @@ SC_.howto = () => {
     ['回避', 'シールド中に ← → / ↓、空中でシールド'], ['しゃがみ / すり抜け / 急降下', '↓'], ['ポーズ', 'Esc または Enter'],
     ['崖つかまり中', '↑登る Space跳ぶ Z攻撃 C転がる ↓離す'],
     ['最後の切り札', 'ボールをこわして X'],
+    ['ダッシュ ／ ダッシュ攻撃', '← → をすばやく押す ／ ダッシュ中に Z'],
     ['つかみ', 'F または U（シールド中に Z でも）'], ['投げ ／ つかみ攻撃', 'つかんで ←→↑↓ ／ Z'],
   ];
   const moves = [
@@ -4855,8 +4888,8 @@ SC_.howto = () => {
       ctx.fillStyle = UIC.red; ctx.fillRect(36, 84, 560, 40); ctx.fillRect(620, 84, 624, 40);
       text('操作（キーボード）', 56, 104, 22, '#fff', 'left', '900');
       rows.forEach((r, i) => {
-        const y = 152 + i * 37;
-        if (i % 2 === 0) { ctx.fillStyle = '#f3f1ec'; ctx.fillRect(40, y - 17, 552, 34); }
+        const y = 150 + i * 35;
+        if (i % 2 === 0) { ctx.fillStyle = '#f3f1ec'; ctx.fillRect(40, y - 16, 552, 32); }
         text(r[0], 56, y, 18, UIC.ink, 'left', '900'); text(r[1], 578, y, i === 9 ? 14 : 18, UIC.red2, 'right', '900');
       });
       text('必殺ワザ', 640, 104, 22, '#fff', 'left', '900');
@@ -5038,7 +5071,7 @@ SC_.battle = (o) => {
     T.vx = Math.cos(a) * kb * KBV * ds; T.vy = -Math.sin(a) * kb * KBV;
     if (T.ground && T.vy > 0) T.vy = -T.vy * 0.6;
     if (T.vy < -0.5) T.ground = null;
-    T.hitstun = Math.min(90, Math.floor(kb * 2.1)); T.move = null; T.tumble = kb > 14; T.spin = 0;
+    T.hitstun = Math.min(90, Math.floor(kb * 2.1)); T.move = null; T.tumble = kb > 14; T.spin = 0; T.usedSideB = false;
     T.setState('hitstun');
     if (hb.ink) T.inkT = hb.ink;   // 墨：しばらく動きが鈍る
     if (hb.stun && kb < 22) { T.setState('dizzy'); T.dizzyT = hb.stun; T.vx *= 0.3; if (!T.ground) T.vy = Math.min(T.vy, -3); }   // ハウリング：くらくら
