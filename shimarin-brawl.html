@@ -116,7 +116,7 @@ function buildOffline(stage) {
 //  サウンド（WebAudio で合成）
 // =====================================================================
 const Snd = {
-  ac: null, on: true, P: 0.72, NP: 0.8,
+  ac: null, on: true, _heavy: false,
   init() {
     if (!this.ac) { try { this.ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
     if (this.ac && this.ac.state === 'suspended') this.ac.resume();
@@ -146,11 +146,9 @@ const Snd = {
     if (this.playClip(0.75 + k * 0.35)) { this.osc('sine', 80, 0.3 + k * 0.2, 0.08 + k * 0.08, 50); return; }
     this.shout(k);
   },
-  // メニューの音：音程を下げない
-  utone(f, d, type, v, f2) { const P = this.P; this.P = 1; this.tone(f, d, type, v, f2); this.P = P; },
   tone(f, d, type = 'square', v = 0.08, f2 = null) {
     if (!this.on || !this.ac) return;
-    f *= this.P; if (f2) f2 *= this.P;
+    if (this._heavy) { f *= 0.72; if (f2) f2 *= 0.72; }
     const t = this.ac.currentTime, o = this.ac.createOscillator(), g = this.ac.createGain();
     o.type = type; o.frequency.setValueAtTime(f, t);
     if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
@@ -159,7 +157,7 @@ const Snd = {
   },
   noise(d, v = 0.2, freq = 1200) {
     if (!this.on || !this.ac) return;
-    freq *= this.NP;
+    if (this._heavy) freq *= 0.8;
     const t = this.ac.currentTime, n = Math.floor(this.ac.sampleRate * d);
     const buf = this.ac.createBuffer(1, n, this.ac.sampleRate), a = buf.getChannelData(0);
     for (let i = 0; i < n; i++) a[i] = (Math.random() * 2 - 1) * (1 - i / n);
@@ -168,11 +166,11 @@ const Snd = {
     const g = this.ac.createGain(); g.gain.value = v;
     s.connect(fl).connect(g).connect(this.out()); s.start(t);
   },
-  move() { this.utone(660, 0.05, 'square', 0.035); },
-  ok() { this.utone(523, 0.08, 'square', 0.05); setTimeout(() => this.utone(784, 0.12, 'square', 0.05), 70); },
-  back() { this.utone(392, 0.1, 'square', 0.04, 262); },
+  move() { this.tone(660, 0.05, 'square', 0.035); },
+  ok() { this.tone(523, 0.08, 'square', 0.05); setTimeout(() => this.tone(784, 0.12, 'square', 0.05), 70); },
+  back() { this.tone(392, 0.1, 'square', 0.04, 262); },
   hit(p) { this.noise(0.1 + p * 0.008, 0.22 + Math.min(0.3, p * 0.02), 900 + p * 140); this.tone(200, 0.08, 'sawtooth', 0.05, 60); },
-  ko() { this.noise(1.0, 0.5, 2600); this.tone(130, 0.9, 'sawtooth', 0.12, 30); this.doom(1); },
+  ko() { this.noise(1.0, 0.5, 2600); this.tone(130, 0.9, 'sawtooth', 0.12, 30); },
   beam() { this.tone(1500, 0.25, 'sawtooth', 0.04, 300); },
   jump() { this.tone(300, 0.08, 'triangle', 0.05, 620); },
   swing() { this.noise(0.07, 0.07, 3200); },
@@ -181,10 +179,10 @@ const Snd = {
   go() { this.tone(880, 0.5, 'square', 0.07); },
   psy() { this.tone(320, 0.3, 'sine', 0.07, 960); this.tone(480, 0.25, 'triangle', 0.035, 1400); },
   koBoom() {
-    this.tone(70, 1.4, 'sine', 0.3, 28); this.noise(1.6, 0.45, 700); this.doom(1.2);
+    this.tone(70, 1.4, 'sine', 0.3, 28); this.noise(1.6, 0.45, 700);
     setTimeout(() => { this.tone(2200, 0.7, 'sawtooth', 0.03, 300); this.noise(0.9, 0.2, 5000); }, 60);
   },
-  cine() { this.doom(0.8); this.tone(95, 0.7, 'sine', 0.32, 40); this.noise(0.6, 0.35, 380); this.tone(2600, 0.5, 'sine', 0.05, 700); },
+  cine() { this.tone(95, 0.7, 'sine', 0.32, 40); this.noise(0.6, 0.35, 380); this.tone(2600, 0.5, 'sine', 0.05, 700); },
   ballIn() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => this.tone(f, 0.18, 'triangle', 0.05), i * 70)); },
   ballHit() { this.tone(1400, 0.08, 'square', 0.04, 900); },
   fsGet() { [523, 659, 784, 1047, 1319].forEach((f, i) => setTimeout(() => this.tone(f, 0.25, 'square', 0.05), i * 60)); this.noise(0.6, 0.15, 6000); },
@@ -200,20 +198,18 @@ const Snd = {
   // ---------- 音の部品 ----------
   // まとめて音量をそろえる出口（コンプレッサー）
   // 出口：すべての音 → [そのまま ＋ 残響（広い会場の響き）] → コンプレッサー → スピーカー
-  out() {
-    if (!this.bus) {
+  // バーサーカーの音だけを通す、重厚な出口（低音を大きく・少し歪ませ・長く暗い残響）
+  hout() {
+    if (!this.hbus) {
       const ac = this.ac, c = ac.createDynamicsCompressor();
       c.threshold.value = -20; c.knee.value = 6; c.ratio.value = 10; c.attack.value = 0.003; c.release.value = 0.3;
-      const mg = ac.createGain(); mg.gain.value = 1.25; c.connect(mg).connect(ac.destination);
-      // 低音を大きく持ち上げ、高音は少しおさえて重く暗い音に
+      const mg = ac.createGain(); mg.gain.value = 1.3; c.connect(mg).connect(ac.destination);
       const low = ac.createBiquadFilter(); low.type = 'lowshelf'; low.frequency.value = 160; low.gain.value = 11;
       const mid = ac.createBiquadFilter(); mid.type = 'peaking'; mid.frequency.value = 70; mid.Q.value = 1.2; mid.gain.value = 5;
       const hi = ac.createBiquadFilter(); hi.type = 'highshelf'; hi.frequency.value = 4500; hi.gain.value = -5;
-      // ほんの少し歪ませて、音に厚みと迫力を出す
       const sat = ac.createWaveShaper(), N = 1024, cv2 = new Float32Array(N);
       for (let i = 0; i < N; i++) { const x = i * 2 / N - 1; cv2[i] = Math.tanh(x * 1.8) / Math.tanh(1.8); }
       sat.curve = cv2; sat.oversample = '2x';
-      // 残響：長く暗いホールの響き（左右で少し違う）
       const len = ac.sampleRate * 3.2, ir = ac.createBuffer(2, len, ac.sampleRate);
       for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.4); }
       const verb = ac.createConvolver(); verb.buffer = ir;
@@ -222,32 +218,64 @@ const Snd = {
       const bus = ac.createGain();
       bus.connect(low); low.connect(mid).connect(hi).connect(sat).connect(c);
       bus.connect(vlp); vlp.connect(verb); verb.connect(wet).connect(c);
-      this.master = c; this.bus = bus;
+      this.hbus = bus;
     }
-    return this.bus;
+    return this.hbus;
   },
-  // 強い打撃の下に重ねる「ドンッ」という重低音と、空気が割れるアタック音
-  impactLayer(d) {
+  heavy(fn) { const h = this._heavy; this._heavy = true; try { fn(); } finally { this._heavy = h; } },
+  // 打撃の下に重ねる「ズドン」＋地鳴り（バーサーカー用）
+  bigImpact(d) {
     const k = clamp((d - 2) / 16, 0, 1);
-    this.osc('sine', 110, 0.5 + k * 0.7, 0.26 + k * 0.24, 30);                 // 胸に響く「ズン」
+    this.osc('sine', 110, 0.5 + k * 0.7, 0.26 + k * 0.24, 30);
     this.osc('triangle', 70, 0.35 + k * 0.5, 0.14 + k * 0.12, 28, 0.01);
-    this.nz(0.06, 0.24 + k * 0.16, 'lowpass', 2200, 0.7, 0, 260, 8);             // 歪んだ打撃の芯
-    this.nz(0.03, 0.1 + k * 0.1, 'highpass', 5000, 0.7);
-    this.nz(0.45 + k * 1.1, 0.12 + k * 0.2, 'lowpass', 520, 1.2, 0.02, 60, 10); // 地鳴り
-    if (k > 0.45) this.osc('sawtooth', 62, 0.7 + k * 0.7, 0.07 * k, 24, 0.03);  // 低いうなり
+    this.nz(0.06, 0.24 + k * 0.16, 'lowpass', 2200, 0.7, 0, 260, 8);
+    this.nz(0.45 + k * 1.1, 0.12 + k * 0.2, 'lowpass', 520, 1.2, 0.02, 60, 10);
+    if (k > 0.45) this.osc('sawtooth', 62, 0.7 + k * 0.7, 0.07 * k, 24, 0.03);
     if (k > 0.75) this.doom(k * 0.6);
   },
-  // 世界が揺れるような重低音（撃墜・決定打・咆哮）
+  // 世界が揺れるような重低音
   doom(k = 1) {
     this.osc('sine', 72, 1.8 * k + 0.4, 0.34 * Math.min(1, k), 22);
     this.osc('sine', 48, 2.2 * k + 0.4, 0.26 * Math.min(1, k), 20, 0.05);
     this.nz(2.0 * k + 0.4, 0.22 * Math.min(1, k), 'lowpass', 300, 1.5, 0.04, 40, 14);
     this.nz(0.12, 0.3 * Math.min(1, k), 'bandpass', 900, 0.8, 0, 200, 20);
   },
+  // 力をためるうなり（ため時間 W フレーム）
+  berserkCharge(W) {
+    this.heavy(() => {
+      const d = W / 60 + 0.25;
+      this.osc('sawtooth', 46, d, 0.08, 78); this.osc('sine', 60, d, 0.16, 95);
+      this.nz(d, 0.12, 'lowpass', 300, 2, 0, 700, 10);
+    });
+  },
+  out() {
+    if (this._heavy) return this.hout();
+    if (!this.bus) {
+      const ac = this.ac, c = ac.createDynamicsCompressor();
+      c.threshold.value = -16; c.knee.value = 8; c.ratio.value = 7; c.attack.value = 0.002; c.release.value = 0.18;
+      const mg = ac.createGain(); mg.gain.value = 1.15; c.connect(mg).connect(ac.destination);
+      // 残響：だんだん小さくなるノイズを「響き方」として使う（左右で少し違う）
+      const len = ac.sampleRate * 1.6, ir = ac.createBuffer(2, len, ac.sampleRate);
+      for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); }
+      const verb = ac.createConvolver(); verb.buffer = ir;
+      const wet = ac.createGain(); wet.gain.value = 0.26;
+      const bus = ac.createGain();
+      bus.connect(c); bus.connect(verb); verb.connect(wet).connect(c);
+      this.master = c; this.bus = bus;
+    }
+    return this.bus;
+  },
+  // 強い打撃の下に重ねる「ドンッ」という重低音と、空気が割れるアタック音
+  impactLayer(d) {
+    const k = Math.min(1, (d - 5) / 15);
+    this.osc('sine', 78, 0.28 + k * 0.3, 0.14 + k * 0.16, 30);
+    this.nz(0.03, 0.12 + k * 0.1, 'highpass', 5000, 0.7);
+    if (k > 0.5) this.nz(0.5 + k * 0.4, 0.1 * k, 'lowpass', 600, 1, 0.02, 80, 4);
+  },
   // 波形の音（f → f2 へ変化。delay 秒後に鳴らす）
   osc(type, f, d, v, f2 = null, delay = 0) {
     if (!this.on || !this.ac) return;
-    f *= this.P; if (f2) f2 *= this.P;
+    if (this._heavy) { f *= 0.72; if (f2) f2 *= 0.72; }
     const t = this.ac.currentTime + delay, o = this.ac.createOscillator(), g = this.ac.createGain();
     o.type = type; o.frequency.setValueAtTime(f, t);
     if (f2) o.frequency.exponentialRampToValueAtTime(Math.max(20, f2), t + d);
@@ -258,7 +286,7 @@ const Snd = {
   // フィルター付きノイズ（風切り・衝撃・こすれ）。dist で歪ませる
   nz(d, v, type = 'lowpass', freq = 1200, q = 1, delay = 0, f2 = null, dist = 0) {
     if (!this.on || !this.ac) return;
-    freq *= this.NP; if (f2) f2 *= this.NP;
+    if (this._heavy) { freq *= 0.8; if (f2) f2 *= 0.8; }
     if (!this.nbuf) {
       const n = this.ac.sampleRate * 2, b = this.ac.createBuffer(1, n, this.ac.sampleRate), a = b.getChannelData(0);
       for (let i = 0; i < n; i++) a[i] = Math.random() * 2 - 1;
@@ -284,6 +312,7 @@ const Snd = {
 
   // ---------- キャラ別：攻撃の振り ----------
   swingC(ch, p = 6) {
+    if (ch && ch.key === 'berserker' && !this._heavy) return this.heavy(() => this.swingC(ch, p));
     const k = Math.min(1, p / 16);
     switch (ch && ch.key) {
       case 'shimarin':   // 念力のうねり：わずかにずれた2つの音が「ウォン」と揺れる
@@ -327,6 +356,7 @@ const Snd = {
   },
   // ---------- キャラ別：当たった音 ----------
   hitC(ch, d, proj = false) {
+    if (ch && ch.key === 'berserker' && !this._heavy) return this.heavy(() => { this.hitC(ch, d, proj); this.bigImpact(d); });
     const v = 0.18 + Math.min(0.3, d * 0.018), big = d >= 11;
     switch (ch && ch.key) {
       case 'shimarin':   // 念力の衝撃：電気がはじける「バチッ」＋共鳴
@@ -389,10 +419,11 @@ const Snd = {
       }
       default: this.hit(d);
     }
-    this.impactLayer(d);   // 強い攻撃ほど重低音を厚く重ねる
+    if (d >= 6) this.impactLayer(d);   // 強い攻撃ほど重低音を厚く重ねる
   },
   // ---------- キャラ別：ジャンプ・着地・足音 ----------
   jumpC(ch) {
+    if (ch && ch.key === 'berserker' && !this._heavy) return this.heavy(() => this.jumpC(ch));
     switch (ch && ch.key) {
       case 'shimarin': this.osc('sine', this.vary(380), 0.2, 0.05, 1150); this.osc('sine', this.vary(760), 0.16, 0.025, 2300, 0.02); break;
       case 'ichigo': this.osc('triangle', this.vary(520), 0.07, 0.045, 960); this.nz(0.06, 0.04, 'highpass', 3000); break;
@@ -411,8 +442,7 @@ const Snd = {
     }
   },
   landC(ch) {
-    this.osc('sine', 90, 0.35, 0.18 * (ch && ch.scale > 1.2 ? 1.6 : 1), 32);
-    this.nz(0.25, 0.1, 'lowpass', 400, 1, 0, 80, 6);
+    if (ch && ch.key === 'berserker' && !this._heavy) return this.heavy(() => { this.landC(ch); this.osc('sine', 90, 0.4, 0.3, 30); this.nz(0.3, 0.14, 'lowpass', 400, 1, 0, 80, 6); });
     if (ch && ch.key === 'berserker') { this.osc('sine', 85, 0.25, 0.22, 35); this.nz(0.2, 0.2, 'lowpass', 400, 1, 0, 90, 6); }
     else if (ch && ch.key === 'hammer') {   // 「ズシン」＋金属のガチャッ
       this.osc('sine', 60, 0.35, 0.26, 26); this.nz(0.25, 0.22, 'lowpass', 350, 1, 0, 70, 8);
@@ -495,6 +525,7 @@ const Snd = {
     this.osc('triangle', 3000, 0.35, 0.05, 2600); this.osc('triangle', 3600, 0.35, 0.04, 3100, 0.05);
   },
   roar() {   // バーサーカー：咆哮（ゆらぐ低いノコギリ波＋歪んだうなり）
+    if (!this._heavy) return this.heavy(() => { this.roar(); this.doom(0.9); });
     if (!this.on || !this.ac) return;
     const t = this.ac.currentTime, o = this.ac.createOscillator(), lfo = this.ac.createOscillator(), lg = this.ac.createGain();
     const fl = this.ac.createBiquadFilter(), g = this.ac.createGain();
@@ -507,6 +538,7 @@ const Snd = {
     this.nz(1.1, 0.25, 'lowpass', 700, 1, 0, 150, 20);
   },
   quake() {   // バーサーカー：大地割りの地響き
+    if (!this._heavy) return this.heavy(() => { this.quake(); this.doom(1); });
     this.osc('sine', 70, 0.9, 0.3, 25); this.nz(1.0, 0.35, 'lowpass', 500, 1, 0, 60, 15);
     this.nz(0.3, 0.15, 'bandpass', 1500, 1, 0.05, 400, 6);
   },
@@ -1401,6 +1433,25 @@ restyle(SMOVES, {
   uair: [[0, {}], [5, { fa: A_(1.2, 1), ba: A_(-1.2, 1) }], [8, { lean: -0.2, hd: -0.4, fa: A_(3.0, 0), ba: A_(3.2, 0), fa2: A_(2.5, 0.3), ba2: A_(-2.5, 0.3), fl: G_(0.4, -1), bl: G_(0.1, -0.8) }], [14, { lean: -0.2, fa: A_(3.0, 0), ba: A_(3.2, 0), fa2: A_(2.5, 0.3), ba2: A_(-2.5, 0.3) }], [30, {}]],
   dair: [[0, {}], [10, { by: -6, fa: A_(2.6, 0.3), ba: A_(2.5, 0.3), fa2: A_(2.0, 0.5), ba2: A_(1.9, 0.5) }], [13, { by: 4, fa: A_(0.15, 0), ba: A_(-0.1, 0), fa2: A_(0.4, 0), ba2: A_(-0.4, 0), fl: G_(0.3, -1), bl: G_(-0.1, -0.8) }], [22, { by: 4, fa: A_(0.15, 0), ba: A_(-0.1, 0), fa2: A_(0.4, 0), ba2: A_(-0.4, 0) }], [40, {}]],
 });
+
+// バーサーカー：ため時間 W フレームぶん発生をおそくし、ためのポーズを深くする
+function windup(M, k, W) {
+  const m = M[k], ks = m.keys, f1 = ks[1][0], ant = { ...ks[1][1] };
+  ant.by = (ant.by || 0) + 12; ant.lean = (ant.lean || 0) - 0.12; ant.hd = (ant.hd || 0) + 0.15;
+  m.keys = [[0, {}], [f1, ks[1][1]], [f1 + W, ant], ...ks.slice(2).map(([f, p]) => [f + W, p])];
+  m.hb = m.hb.map(h => ({ ...h, f0: h.f0 + W, f1: h.f1 + W }));
+  m.len += W; if (m.charge) m.charge += W;
+  m.windup = [1, f1 + W];
+  const u = m.upd;
+  m.upd = (F, f, c) => {
+    if (f === 1) Snd.berserkCharge(W);
+    if (f < W) { if (!m.slide) F.vx *= 0.85; if (!F.ground) F.vy = Math.min(F.vy, 2); return; }
+    return u ? u(F, f - W, c) : undefined;
+  };
+  m.K = m.keys.map(([f, o]) => [f, mk(o)]);
+}
+for (const [k, W] of [['jab', 5], ['ftilt', 8], ['utilt', 8], ['dtilt', 7], ['dash', 6], ['fsmash', 14], ['usmash', 12], ['dsmash', 12],
+  ['nair', 5], ['fair', 8], ['bair', 7], ['uair', 6], ['dair', 8]]) windup(BMOVES, k, W);
 
 const CHARS = [
   { key: 'shimarin', name: 'しまりん', kana: 'PSYCHIC', img: FACE, ar: FACE_AR, eyes: true, scale: 1, run: 7.0, airs: 5.8, jv: -14.6, shv: -10, djv: -13.4, airJumps: 2,
@@ -2830,72 +2881,62 @@ function drawMenaceAura(F, t, SCL) {
 }
 // ---- バーサーカー専用：黒煙の炎・血の色の芯・ひび割れた地面・赤い稲妻 ----
 function drawBerserkAura(F, t, SCL) {
-  const rage = F.rage, s = SCL * (rage ? 1.45 : 1) * (F.state === 'move' ? 1.15 : 1);
+  const rage = F.rage, boost = F.auraBoost === undefined ? 1 : F.auraBoost;
+  if (boost <= 0.01) return;
+  const s = SCL * (rage ? 1.35 : 1) * (F.state === 'move' ? 1.1 : 1) * boost;
   ctx.save();
-  // 足元：黒い穴と、赤く光るひび割れ
-  ctx.globalAlpha = 0.8; ctx.drawImage(glowSprite('rgba(10,0,2,.9)'), -130 * s, -36 * s, 260 * s, 64 * s);
-  ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
-  const R0 = srand(F.id * 97 + 13), pulse = 0.55 + 0.45 * Math.sin(t * 0.12);
-  for (let i = 0; i < 9; i++) {
-    const a = R0() * Math.PI, len = (60 + R0() * 70) * s;
-    let x = 0, y = 2; ctx.beginPath(); ctx.moveTo(x, y);
-    for (let j = 0; j < 4; j++) { x += Math.cos(a + (R0() - 0.5) * 0.8) * len / 4 * (R0() < 0.5 ? 1 : -1) * (j ? 1 : 1); y += Math.sin(a) * len / 16 * 0.35; ctx.lineTo(x, y); }
-    ctx.globalAlpha = pulse * 0.9; ctx.strokeStyle = 'rgba(255,30,20,.85)'; ctx.lineWidth = 3 * SCL; ctx.stroke();
-    ctx.globalAlpha = pulse * 0.5; ctx.strokeStyle = 'rgba(255,200,160,.9)'; ctx.lineWidth = 1 * SCL; ctx.stroke();
+  // 足元：やわらかい黒い影だまりと、ゆっくり脈打つ赤い光
+  const pulse = 0.55 + 0.45 * Math.sin(t * 0.08);
+  ctx.globalAlpha = 0.75; ctx.drawImage(glowSprite('rgba(12,0,4,.9)'), -140 * s, -40 * s, 280 * s, 72 * s);
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = 0.45 * pulse; ctx.drawImage(glowSprite('rgba(230,20,30,.8)'), -120 * s, -30 * s, 240 * s, 56 * s);
+  // 地面の光るすじ（なめらかな曲線）
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI + 0.3, r = (70 + (i % 2) * 30) * s;
+    ctx.globalAlpha = 0.5 * pulse; ctx.strokeStyle = 'rgba(255,40,30,.8)'; ctx.lineWidth = 2.5 * SCL;
+    ctx.beginPath(); ctx.moveTo(0, 2); ctx.quadraticCurveTo(Math.cos(a) * r * 0.5, 2 + Math.sin(a) * 6 * s, Math.cos(a) * r, 2 + Math.sin(a) * 12 * s); ctx.stroke();
   }
-  ctx.globalAlpha = 0.5 * pulse; ctx.drawImage(glowSprite('rgba(255,20,10,.8)'), -110 * s, -26 * s, 220 * s, 50 * s);
-  // 黒い煙の炎（通常合成）→ 血の色のふち（加算）→ 白っぽい芯（加算、細く）
-  const N = 15;
+  // 炎の柱：やわらかい煙の玉を積み重ねて、ゆらゆら立ちのぼる
+  const COLS = 9, H = 210 * s;
   for (let layer = 0; layer < 3; layer++) {
     ctx.globalCompositeOperation = layer ? 'lighter' : 'source-over';
-    ctx.globalAlpha = [0.85, 0.7, 0.35][layer];
-    ctx.fillStyle = ['rgba(12,0,4,.75)', 'rgba(170,0,20,.55)', 'rgba(255,120,90,.5)'][layer];
-    for (let i = 0; i < N; i++) {
-      const q = i / (N - 1), ph = t * 0.11 + i * 1.9;
-      const bx = (q - 0.5) * 120 * s, by = (-6 - Math.abs(q - 0.5) * 100 - (i % 3) * 16) * s;
-      const h = (95 + 60 * Math.abs(Math.sin(ph)) + (i % 2) * 35) * s * [1.15, 0.85, 0.5][layer];
-      const w = (16 + (i % 3) * 5) * s * [1.1, 0.6, 0.3][layer];
-      flameTongue(bx, by, w, h, Math.sin(ph * 1.2) * 14 * s);
-      ctx.fill();
+    const spr = layer === 0 ? puffSprite('rgba(18,0,6,.95)') : layer === 1 ? glowSprite('rgba(200,10,30,.8)') : glowSprite('rgba(255,120,60,.7)');
+    const sz = [1.15, 0.85, 0.4][layer], al = [0.42, 0.32, 0.28][layer];
+    for (let i = 0; i < COLS; i++) {
+      const q = i / (COLS - 1) - 0.5, bx = q * 120 * s, hh = H * (0.75 + 0.35 * Math.cos(q * 2.6)) * (0.85 + 0.15 * Math.sin(t * 0.05 + i * 1.3));
+      for (let j = 0; j < 7; j++) {
+        const k = j / 6, ph = t * 0.06 + i * 1.1 - j * 0.45;
+        const x = bx * (1 - k * 0.45) + Math.sin(ph) * 16 * s * k, y = -k * hh - 8 * s;
+        const r = (34 - 22 * k) * s * sz * (0.9 + 0.1 * Math.sin(ph * 1.7));
+        ctx.globalAlpha = al * (1 - k * 0.7);
+        ctx.drawImage(spr, x - r, y - r, r * 2, r * 2);
+      }
     }
   }
   // 体の芯：暗い赤の光
-  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.55 + 0.2 * Math.sin(t * 0.18);
-  ctx.drawImage(glowSprite('rgba(200,0,20,.6)'), -95 * s, -200 * s, 190 * s, 220 * s);
-  // 立ちのぼる黒い煙
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5 + 0.15 * Math.sin(t * 0.12);
+  ctx.drawImage(glowSprite('rgba(200,0,20,.6)'), -100 * s, -210 * s, 200 * s, 230 * s);
+  // 立ちのぼる黒煙
   ctx.globalCompositeOperation = 'source-over';
-  for (let i = 0; i < 7; i++) {
-    const life = ((t * (0.6 + (i % 3) * 0.2) + i * 41) % 90) / 90;
-    const x = Math.sin(i * 1.7 + t * 0.02) * 60 * s, y = (-60 - life * 240) * s, r = (26 + life * 40) * s;
-    ctx.globalAlpha = (1 - life) * 0.45; ctx.drawImage(puffSprite('rgba(15,5,8,.9)'), x - r, y - r, r * 2, r * 2);
+  for (let i = 0; i < 6; i++) {
+    const life = ((t * (0.5 + (i % 3) * 0.15) + i * 47) % 100) / 100;
+    const x = Math.sin(i * 1.7 + t * 0.02) * 60 * s, y = (-80 - life * 260) * s, r = (30 + life * 46) * s;
+    ctx.globalAlpha = (1 - life) * 0.35; ctx.drawImage(puffSprite('rgba(15,5,8,.9)'), x - r, y - r, r * 2, r * 2);
   }
-  // 火の粉と灰
+  // 火の粉（丸く光る）
   ctx.globalCompositeOperation = 'lighter';
-  for (let i = 0; i < 14; i++) {
-    const life = ((t * (1 + (i % 4) * 0.3) + i * 29) % 70) / 70;
-    const x = Math.sin(i * 2.9 + t * 0.04) * 70 * s, y = (-10 - life * 260) * s;
-    ctx.globalAlpha = (1 - life); ctx.fillStyle = i % 3 ? '#ff3a1a' : '#ffb060';
-    ctx.beginPath(); ctx.arc(x, y, (1.6 + (i % 3)) * SCL, 0, TAU); ctx.fill();
+  for (let i = 0; i < 12; i++) {
+    const life = ((t * (0.8 + (i % 4) * 0.25) + i * 29) % 80) / 80;
+    const x = Math.sin(i * 2.9 + t * 0.03) * 70 * s + Math.sin(life * 6 + i) * 8 * s, y = (-10 - life * 270) * s, r = (5 + (i % 3) * 2) * SCL;
+    ctx.globalAlpha = (1 - life) * 0.9; ctx.drawImage(glowSprite(i % 3 ? 'rgba(255,60,30,.9)' : 'rgba(255,180,90,.9)'), x - r, y - r, r * 2, r * 2);
   }
-  // 赤い稲妻（ときどき）
-  if (t % 29 < 4 || t % 41 < 3 || (rage && t % 13 < 3)) {
-    const R = srand(((t / 4) | 0) * 173 + F.id * 11 + 5);
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    for (let b = 0; b < (rage ? 3 : 2); b++) {
-      let x = (R() - 0.5) * 110 * s, y = -210 * s;
-      ctx.beginPath(); ctx.moveTo(x, y);
-      for (let j = 0; j < 7; j++) { x += (R() - 0.5) * 50 * s; y += 30 * s; ctx.lineTo(x, y); }
-      ctx.globalAlpha = 0.9; ctx.strokeStyle = 'rgba(140,0,10,.9)'; ctx.lineWidth = 7 * SCL; ctx.stroke();
-      ctx.strokeStyle = '#ff2a2a'; ctx.lineWidth = 3 * SCL; ctx.stroke();
-      ctx.strokeStyle = '#ffe0d0'; ctx.lineWidth = 1 * SCL; ctx.stroke();
-    }
-  }
-  // 激怒中：足元から赤い波動が広がる
+  // 激怒中：足元から赤い波動
   if (rage) {
     for (let i = 0; i < 2; i++) {
-      const q = ((t * 0.025 + i * 0.5) % 1);
-      ctx.globalAlpha = (1 - q) * 0.7; ctx.strokeStyle = '#ff1a1a'; ctx.lineWidth = (6 - q * 4) * SCL;
-      ctx.beginPath(); ctx.ellipse(0, 0, (40 + q * 180) * s, (10 + q * 40) * s, 0, 0, TAU); ctx.stroke();
+      const q = ((t * 0.02 + i * 0.5) % 1);
+      ctx.globalAlpha = (1 - q) * 0.6; ctx.strokeStyle = '#ff1a1a'; ctx.lineWidth = (6 - q * 4) * SCL;
+      ctx.beginPath(); ctx.ellipse(0, 0, (40 + q * 170) * s, (10 + q * 36) * s, 0, 0, TAU); ctx.stroke();
     }
   }
   ctx.restore();
@@ -3770,67 +3811,179 @@ function drawFighter(F, t) {
 
 // ---- ムキムキ体型の描画（バーサーカー用） ----
 function drawMuscle(F, P, J, C, t) {
-  const skin = '#e6b08f', skinD = '#c98e6c', line = '#14121f', pants = '#3b2a22';
-  const seg = (a, b, w, col) => {
-    ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineWidth = w + 5; ctx.strokeStyle = line; ctx.stroke();
-    ctx.lineWidth = w; ctx.strokeStyle = col; ctx.stroke();
-    const o = w * 0.2;
-    ctx.beginPath(); ctx.moveTo(a.x - o, a.y - o); ctx.lineTo(b.x - o, b.y - o); ctx.lineWidth = w * 0.28; ctx.strokeStyle = 'rgba(255,240,220,.35)'; ctx.stroke();
+  const SK = '#d99c74', SKD = '#b0704a', SKL = 'rgba(255,232,205,.38)', LN = '#14121f';
+  const ARM = '#2b2c34', ARMD = '#1c1d24', GOLD = '#e3b341', GOLDD = '#8a6210', CAPE = '#7a0c18', CAPED = '#3a0408';
+  const ax = Math.sin(P.lean), ay = -Math.cos(P.lean), px = -ay, py = ax;
+  const at = (b, a, p) => ({ x: b.x + ax * a + px * p, y: b.y + ay * a + py * p });
+  const hip = J.hip, nk = J.neck;
+  const cap = (a, b, ra, rb, col) => { ctx.fillStyle = LN; capsulePath(a, b, ra + 3, rb + 3); ctx.fill(); ctx.fillStyle = col; capsulePath(a, b, ra, rb); ctx.fill(); };
+  const shade = (a, b, ra, rb, dark = 'rgba(90,25,0,.25)') => {
+    ctx.fillStyle = dark; capsulePath({ x: a.x + ra * 0.35, y: a.y + ra * 0.35 }, { x: b.x + rb * 0.35, y: b.y + rb * 0.35 }, ra * 0.55, rb * 0.55); ctx.fill();
+    ctx.fillStyle = SKL; capsulePath({ x: a.x - ra * 0.35, y: a.y - ra * 0.35 }, { x: b.x - rb * 0.35, y: b.y - rb * 0.35 }, ra * 0.28, rb * 0.28); ctx.fill();
   };
-  const limb = (L, w1, w2, col, bulge) => {
-    seg(L[0], L[1], w1, col); seg(L[1], L[2], w2, col);
-    if (bulge) {
-      const mx = (L[0].x + L[1].x) / 2, my = (L[0].y + L[1].y) / 2;
-      ctx.beginPath(); ctx.arc(mx, my, w1 * 0.62, 0, TAU); ctx.fillStyle = col; ctx.fill();
+  const band = (a, b, q, r) => {   // 金の帯
+    const m = { x: lerp(a.x, b.x, q), y: lerp(a.y, b.y, q) }, ang = Math.atan2(b.y - a.y, b.x - a.x);
+    ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(ang);
+    ctx.fillStyle = LN; ctx.fillRect(-4.5, -r - 2, 9, r * 2 + 4); ctx.fillStyle = GOLD; ctx.fillRect(-3, -r, 6, r * 2);
+    ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(-3, -r, 2, r * 2); ctx.restore();
+  };
+  // 力をためている間：こぶしに赤黒い力が集まり、体がふるえる
+  const W = F.state === 'move' && F.move.windup, charging = W && F.mf <= W[1];
+  const ck = charging ? clamp(F.mf / W[1], 0, 1) : 0;
+  if (charging) ctx.translate(rnd(-1, 1) * ck * 1.6, rnd(-1, 1) * ck * 1.2);
+  // ---- マント（いちばん後ろ） ----
+  {
+    const sw = Math.sin(t * 0.07) * 6, s1 = at(nk, -4, 30), s2 = at(nk, -4, -26);
+    const b1 = { x: hip.x - 46 + sw, y: hip.y + 58 }, b2 = { x: hip.x + 6 + sw * 0.4, y: hip.y + 60 };
+    ctx.beginPath(); ctx.moveTo(s1.x, s1.y);
+    ctx.bezierCurveTo(s1.x - 30, s1.y + 30, b1.x - 10, b1.y - 40, b1.x, b1.y);
+    for (let i = 1; i <= 4; i++) { const q = i / 4, x = lerp(b1.x, b2.x, q), y = lerp(b1.y, b2.y, q); ctx.quadraticCurveTo(x - 6, y + 9 + Math.sin(t * 0.1 + i) * 3, x, y); }
+    ctx.bezierCurveTo(b2.x, b2.y - 40, s2.x - 6, s2.y + 40, s2.x, s2.y); ctx.closePath();
+    ctx.lineJoin = 'round'; ctx.lineWidth = 5; ctx.strokeStyle = LN; ctx.stroke();
+    const g = ctx.createLinearGradient(s1.x, s1.y, b1.x, b1.y); g.addColorStop(0, CAPE); g.addColorStop(1, CAPED);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.strokeStyle = GOLD; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(b1.x, b1.y); for (let i = 1; i <= 4; i++) { const q = i / 4, x = lerp(b1.x, b2.x, q), y = lerp(b1.y, b2.y, q); ctx.quadraticCurveTo(x - 6, y + 9 + Math.sin(t * 0.1 + i) * 3, x, y); } ctx.stroke();
+  }
+  const leg = (L, front) => {
+    cap(L[0], L[1], 17, 14, front ? '#3a1a22' : '#24101a');
+    cap(L[1], L[2], 14, 12, front ? ARM : ARMD);
+    ctx.fillStyle = 'rgba(255,255,255,.14)'; capsulePath({ x: L[1].x - 4, y: L[1].y }, { x: L[2].x - 4, y: L[2].y }, 4, 3); ctx.fill();
+    ctx.fillStyle = LN; ctx.beginPath(); ctx.arc(L[1].x, L[1].y, 11, 0, TAU); ctx.fill();
+    ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(L[1].x, L[1].y, 8, 0, TAU); ctx.fill();
+    ctx.fillStyle = GOLDD; ctx.beginPath(); ctx.arc(L[1].x + 1.5, L[1].y + 1.5, 4, 0, TAU); ctx.fill();
+    shoeShape(L[2], front ? '#25252d' : '#18181e', '#000', 1.55, 3);
+  };
+  const pauldron = (front) => {   // 大きな肩当て（なめらかな丸み＋金のふち＋角）
+    const c = at(nk, -6, front ? 32 : -30);
+    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(P.lean * 0.6 + (front ? 0.15 : -0.15));
+    ctx.beginPath(); ctx.ellipse(0, 2, 24, 18, 0, Math.PI * 1.02, Math.PI * 1.98); ctx.quadraticCurveTo(0, 10, -24, 2); ctx.closePath();
+    ctx.lineWidth = 4; ctx.strokeStyle = LN; ctx.stroke();
+    const g = ctx.createLinearGradient(-20, -16, 20, 8); g.addColorStop(0, '#5a5c6a'); g.addColorStop(0.5, front ? ARM : ARMD); g.addColorStop(1, '#101014');
+    ctx.fillStyle = g; ctx.fill();
+    ctx.strokeStyle = GOLD; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(0, 2, 21, 15, 0, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke();
+    ctx.fillStyle = GOLD; ctx.strokeStyle = LN; ctx.lineWidth = 2;   // 丸い鋲
+    for (const x of [-12, 0, 12]) { ctx.beginPath(); ctx.arc(x, -6 - (x ? 0 : 3), 2.6, 0, TAU); ctx.fill(); ctx.stroke(); }
+    ctx.restore();
+  };
+  const arm = (L, front) => {
+    const col = front ? SK : SKD;
+    cap(L[0], L[1], 16, 13, col); shade(L[0], L[1], 16, 13);
+    // 力こぶ（2つのふくらみ）
+    const ang = Math.atan2(L[1].y - L[0].y, L[1].x - L[0].x);
+    for (const [q, r, oy] of [[0.4, 13, -6], [0.7, 10, -4]]) {
+      const m = { x: lerp(L[0].x, L[1].x, q), y: lerp(L[0].y, L[1].y, q) };
+      ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(ang);
+      ctx.fillStyle = LN; ctx.beginPath(); ctx.ellipse(0, oy, r + 3, r + 2, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(0, oy, r, r - 1, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = SKL; ctx.beginPath(); ctx.ellipse(-2, oy - r * 0.4, r * 0.45, r * 0.25, 0, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+    // ガントレット（前腕）と金の帯
+    cap(L[1], L[2], 13, 12, front ? ARM : ARMD);
+    ctx.fillStyle = 'rgba(255,255,255,.14)'; capsulePath({ x: L[1].x - 4, y: L[1].y - 3 }, { x: L[2].x - 4, y: L[2].y - 3 }, 4, 3); ctx.fill();
+    band(L[1], L[2], 0.15, 13); band(L[1], L[2], 0.8, 12);
+    // こぶし
+    const h = L[2];
+    ctx.fillStyle = LN; ctx.beginPath(); ctx.arc(h.x, h.y, 15, 0, TAU); ctx.fill();
+    ctx.fillStyle = front ? ARM : ARMD; ctx.beginPath(); ctx.arc(h.x, h.y, 12, 0, TAU); ctx.fill();
+    ctx.fillStyle = GOLD; for (let i = -1; i <= 1; i++) { const a2 = ang + i * 0.5; ctx.beginPath(); ctx.arc(h.x + Math.cos(a2) * 9, h.y + Math.sin(a2) * 9, 2.6, 0, TAU); ctx.fill(); }
+    if (front && charging) {   // ためている力
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const r = (20 + ck * 46) * (0.9 + 0.1 * Math.sin(t * 0.6));
+      ctx.globalAlpha = 0.5 + ck * 0.5; ctx.drawImage(glowSprite('rgba(220,10,30,.9)'), h.x - r, h.y - r, r * 2, r * 2);
+      ctx.globalAlpha = ck; ctx.drawImage(glowSprite('rgba(255,150,90,.8)'), h.x - r * 0.4, h.y - r * 0.4, r * 0.8, r * 0.8);
+      for (let i = 0; i < 6; i++) {
+        const a2 = t * 0.25 + i * TAU / 6, rr2 = (1 - ((t * 0.04 + i / 6) % 1)) * 60;
+        ctx.globalAlpha = ck * 0.9; ctx.drawImage(glowSprite('rgba(255,40,40,.9)'), h.x + Math.cos(a2) * rr2 - 5, h.y + Math.sin(a2) * rr2 - 5, 10, 10);
+      }
+      ctx.restore();
     }
   };
-  // 後ろ脚・後ろ腕
-  limb(J.bl, 21, 16, '#2a1d17', false); dot(J.bl[2], 8, '#15151c');
-  limb(J.ba, 19, 15, skinD, true);
-  ctx.save(); ctx.translate(J.ba[2].x, J.ba[2].y); dot({ x: 0, y: 0 }, 10, skinD); ctx.restore();
-  // 胴体（逆三角形）
-  const ax = Math.sin(P.lean), ay = -Math.cos(P.lean), px = -ay, py = ax;
-  const hip = J.hip, chest = { x: J.neck.x - ax * 4, y: J.neck.y - ay * 4 };
-  ctx.beginPath();
-  ctx.moveTo(hip.x + px * 16, hip.y + py * 16);
-  ctx.lineTo(chest.x + px * 30 + ax * 2, chest.y + py * 30 + ay * 2);
-  ctx.quadraticCurveTo(chest.x + ax * 12, chest.y + ay * 12, chest.x - px * 30 + ax * 2, chest.y - py * 30 + ay * 2);
-  ctx.lineTo(hip.x - px * 16, hip.y - py * 16);
-  ctx.closePath();
-  ctx.fillStyle = skin; ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = line; ctx.stroke();
-  // 胸筋・腹筋
-  ctx.strokeStyle = 'rgba(120,60,40,.65)'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
-  const at = (k, o) => ({ x: hip.x + ax * 34 * k + px * o, y: hip.y + ay * 34 * k + py * o });
-  let q = at(0.68, -22), r2 = at(0.62, 0), u = at(0.68, 20);
-  ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.quadraticCurveTo(r2.x, r2.y + 6, u.x, u.y); ctx.stroke();
-  for (const k of [0.45, 0.28]) { const a1 = at(k, -9), a2 = at(k, 9); ctx.beginPath(); ctx.moveTo(a1.x, a1.y); ctx.lineTo(a2.x, a2.y); ctx.stroke(); }
-  const m1 = at(0.6, 0), m2 = at(0.15, 0); ctx.beginPath(); ctx.moveTo(m1.x, m1.y); ctx.lineTo(m2.x, m2.y); ctx.stroke();
-  // ベルト（プレイヤー色）
-  ctx.beginPath(); ctx.moveTo(hip.x + px * 17, hip.y + py * 17); ctx.lineTo(hip.x - px * 17, hip.y - py * 17);
-  ctx.lineWidth = 9; ctx.strokeStyle = line; ctx.stroke(); ctx.lineWidth = 6; ctx.strokeStyle = C.main; ctx.stroke();
-  berserkGear(J, P, C, t);
-  // 前脚（ボロボロのズボン）
-  limb(J.fl, 21, 16, pants, false); dot(J.fl[2], 8, '#15151c');
-  // 頭（体に対して小さめ）
-  const ha = P.lean * 0.5 + P.hd + (F._look || 0);
-  const hc = { x: J.neck.x + Math.sin(ha) * 29, y: J.neck.y - Math.cos(ha) * 29 };
-  drawFace(hc.x, hc.y, 56, ha, 0, t, F.ch, F._fsx || 1);
-  // はちまき
-  ctx.save(); ctx.translate(hc.x, hc.y); ctx.rotate(ha);
-  ctx.fillStyle = C.main; ctx.strokeStyle = line; ctx.lineWidth = 2.5;
-  ctx.beginPath(); ctx.rect(-27, -20, 54, 8); ctx.fill(); ctx.stroke();
-  const flap = Math.sin(t * 0.25) * 4;
-  ctx.beginPath(); ctx.moveTo(-26, -17); ctx.lineTo(-44, -12 + flap); ctx.lineTo(-42, -4 + flap); ctx.lineTo(-26, -13); ctx.fill(); ctx.stroke();
+  leg(J.bl, false);
+  arm(J.ba, false);
+  pauldron(false);
+  leg(J.fl, true);
+  // ---- 胴体：分厚い胸板と割れた腹筋 ----
+  const s1 = at(nk, -6, 37), s2 = at(nk, -6, -37), w1 = at(hip, 20, 21), w2 = at(hip, 20, -21);
+  const h1 = at(hip, -4, 23), h2 = at(hip, -4, -23), top = at(nk, 10, 0), bot = at(hip, -10, 0);
+  const torso = () => {
+    ctx.beginPath(); ctx.moveTo(h1.x, h1.y);
+    ctx.quadraticCurveTo(w1.x, w1.y, s1.x, s1.y); ctx.quadraticCurveTo(top.x, top.y, s2.x, s2.y);
+    ctx.quadraticCurveTo(w2.x, w2.y, h2.x, h2.y); ctx.quadraticCurveTo(bot.x, bot.y, h1.x, h1.y); ctx.closePath();
+  };
+  // 僧帽筋（首から肩へ盛り上がる）
+  for (const sd of [1, -1]) { const tr = at(nk, 2, 15 * sd); ctx.fillStyle = LN; ctx.beginPath(); ctx.ellipse(tr.x, tr.y, 17, 11, P.lean, 0, TAU); ctx.fill(); ctx.fillStyle = sd > 0 ? SK : SKD; ctx.beginPath(); ctx.ellipse(tr.x, tr.y, 14, 8.5, P.lean, 0, TAU); ctx.fill(); }
+  torso(); ctx.lineWidth = 5; ctx.lineJoin = 'round'; ctx.strokeStyle = LN; ctx.stroke();
+  const tg = ctx.createLinearGradient(s1.x, s1.y, s2.x, s2.y); tg.addColorStop(0, '#f0b48a'); tg.addColorStop(0.45, SK); tg.addColorStop(1, SKD);
+  ctx.fillStyle = tg; ctx.fill();
+  ctx.save(); torso(); ctx.clip();
+  // 胸筋
+  for (const sd of [1, -1]) {
+    const c = at(nk, -16, 15 * sd);
+    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(P.lean);
+    ctx.fillStyle = 'rgba(120,45,10,.28)'; ctx.beginPath(); ctx.ellipse(0, 5, 18, 11, 0, 0, Math.PI); ctx.fill();
+    ctx.fillStyle = SKL; ctx.beginPath(); ctx.ellipse(-2 * sd, -3, 11, 5, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(110,40,10,.6)'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.ellipse(0, 0, 17, 11, 0, 0.15, Math.PI - 0.15); ctx.stroke();
+    ctx.restore();
+  }
+  // 腹筋（3段×2）
+  for (let r = 0; r < 3; r++) for (const sd of [1, -1]) {
+    const c = at(hip, 24 - r * 9, 6.5 * sd);
+    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(P.lean);
+    ctx.fillStyle = 'rgba(120,45,10,.25)'; ctx.beginPath(); ctx.ellipse(0, 1.5, 6.5, 4.5, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = SKL; ctx.beginPath(); ctx.ellipse(-1, -1.2, 4, 2, 0, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+  const m1 = at(nk, -10, 0), m2 = at(hip, 0, 0); ctx.strokeStyle = 'rgba(110,40,10,.45)'; ctx.lineWidth = 2; line(m1.x, m1.y, m2.x, m2.y);
+  // 前鋸筋（わきのすじ）
+  for (let i = 0; i < 3; i++) { const a1 = at(nk, -24 - i * 6, 24), a2 = at(nk, -27 - i * 6, 18); ctx.strokeStyle = 'rgba(110,40,10,.4)'; ctx.lineWidth = 2; line(a1.x, a1.y, a2.x, a2.y); }
   ctx.restore();
-  // 前腕
-  limb(J.fa, 20, 16, skin, true);
-  dot(J.fa[2], 11, skin);
-  // リストバンド
-  const fx = J.fa[1], fh = J.fa[2];
-  const wb = { x: fx.x + (fh.x - fx.x) * 0.75, y: fx.y + (fh.y - fx.y) * 0.75 };
-  dot(wb, 8, C.main);
-  berserkChain(wb); berserkPauldron(J, P);
+  // ---- ベルト・前垂れ（よろいの板） ----
+  const b1 = at(hip, 3, 24), b2 = at(hip, 3, -24);
+  ctx.lineCap = 'butt'; ctx.lineWidth = 15; ctx.strokeStyle = LN; line(b1.x, b1.y, b2.x, b2.y);
+  ctx.lineWidth = 11; ctx.strokeStyle = '#2a1a14'; line(b1.x, b1.y, b2.x, b2.y); ctx.lineCap = 'round';
+  for (const [o, w, l] of [[-14, 11, 26], [0, 13, 30], [14, 11, 26]]) {
+    const a1 = at(hip, -2, o - w / 2), a2 = at(hip, -2, o + w / 2), a3 = at(hip, -2 - l, o + w / 2 - 1), a4 = at(hip, -2 - l, o - w / 2 + 1);
+    ctx.beginPath(); ctx.moveTo(a1.x, a1.y); ctx.lineTo(a2.x, a2.y); ctx.quadraticCurveTo(a3.x, a3.y - 2, a3.x, a3.y); ctx.lineTo(a4.x, a4.y); ctx.quadraticCurveTo(a1.x, a1.y + 4, a1.x, a1.y); ctx.closePath();
+    ctx.lineWidth = 3; ctx.strokeStyle = LN; ctx.stroke(); ctx.fillStyle = ARM; ctx.fill();
+    ctx.strokeStyle = GOLD; ctx.lineWidth = 1.8; line(a4.x, a4.y, a3.x, a3.y);
+  }
+  const bk = at(hip, 3, 0);
+  ctx.fillStyle = LN; ctx.beginPath(); ctx.arc(bk.x, bk.y, 11, 0, TAU); ctx.fill();
+  ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(bk.x, bk.y, 9, 0, TAU); ctx.fill();
+  ctx.fillStyle = C.main; ctx.beginPath(); ctx.arc(bk.x, bk.y, 4.5, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.beginPath(); ctx.arc(bk.x - 1.5, bk.y - 1.5, 1.6, 0, TAU); ctx.fill();
+  // ---- 毛皮のえり（なめらかな丸いふさ） ----
+  for (let i = 0; i < 7; i++) {
+    const q = i / 6 - 0.5, c = at(nk, -2 + Math.abs(q) * 6, q * 52);
+    ctx.fillStyle = LN; ctx.beginPath(); ctx.arc(c.x, c.y, 11, 0, TAU); ctx.fill();
+  }
+  for (let i = 0; i < 7; i++) {
+    const q = i / 6 - 0.5, c = at(nk, -2 + Math.abs(q) * 6, q * 52);
+    ctx.fillStyle = i % 2 ? '#4a2e1e' : '#5c3a26'; ctx.beginPath(); ctx.arc(c.x, c.y, 8.5, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'rgba(255,220,180,.18)'; ctx.beginPath(); ctx.arc(c.x - 2, c.y - 3, 3.5, 0, TAU); ctx.fill();
+  }
+  // ---- 頭：金の冠となめらかな角 ----
+  const ha = P.lean * 0.5 + P.hd + (F._look || 0);
+  const hc = { x: nk.x + Math.sin(ha) * 30, y: nk.y - Math.cos(ha) * 30 };
+  drawFace(hc.x, hc.y, 56, ha, 0, t, F.ch, F._fsx || 1);
+  ctx.save(); ctx.translate(hc.x, hc.y); ctx.rotate(ha);
+  for (const sd of [1, -1]) {   // 角：うしろへ反りかえる
+    ctx.beginPath(); ctx.moveTo(sd * 18, -20); ctx.bezierCurveTo(sd * 30, -32, sd * 34 - 10, -52, sd * 20 - 16, -62);
+    ctx.bezierCurveTo(sd * 26 - 4, -46, sd * 22, -34, sd * 10, -24); ctx.closePath();
+    ctx.lineWidth = 3; ctx.strokeStyle = LN; ctx.stroke(); ctx.fillStyle = '#e8dcc0'; ctx.fill();
+    ctx.fillStyle = 'rgba(120,90,50,.35)'; ctx.beginPath(); ctx.moveTo(sd * 16, -24); ctx.bezierCurveTo(sd * 26, -34, sd * 28 - 10, -50, sd * 20 - 16, -62); ctx.lineTo(sd * 20 - 13, -58); ctx.bezierCurveTo(sd * 22 - 6, -46, sd * 20, -34, sd * 14, -26); ctx.fill();
+  }
+  ctx.beginPath(); ctx.moveTo(-26, -16); ctx.quadraticCurveTo(0, -28, 26, -16); ctx.lineTo(24, -10); ctx.quadraticCurveTo(0, -21, -24, -10); ctx.closePath();
+  ctx.lineWidth = 3; ctx.strokeStyle = LN; ctx.stroke(); ctx.fillStyle = GOLD; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-7, -21); ctx.quadraticCurveTo(0, -36, 7, -21); ctx.closePath(); ctx.fillStyle = GOLD; ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#d7191f'; ctx.beginPath(); ctx.arc(0, -22, 3.6, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.arc(-1.2, -23.2, 1.2, 0, TAU); ctx.fill();
+  ctx.restore();
+  // ---- 前の腕・前の肩当て ----
+  arm(J.fa, true);
+  pauldron(true);
 }
 function drawFighterExtras(F, t) {
   const C = F.col;
@@ -4573,6 +4726,8 @@ SC_.battle = (o) => {
     kosp: [], cine: null, slow: 0, flashRGB: '255,255,255', hudShake: new Array(fs.length).fill(0), lostStock: null, scorePop: null, vcam: null,
     ball: null, ballT: R(420, 900), sup: null, stall: 0, leaveT: 0, netLost: 0, rains: [] };
   BT = B;
+  B.introF = fs.find(f => f.ch.berserk) || null; B.intro = B.introF ? 170 : 0; B.introT = 0;
+  if (B.introF) B.introF.auraBoost = 0;
 
   B.burst = (x, y, col, n = 10) => {
     for (let i = 0; i < n; i++) { const a = Math.random() * TAU, s = rnd(2, 9); B.parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 22, max: 22, col, size: rnd(3, 6), g: 0.1 }); }
@@ -5406,6 +5561,54 @@ SC_.battle = (o) => {
 
   const toScreen = (x, y) => { const c = B.vcam || B.cam; return { x: (x - c.x) * c.z + VW / 2, y: (y - c.y) * c.z + VH / 2 }; };
 
+  // ---- バーサーカーのオーラ解放の演出 ----
+  const INTRO_ROAR = 72;
+  function updIntro() {
+    const F = B.introF, k = ++B.introT;
+    B.intro--; F.t++;
+    if (B.shake > 0) B.shake--; if (B.flashScr > 0) B.flashScr--;
+    // ポーズ：力をためる → 咆哮 → もとの構えへ
+    const tgt = k < INTRO_ROAR ? { by: 16, lean: 0.38, hd: 0.25, fa: { s: 0.9, e: 1.9 }, ba: { s: 0.7, e: 1.9 }, fl: { h: 0.6, k: -0.9 }, bl: { h: -0.55, k: -0.6 } }
+      : k < 150 ? { by: -6, lean: -0.35, hd: -0.5, fa: { s: 2.5, e: 1.4 }, ba: { s: -2.5, e: -1.4 }, fl: { h: 0.55, k: -0.2 }, bl: { h: -0.55, k: 0 } } : null;
+    if (tgt) F.pose = lp(F.pose, mk(tgt), 0.2); else F.updatePose();
+    // オーラ：少しずつ出てきて、咆哮で一気にふくらみ、落ち着く
+    F.auraBoost = k < INTRO_ROAR ? 0.15 + 0.5 * (k / INTRO_ROAR) : 1 + 1.3 * Math.max(0, 1 - (k - INTRO_ROAR) / 80);
+    if (k === 8) Snd.berserkCharge(60);
+    if (k === INTRO_ROAR) { Snd.roar(); B.shake = 34; B.flashScr = 10; B.flashRGB = '255,40,40'; }
+    if (k > INTRO_ROAR && k % 20 === 0) Snd.heavy(() => Snd.osc('sine', 60, 0.6, 0.18, 30));
+    // カメラ：バーサーカーに寄って、最後にもどる
+    const z = k < 140 ? 1.7 : lerp(1.7, B.cam.z, (k - 140) / 30);
+    B.vcam = k < 168 ? { x: F.x, y: F.y - 110 * F.ch.scale, z } : null;
+    if (B.intro <= 0) { F.auraBoost = undefined; B.vcam = null; }
+  }
+  function drawIntro() {
+    const F = B.introF, k = B.introT, s = toScreen(F.x, F.y - 100 * F.ch.scale), fade = Math.min(1, k / 20) * Math.min(1, (170 - k) / 20);
+    // まわりを暗く（中心はバーサーカー）
+    const g = ctx.createRadialGradient(s.x, s.y, 80, s.x, s.y, 900);
+    g.addColorStop(0, 'rgba(20,0,0,0)'); g.addColorStop(0.4, `rgba(20,0,4,${0.55 * fade})`); g.addColorStop(1, `rgba(0,0,0,${0.9 * fade})`);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
+    // 咆哮の衝撃波
+    if (k >= INTRO_ROAR) {
+      const q = k - INTRO_ROAR, ft = toScreen(F.x, F.y);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 3; i++) {
+        const r = (q - i * 9) * 26; if (r <= 0) continue;
+        const a = Math.max(0, 1 - r / 1300);
+        ctx.globalAlpha = a; ctx.strokeStyle = i === 1 ? '#ffffff' : '#ff2030'; ctx.lineWidth = 18 * a + 2;
+        ctx.beginPath(); ctx.ellipse(ft.x, ft.y, r, r * 0.32, 0, 0, TAU); ctx.stroke();
+      }
+      ctx.restore();
+    }
+    // 文字「覇王降臨」
+    if (k > INTRO_ROAR + 4) {
+      const q = clamp((k - INTRO_ROAR - 4) / 14, 0, 1), sc = 1.6 - 0.6 * ease(q);
+      ctx.save(); ctx.translate(VW / 2, VH - 190); ctx.scale(sc, sc); ctx.globalAlpha = q * fade;
+      ctx.fillStyle = 'rgba(0,0,0,.6)'; uiPara(-330, -62, 660, 112, 40); ctx.fill();
+      ctx.shadowColor = '#ff1a1a'; ctx.shadowBlur = 30;
+      text('覇王降臨', 0, -4, 92, '#ffffff', 'center', '900', '#8a0010', 14);
+      ctx.restore();
+    }
+  }
   // 強い一撃の集中線（画面の外側から当たった場所へ）
   function drawSpeedLines(sp) {
     const s = toScreen(sp.x, sp.y), k = sp.life / sp.max;
@@ -5781,7 +5984,7 @@ SC_.battle = (o) => {
       ctx.restore();
     }
     for (const O of B.orcs) drawOrc(O, B.t);
-    for (const F of fs) drawFighter(F, B.t);
+    for (const F of fs) drawFighter(F, B.t + B.introT);
     drawBall();
     for (const p of B.proj) {
       if (p.type === 'ink') {   // 墨の玉
@@ -6097,6 +6300,7 @@ SC_.battle = (o) => {
         if (B.paused) { B.pm.update(); if (anyP('Escape')) { B.paused = false; Snd.ok(); } return; }
         if (B.phase === 'fight' && anyP('Escape', 'Enter')) { openPause(); return; }
       }
+      if (B.intro > 0) { updIntro(); return; }
       B.t++;
       if (B.shake > 0) B.shake = Math.max(0, B.shake - 1);
       B.zoomP *= 0.86;
@@ -6134,6 +6338,7 @@ SC_.battle = (o) => {
     },
     draw() {
       drawWorld();
+      if (B.intro > 0) drawIntro();
       if (B.speed) drawSpeedLines(B.speed);
       // インパクトフレーム：最初の2フレームは色を反転、残りは白黒で強く光らせる
       if (B.impactF > 0) {
@@ -6171,7 +6376,7 @@ SC_.battle = (o) => {
           text('Enter でメニューへもどる', VW / 2, VH / 2 + 50, 24, '#ddd', 'center');
         }
       }
-      if (B.phase === 'count' || (B.phase === 'fight' && B.t < 230)) {
+      if (!B.intro && (B.phase === 'count' || (B.phase === 'fight' && B.t < 230))) {
         const n = B.t <= 60 ? '3' : B.t <= 120 ? '2' : B.t <= 180 ? '1' : 'GO!';
         const lt = n === 'GO!' ? (B.t - 180) / 50 : (B.t % 60) / 60;
         ctx.save(); ctx.translate(VW / 2, VH / 2 - 40); const s = 1.6 - Math.min(1, lt * 3) * 0.6; ctx.scale(s, s);
