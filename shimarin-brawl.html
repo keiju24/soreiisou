@@ -873,16 +873,13 @@ Object.assign(TMOVES, {
       if (f > 6 && f < 26) F.vx = c.hx * 3.2;
       if (f % 5 === 0 && f < 16) F.hitIds.clear();
     } },
-  // 下必殺：触手の檻（足元の左右から触手を生やして連続攻撃）
-  db: { len: 46, keys: [[0, {}], [6, { by: 14, lean: 0.3, fa: { s: 0.4, e: 1.4 }, ba: { s: 0.3, e: 1.4 } }],
-      [32, { by: 14, lean: 0.3, fa: { s: 0.4, e: 1.4 }, ba: { s: 0.3, e: 1.4 } }], [46, {}]],
-    hb: [HB(8, 26, 95, -40, 42, 2, 95, 2, 0, { fromGround: 1 }), HB(8, 26, -95, -40, 42, 2, 95, 2, 0, { fromGround: 1 }),
-      HB(28, 31, 95, -60, 52, 8, 70, 8, 0.8, { auto: 1, fromGround: 1 }), HB(28, 31, -95, -60, 52, 8, 70, 8, 0.8, { auto: 1, fromGround: 1 })],
+  // 下必殺：オーク召喚（魔法陣からオークを呼び出して戦わせる。1体まで）
+  db: { len: 40, keys: [[0, {}], [8, { by: 10, lean: 0.35, hd: 0.2, fa: { s: 2.4, e: 0.3 }, ba: { s: 2.2, e: 0.3 } }],
+      [16, { by: 4, lean: -0.15, hd: -0.25, fa: { s: 0.9, e: 0.2 }, ba: { s: 0.8, e: 0.2 } }], [40, {}]], hb: [],
     upd(F, f) {
       F.vx *= 0.8; if (!F.ground) F.vy = Math.min(F.vy, 1);
-      if (f === 8) Snd.tentWhip();
-      if (f % 6 === 2 && f < 26) F.hitIds.clear();
-      if (f === 28) { F.hitIds.clear(); Snd.squelch(); }
+      if (f === 4) BT.parts.push({ x: F.x + F.dir * 70 * F.ch.scale, y: F.y, ring: 1, r: 10, life: 14, max: 14, col: '#b56cff' });
+      if (f === 16) BT.summonOrc(F);
     } },
 });
 for (const k in TMOVES) TMOVES[k].K = TMOVES[k].keys.map(([f, o]) => [f, mk(o)]);
@@ -1264,7 +1261,7 @@ const CHARS = [
     outfit: { main: '#2d1b3d', dark: '#140a1e', light: '#5a3d73', pants: '#1a1424', shoe: '#0e0a14' },
     fsName: '深淵の抱擁', fsDesc: '足元から巨大な触手を呼び、しめ上げて投げ飛ばす',
     specials: [['インク弾', '必殺', '当たると動きが鈍くなる墨を吐く'], ['触手グラブ', '横＋必殺', '遠くの相手を触手でつかんでしめる'],
-      ['触手ロープ', '上＋必殺', '崖をつかめる距離がとても長い（復帰用）'], ['触手の檻', '下＋必殺', '足元から触手を生やして連続攻撃']] },
+      ['触手ロープ', '上＋必殺', '崖をつかめる距離がとても長い（復帰用）'], ['オーク召喚', '下＋必殺', 'オークを呼び出して戦わせる（1体まで）']] },
   { key: 'henry', name: 'ヘンリー', kana: 'SPEEDSTER', img: HENRY, ar: HENRY_AR, eyes: false, scale: 0.98, run: 10.5, airs: 7.2, jv: -15.2, shv: -10.6, djv: -14.2,
     kbTake: 1.06, swords: false, speedster: true, hand: '#f0c8a8', moves: HEMOVES,
     outfit: { main: '#1e2a3a', dark: '#0e141e', light: '#3a5070', pants: '#1a1f2a', shoe: '#ffd23a' },
@@ -4177,7 +4174,7 @@ SC_.battle = (o) => {
   // オンライン用：両者の状態をまとめたチェック値（ズレたら知らせる）
   function stateHash() {
     let h = 5381;
-    const s = fs.map(F => [F.x, F.y, F.vx, F.vy, F.percent, F.stocks].map(v => Math.round(v * 100)).join(',') + F.state).join('|') + '|' + (B.ball ? Math.round(B.ball.x) : 'n');
+    const s = fs.map(F => [F.x, F.y, F.vx, F.vy, F.percent, F.stocks].map(v => Math.round(v * 100)).join(',') + F.state).join('|') + '|' + (B.ball ? Math.round(B.ball.x) : 'n') + '|' + B.orcs.map(O => Math.round(O.x) + ',' + Math.round(O.y) + ',' + O.hp).join(';');
     for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
     return h;
   }
@@ -4515,6 +4512,168 @@ SC_.battle = (o) => {
     }
   };
 
+  // =================================================================
+  //  今井の召喚オーク：いちばん近い相手に歩いて行って棍棒でなぐる
+  //  一定時間たつか、ダメージを受けすぎると消える（オンラインでも全員同じ動きになるよう乱数は使わない）
+  // =================================================================
+  const ORC_LIFE = 540, ORC_HP = 40, ORC_CD = 240, ORC_HB = { dmg: 11, ang: 45, base: 7, gr: 0.9 };
+  B.orcs = []; B.orcId = 0;
+  const orcRect = O => ({ x: O.x - 34, y: O.y - 150, w: 68, h: 150 });
+  function orcPoof(O) { B.burst(O.x, O.y - 70, '#8bd46a', 18); B.dust(O.x, O.y, 14); Snd.squelch(); }
+  B.summonOrc = (F) => {
+    const x = F.x + F.dir * 70 * F.ch.scale;
+    if (F.orcAt !== undefined && B.t - F.orcAt < ORC_CD) { B.puff(x, F.y - 30, 'rgba(181,108,255,.6)'); return; }   // 呼びなおしは少し待つ
+    F.orcAt = B.t;
+    for (const O of B.orcs) if (O.owner === F && O.life > 0) { O.life = 0; orcPoof(O); }
+    B.orcs.push({ id: B.orcId++, owner: F, x, y: F.y, vx: 0, vy: 0, dir: F.dir, ground: null, hp: ORC_HP, life: ORC_LIFE, t: 0, swing: 0, cd: 20, hurt: 0, hit: new Set(), walk: 0 });
+    B.parts.push({ x, y: F.y, ring: 1, r: 24, life: 24, max: 24, col: '#b56cff' });
+    B.burst(x, F.y - 60, '#7dff6a', 14); Snd.roar();
+  };
+  B.hitOrc = (O, dmg, ds) => {
+    O.hp -= dmg; O.hurt = 14; O.swing = 0;
+    O.vx = ds * Math.min(10, 3 + dmg * 0.4); O.vy = -3 - dmg * 0.15; O.ground = null;
+    B.burst(O.x, O.y - 80, '#ffffff', 6); Snd.hit(dmg);
+    if (O.hp <= 0) { O.life = 0; orcPoof(O); }
+  };
+  // ファイターの攻撃がオークに当たったか
+  B.hitOrcsMelee = (A, hx, hy, r, dmg, dir) => {
+    for (const O of B.orcs) {
+      if (O.life <= 0 || O.owner === A || A.hitIds.has('orc' + O.id)) continue;
+      if (circRect(hx, hy, r, orcRect(O))) { A.hitIds.add('orc' + O.id); B.hitOrc(O, dmg, dir || sgn(O.x - A.x || A.dir)); A.hitlag = Math.max(A.hitlag, 4); }
+    }
+  };
+  // 飛び道具がオークに当たったか
+  B.hitOrcsProj = (p) => {
+    for (const O of B.orcs) {
+      if (O.life <= 0 || O.owner === p.owner) continue;
+      if (circRect(p.x, p.y, p.r, orcRect(O))) { B.hitOrc(O, p.hb.dmg, sgn(p.vx) || 1); return true; }
+    }
+    return false;
+  };
+  function updOrcs() {
+    for (const O of B.orcs) {
+      if (O.life <= 0) continue;
+      O.t++; O.life--;
+      if (O.owner.state === 'out') O.life = 0;
+      if (O.life <= 0) { orcPoof(O); continue; }
+      if (O.cd > 0) O.cd--;
+      // ねらう相手：いちばん近い相手（持ち主以外）
+      let tg = null, bd = 1e9;
+      for (const T of fs) {
+        if (T === O.owner || !T.alive || T.state === 'respawn') continue;
+        const d = Math.abs(T.x - O.x) + Math.abs(T.y - O.y) * 0.5;
+        if (d < bd) { bd = d; tg = T; }
+      }
+      if (O.hurt > 0) O.hurt--;
+      else if (O.t > 24) {   // 出てくる演出が終わってから動く
+        if (O.swing > 0) {
+          O.swing++; O.vx *= 0.7;
+          if (O.swing === 16) { Snd.swingC(O.owner.ch, 11); B.shake = Math.max(B.shake, 4); }
+          if (O.swing >= 16 && O.swing <= 22) {
+            const hx = O.x + O.dir * 78, hy = O.y - 70;
+            for (const T of fs) {
+              if (T === O.owner || !T.alive || O.hit.has(T.id)) continue;
+              if (circRect(hx, hy, 52, T.hurt()) && B.applyHit(O.owner, T, ORC_HB, 1, O.dir, true, hx, hy)) O.hit.add(T.id);
+            }
+            if (O.swing === 20 && O.ground) B.dust(hx, O.ground.y, 8);
+          }
+          if (O.swing >= 42) { O.swing = 0; O.cd = 50; }
+        } else if (tg && O.ground) {
+          const dx = tg.x - O.x;
+          if (Math.abs(dx) > 8) O.dir = sgn(dx);
+          if (Math.abs(dx) < 105 && Math.abs(tg.y - O.y) < 140 && O.cd <= 0) { O.swing = 1; O.hit.clear(); O.vx = 0; }
+          else if (Math.abs(dx) > 70) {
+            const nx = O.x + O.dir * 14;   // 足場の端では止まる
+            O.vx = nx > O.ground.x1 + 10 && nx < O.ground.x2 - 10 ? O.dir * 2.6 : 0;
+          } else O.vx *= 0.7;
+        } else if (O.ground) O.vx *= 0.7;
+      }
+      // 動き（重力・着地）
+      if (!O.ground) O.vy = Math.min(O.vy + GRAV, MAXF);
+      const py = O.y;
+      O.x += O.vx; O.y += O.vy;
+      if (O.ground) {
+        if (O.x < O.ground.x1 || O.x > O.ground.x2) O.ground = null; else O.y = O.ground.y;
+      } else if (O.vy >= 0) {
+        const pl = st.plats.find(q => O.x >= q.x1 && O.x <= q.x2 && py <= q.y + 1 && O.y >= q.y);
+        if (pl) { O.ground = pl; O.y = pl.y; O.vy = 0; }
+      }
+      if (O.hurt && O.ground) O.vx *= 0.85;
+      if (O.ground) O.walk += Math.abs(O.vx);
+      if (O.y > st.blast.b || O.x < st.blast.l || O.x > st.blast.r) O.life = 0;
+    }
+    B.orcs = B.orcs.filter(O => O.life > 0);
+  }
+  function drawOrc(O, t) {
+    const k = Math.min(1, O.t / 24), fade = Math.min(1, O.life / 20);
+    const skin = O.hurt > 0 && O.hurt % 4 < 2 ? '#e8ffd8' : '#6aa83f', dark = '#2c4a1a', ow = O.owner.col;
+    ctx.save(); ctx.translate(O.x, O.y); ctx.globalAlpha = fade;
+    // 出現の魔法陣
+    if (O.t < 34) {
+      ctx.save(); ctx.globalAlpha = (1 - O.t / 34) * fade; ctx.strokeStyle = '#b56cff'; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.ellipse(0, 0, 80, 18, 0, 0, TAU); ctx.stroke();
+      ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, 0, 58, 12, 0, 0, TAU); ctx.stroke(); ctx.restore();
+    }
+    // 足元：持ち主の色の輪
+    ctx.strokeStyle = ow.main; ctx.lineWidth = 3; ctx.globalAlpha = 0.7 * fade;
+    ctx.beginPath(); ctx.ellipse(0, 2, 44, 9, 0, 0, TAU); ctx.stroke(); ctx.globalAlpha = fade;
+    ctx.scale(O.dir * (0.6 + 0.4 * k), k);
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    // 棍棒の角度（0 = 真上、+ = 前へ倒す）
+    const s = O.swing;
+    const a = s <= 0 ? -0.5 + Math.sin(t * 0.05) * 0.08 : s <= 15 ? lerp(-0.5, -1.6, s / 15) : s <= 22 ? lerp(-1.6, 2.2, (s - 15) / 7) : lerp(2.2, -0.5, (s - 22) / 20);
+    const sw = O.ground && !O.hurt ? Math.sin(O.walk * 0.09) * 0.5 : 0.15;
+    const bob = Math.abs(Math.sin(O.walk * 0.09)) * 3;
+    const leg = (x, ang) => {
+      ctx.save(); ctx.translate(x, -56); ctx.rotate(ang);
+      ctx.fillStyle = skin; ctx.strokeStyle = dark; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.roundRect(-11, 0, 22, 50, 9); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#4a3020'; ctx.beginPath(); ctx.roundRect(-13, 44, 30, 12, 5); ctx.fill(); ctx.stroke();
+      ctx.restore();
+    };
+    leg(-12, -sw); leg(12, sw);
+    ctx.translate(0, -bob);
+    // うしろの腕
+    ctx.fillStyle = skin; ctx.strokeStyle = dark; ctx.lineWidth = 3;
+    ctx.save(); ctx.translate(-22, -108); ctx.rotate(0.3 + sw * 0.6); ctx.beginPath(); ctx.roundRect(-9, 0, 18, 46, 9); ctx.fill(); ctx.stroke(); ctx.restore();
+    // 胴体
+    ctx.beginPath(); ctx.ellipse(0, -88, 38, 42, 0, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,220,.25)'; ctx.beginPath(); ctx.ellipse(8, -80, 20, 24, 0, 0, TAU); ctx.fill();
+    // 腰布とベルト
+    ctx.fillStyle = '#7a5230'; ctx.strokeStyle = dark;
+    ctx.beginPath(); ctx.moveTo(-34, -62); ctx.lineTo(34, -62); ctx.lineTo(26, -34); ctx.lineTo(6, -40); ctx.lineTo(-8, -32); ctx.lineTo(-28, -38); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#3a2414'; ctx.fillRect(-36, -68, 72, 8);
+    // 頭（牙・赤い目・とがった耳）
+    ctx.fillStyle = skin; ctx.strokeStyle = dark;
+    ctx.beginPath(); ctx.moveTo(-18, -142); ctx.lineTo(-40, -152); ctx.lineTo(-22, -130); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(6, -138, 25, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = dark; ctx.beginPath(); ctx.moveTo(-4, -152); ctx.lineTo(28, -150); ctx.lineTo(26, -144); ctx.lineTo(-2, -146); ctx.fill();
+    ctx.fillStyle = '#ff2a2a'; ctx.beginPath(); ctx.arc(18, -142, 3.5, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(6, -142, 3, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#3d5e22'; ctx.beginPath(); ctx.ellipse(14, -124, 14, 7, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#fffbe8'; ctx.strokeStyle = dark; ctx.lineWidth = 1.5;
+    for (const tx of [6, 22]) { ctx.beginPath(); ctx.moveTo(tx - 3, -124); ctx.lineTo(tx, -136); ctx.lineTo(tx + 3, -124); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    // 前の腕と棍棒
+    const shx = 14, shy = -110, dx = Math.sin(a), dy = -Math.cos(a), hx = shx + dx * 38, hy = shy + dy * 38;
+    ctx.save(); ctx.translate(hx, hy); ctx.rotate(a);
+    ctx.fillStyle = '#7a4b22'; ctx.strokeStyle = '#3a2210'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(-5, 8); ctx.lineTo(5, 8); ctx.lineTo(13, -62); ctx.quadraticCurveTo(0, -80, -13, -62); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#d8d0c0';
+    for (const [px, py] of [[-12, -52], [12, -50], [-9, -68], [9, -70], [0, -40]]) { ctx.beginPath(); ctx.moveTo(px - 3, py); ctx.lineTo(px + sgn(px || 1) * 7, py - 3); ctx.lineTo(px - 3, py - 6); ctx.fill(); }
+    ctx.restore();
+    ctx.fillStyle = skin; ctx.strokeStyle = dark; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(shx, shy); ctx.lineTo(hx, hy); ctx.lineWidth = 19; ctx.strokeStyle = dark; ctx.stroke(); ctx.lineWidth = 14; ctx.strokeStyle = skin; ctx.stroke();
+    ctx.fillStyle = skin; ctx.strokeStyle = dark; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(hx, hy, 10, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.restore();
+    // 体力ゲージ
+    if (k >= 1) {
+      const w = 64, x = O.x - w / 2, y = O.y - 182;
+      ctx.save(); ctx.globalAlpha = fade;
+      ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(x - 2, y - 2, w + 4, 10);
+      ctx.fillStyle = ow.main; ctx.fillRect(x, y, w * Math.max(0, O.hp) / ORC_HP, 6);
+      ctx.restore();
+    }
+  }
+
   B.forfeit = (F) => {
     if (F.state === 'out') return;
     for (const o of fs) if (o.heldBy === F) { o.heldBy = null; if (o.state === 'held') o.setState('air'); }
@@ -4567,6 +4726,7 @@ SC_.battle = (o) => {
             if (B.applyHit(A, T, hb, A.charge, ds, false, (hx + T.x) / 2, (hy + T.y - 75) / 2)) A.hitIds.add(T.id);
           }
         }
+        if (B.orcs.length) B.hitOrcsMelee(A, hx, hy, hb.r * sc, hb.dmg * A.charge, hb.auto ? 0 : A.dir);
       }
     }
     // 飛び道具
@@ -4611,6 +4771,7 @@ SC_.battle = (o) => {
         if (pl) { p.life = 0; B.parts.push({ x: p.x, y: pl.y, stuck: 1, rot: Math.atan2(p.vy, p.vx), life: 50, max: 50 }); B.dust(p.x, pl.y, 2); continue; }
       }
       if (!['arrow', 'hammer', 'shock', 'note', 'wave'].includes(p.type) && p.life % 2 === 0) B.parts.push({ x: p.x, y: p.y, vx: 0, vy: 0, life: 10, max: 10, col: p.type === 'x' ? 'rgba(255,140,180,.7)' : p.type === 'ink' ? 'rgba(246,246,240,.75)' : p.type === 'psy' ? 'rgba(160,100,255,.7)' : 'rgba(110,130,255,.8)', size: 9, g: 0, smoke: 1 });
+      if (B.orcs.length && B.hitOrcsProj(p)) { p.life = 0; continue; }
       for (const T of fs) {
         if (T === p.owner || !T.alive) continue;
         // サイコバリアではね返す
@@ -4623,6 +4784,7 @@ SC_.battle = (o) => {
         if (circRect(p.x, p.y, p.r, T.hurt()) && B.applyHit(p.owner, T, p.hb, 1, sgn(p.vx), true, p.x, p.y)) { p.life = 0; break; }
       }
     }
+    updOrcs();
     for (const p of B.proj) if (p.type === 'hammer' && p.life <= 0) p.thrower.hammerOut = false;   // ハンマーが手元に戻った
     B.proj = B.proj.filter(p => p.life > 0);
     // 雨矢：少し遅れて前方に矢が降りそそぐ（位置は共通の乱数なのでオンラインでも同じ）
@@ -5058,6 +5220,7 @@ SC_.battle = (o) => {
       ctx.beginPath(); ctx.ellipse(r.x, 0, 130, 14, 0, 0, TAU); ctx.stroke();
       ctx.restore();
     }
+    for (const O of B.orcs) drawOrc(O, B.t);
     for (const F of fs) drawFighter(F, B.t);
     drawBall();
     for (const p of B.proj) {
