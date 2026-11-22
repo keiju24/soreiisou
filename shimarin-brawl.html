@@ -757,6 +757,7 @@ const P_DODGE = mk({ by: 20, lean: 0.6, hd: 0.3, fa: { s: 1.0, e: 1.6 }, ba: { s
 //  ワザデータ
 //  HB(開始F, 終了F, x, y, 半径, ダメージ, 角度, 基礎ふっとび, 成長率)
 // =====================================================================
+const CHAIN3 = { jab: 1, ftilt: 1 };   // 3段にするワザ（弱攻撃・横強）
 function chainAt(m) {
   if (m._chainAt) return m._chainAt;
   let mx = 0;
@@ -2231,8 +2232,8 @@ class Fighter {
       if (this.state === 'run' && Math.abs(this.vx) > 5) return this.startMove('dash');
       if (c.h.up) return this.startMove('utilt');
       if (c.h.down) return this.startMove('dtilt');
-      if (hx) { this.dir = hx; return this.startMove('ftilt'); }
-      return this.startMove('jab');
+      if (hx) { this.dir = hx; this.startMove('ftilt'); this.spStage = 1; this.spQ = null; return; }
+      this.startMove('jab'); this.spStage = 1; this.spQ = null; return;
     }
     if (c.p.grab || (c.h.shield && c.p.attack)) { if (hx) this.dir = hx; return this.startMove('grab'); }
     if (c.p.jump) { this.ctrl.clear(); this.setState('jumpsquat'); return; }
@@ -2285,25 +2286,23 @@ class Fighter {
     if (hx) {
       if (!this.ground && this.usedSideB) return;
       this.dir = hx; if (!this.ground) this.usedSideB = true;
-      this.startMove('sb'); this.spStage = 1; this.spQ = null; return;
+      return this.startMove('sb');
     }
-    this.startMove('nb'); this.spStage = 1; this.spQ = null;
+    this.startMove('nb');
   }
-  // 通常必殺・横必殺の3段連携
+  // 弱攻撃・横強の3段連携（ワザ中にもう一度 J）
   spChain(c, B) {
     const m = this.move, nm = this.moveName;
-    if ((nm !== 'nb' && nm !== 'sb') || !this.spStage || this.spStage >= 3) return false;
-    if (c.p.special && this.mf > 3) this.spQ = c.hx || 0;
+    if (!CHAIN3[nm] || !this.spStage || this.spStage >= 3) return false;
+    if (c.p.attack && this.mf > 2) this.spQ = c.hx || 0;
     if (this.spQ === null || this.spQ === undefined || this.mf < chainAt(m)) return false;
     const st = this.spStage + 1, hx = this.spQ;
     this.spQ = null;
-    if (nm === 'sb' && hx) this.dir = hx;
+    if (hx) this.dir = hx;
     this.startMove(nm); this.spStage = st;
     const y = this.y - 80 * this.ch.scale;
-    B.parts.push({ x: this.x, y, flare: 1, r: st === 3 ? 110 : 70, life: 12, max: 12, col: st === 3 ? '#ffd34e' : '#ffffff', rot: 0, n: 6 });
-    B.parts.push({ x: this.x, y: this.y - 200 * this.ch.scale, kanji: st === 3 ? '三段' : '二段', size: st === 3 ? 72 : 56, rot: -0.06, life: 30, max: 30 });
-    if (st === 3) { B.parts.push({ x: this.x, y, shock: 1, r: 20, vr: 22, life: 18, max: 18, col: '#ffd34e', w: 12 }); B.shake = Math.max(B.shake, 8); Snd.fsGet(); }
-    else Snd.ledge();
+    B.parts.push({ x: this.x + this.dir * 40, y, flare: 1, r: st === 3 ? 90 : 50, life: 10, max: 10, col: st === 3 ? '#ffd34e' : '#ffffff', rot: 0, n: 6 });
+    if (st === 3) { B.parts.push({ x: this.x, y: this.y - 200 * this.ch.scale, kanji: '三段', size: 58, rot: -0.06, life: 26, max: 26 }); B.parts.push({ x: this.x, y, shock: 1, r: 16, vr: 18, life: 14, max: 14, col: '#ffd34e', w: 10 }); }
     return true;
   }
   moveUpd(c, B) {
@@ -2321,7 +2320,7 @@ class Fighter {
     let grav = true;
     const np = B.proj.length;
     if (m.upd && m.upd(this, this.mf, c, B) === false) grav = false;
-    if (this.spStage && (this.moveName === 'nb' || this.moveName === 'sb') && B.proj.length > np) {
+    if (this.spStage && CHAIN3[this.moveName] && B.proj.length > np) {
       for (let i = np; i < B.proj.length; i++) { const q = B.proj[i]; if (q.owner === this && q.hb) { q.hb = { ...q.hb, stage: this.spStage }; if (this.spStage === 3) { q.r = (q.r || 20) * 1.35; q.big = true; } } }
     }
     if (this.ground && !m.slide) this.vx *= 0.82;
@@ -2334,8 +2333,8 @@ class Fighter {
     // ワザの終わりぎわ（攻撃が出おわったあと）は、次の行動でキャンセルできる
     if (!m.noCancel && m.after !== 'helpless' && this.move === m) {
       const last = m.hb.reduce((a, h) => Math.max(a, h.f1), 0);
-      const chainable = (this.moveName === 'nb' || this.moveName === 'sb') && this.spStage && this.spStage < 3;   // 3段連携の途中は K で切らない
-      if (this.mf > Math.max(last + 5, m.len * 0.72) && (c.p.attack || (c.p.special && !chainable && this.spQ == null) || c.p.jump || c.p.smash || c.p.grab || (this.ground && c.h.shield))) {
+      const chainable = CHAIN3[this.moveName] && this.spStage && this.spStage < 3;   // 3段連携の途中は J で切らない
+      if (this.mf > Math.max(last + 5, m.len * 0.72) && ((c.p.attack && !chainable && this.spQ == null) || c.p.special || c.p.jump || c.p.smash || c.p.grab || (this.ground && c.h.shield))) {
         this.move = null; this.setState(this.ground ? 'idle' : 'air'); return grav;
       }
     }
@@ -2459,7 +2458,7 @@ class Fighter {
     const s = this.state, t = this.t;
     if (s === 'move') {
       let P = keyPose(this.move.K, this.mf);
-      const sp = (this.moveName === 'nb' || this.moveName === 'sb') ? this.spStage : 0;
+      const sp = CHAIN3[this.moveName] ? this.spStage : 0;
       if (sp === 2 && !this.ch.bow && !this.ch.hammer && !this.ch.voice) P = { ...P, fa: P.ba, ba: P.fa, fa2: P.ba2, ba2: P.fa2, fl: P.bl, bl: P.fl };
       else if (sp === 3) P = { ...P, lean: P.lean * 1.2, by: (P.by || 0) + 4 };
       this.pose = P; return;
@@ -5435,7 +5434,7 @@ SC_.howto = () => {
   const back = backBtn(() => { Snd.back(); go('menu'); });
   const M = new Menu([back]);
   const rows = [
-    ['移動', '← → （A / D）'], ['ジャンプ / 空中ジャンプ', 'Space'], ['攻撃', 'Z または J'], ['必殺ワザ', 'X または K（通常・横はもう一度押すと3段まで）'],
+    ['移動', '← → （A / D）'], ['ジャンプ / 空中ジャンプ', 'Space'], ['攻撃', 'Z または J（弱・横強はもう一度押すと3段まで）'], ['必殺ワザ', 'X または K'],
     ['スマッシュ攻撃（ため可）', 'V または I ＋ 方向'], ['シールド', 'C または L（押しっぱなし）'],
     ['回避', 'シールド中に ← → / ↓、空中でシールド'], ['しゃがみ / すり抜け / 急降下', '↓'], ['ポーズ', 'Esc または Enter'],
     ['崖つかまり中', '↑登る Space跳ぶ Z攻撃 C転がる ↓離す'],
@@ -5624,8 +5623,8 @@ SC_.battle = (o) => {
       if (T.shieldHP <= 0) T.breakShield();
       return true;
     }
-    const stg = isProj ? (hb.stage || 0) : (A.state === 'move' && (A.moveName === 'nb' || A.moveName === 'sb') ? (A.spStage || 0) : 0);
-    const SPD = [1, 0.8, 0.85, 1.3][stg], SPK = [1, 0.6, 0.65, 1.3][stg];
+    const stg = isProj ? (hb.stage || 0) : (A.state === 'move' && CHAIN3[A.moveName] ? (A.spStage || 0) : 0);
+    const SPD = [1, 0.9, 0.95, 1.4][stg], SPK = [1, 0.7, 0.7, 1.55][stg];
     const dmg = hb.dmg * charge * (A.rage ? 1.3 : 1) * SPD;
     T.percent += dmg; A.stats.dmg += dmg; T.lastHitBy = A;
     const kb = (hb.base + hb.gr * T.percent * 0.13) * (T.ch.kbTake || 1) * SPK;
