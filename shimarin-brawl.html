@@ -1010,7 +1010,26 @@ Object.assign(IMOVES, {
         Snd.katanaHit(0.5, 16); Snd.smp('glass', 0.45, 1.25); B.shake = Math.max(B.shake, 14); B.flashScr = 8; B.flashRGB = '200,220,255';
       }
     } },
-  // 横必殺：神速斬（一瞬で横へかけぬけ、止まった瞬間に通りすぎた相手が切り刻まれる）
+  // 横必殺（ふだん）：疾風斬。低く構えて突進しながら二刀で斬り、最後に斬り上げる
+  sb0: { len: 42, slide: true, keys: [[0, {}],
+      [5, { by: 20, lean: 0.6, fa: { s: -0.6, e: 1.2 }, ba: { s: -0.9, e: 1.0 }, fl: { h: 1.2, k: -1.2 }, bl: { h: -0.8, k: -0.5 } }],
+      [7, { by: 16, lean: 0.8, fa: { s: 1.8, e: 0 }, ba: { s: -1.9, e: 0 }, fl: { h: 1.3, k: -0.5 }, bl: { h: -1.3, k: -0.2 } }],
+      [16, { by: 16, lean: 0.8, fa: { s: 1.8, e: 0 }, ba: { s: -1.9, e: 0 }, fl: { h: 1.3, k: -0.5 }, bl: { h: -1.3, k: -0.2 } }],
+      [20, { by: -4, lean: -0.2, hd: -0.3, fa: { s: 3.1, e: 0 }, ba: { s: 2.8, e: 0 }, fl: { h: 0.5, k: -0.3 }, bl: { h: -0.5, k: -0.2 } }], [42, {}]],
+    hb: [HB(7, 16, 62, -74, 40, 2.5, 30, 3, 0.05), HB(19, 22, 60, -110, 48, 6, 70, 6.5, 0.7)],
+    upd(F, f) {
+      if (f < 6) { F.vx *= 0.75; if (!F.ground) F.vy = Math.min(F.vy, 0.5); return; }
+      if (f === 7) Snd.dashCut();
+      if (f <= 16) {
+        F.vx = 17 * F.dir; if (f % 4 === 3) { F.hitIds.clear(); Snd.katanaSwing(0.5); }
+        if (f % 2 === 0) BT.parts.push({ x: F.x + F.dir * 40, y: F.y - 74, cut: 1, ang: rnd(-0.4, 0.4), len: 120, w: 6, life: 7, max: 7, col: '#9fc4ff' });
+        if (!F.ground) { F.vy = 0; return false; }
+        return;
+      }
+      F.vx *= 0.8;
+      if (f === 19) { F.hitIds.clear(); Snd.katanaSwing(1); BT.parts.push({ x: F.x + F.dir * 50, y: F.y - 110, cut: 1, ang: -1.2 * F.dir, len: 200, w: 9, life: 11, max: 11, col: '#cfe0ff' }); }
+    } },
+  // 横必殺（次元モード中）：神速斬（一瞬で横へかけぬけ、止まった瞬間に通りすぎた相手が切り刻まれる）
   sb: { len: 54, slide: true, intang: [7, 16], hide: [8, 15], sheathe: [[0, 7], [31, 54]], keys: [[0, {}],
       [6, { by: 28, lean: 0.75, hd: 0.3, fa: { s: 0.35, e: 2.3 }, ba: { s: -0.15, e: 1.9 }, fl: { h: 1.4, k: -1.5 }, bl: { h: -1.15, k: -0.6 } }],
       [8, { by: 22, lean: 0.95, fa: { s: 1.9, e: 0 }, ba: { s: -2.0, e: 0 }, fl: { h: 1.4, k: -0.6 }, bl: { h: -1.4, k: -0.2 } }],
@@ -1070,7 +1089,12 @@ Object.assign(IMOVES, {
   db: { len: 36, counter: [4, 26], keys: [[0, {}], [4, { by: 8, lean: -0.1, fa: { s: 1.4, e: 1.4 }, ba: { s: 1.2, e: 1.6 } }],
       [26, { by: 8, lean: -0.1, fa: { s: 1.4, e: 1.4 }, ba: { s: 1.2, e: 1.6 } }], [36, {}]],
     hb: [], upd(F) { if (!F.ground) F.vy = Math.min(F.vy, 1); } },
-  // カウンター成功：相手の背後へ瞬間移動して切り刻む
+  // カウンター成功（ふだん）：受け止めた刀をそのまま返して斬る
+  dbc0: { len: 30, sfx: 3, keys: [[0, { fa: { s: 2.9, e: 0 }, ba: { s: -2.6, e: 0 } }], [5, { lean: 0.45, by: 8, fa: { s: 0.9, e: 0 }, ba: { s: -0.9, e: 0 }, fl: { h: 1.0, k: -0.4 }, bl: { h: -0.9, k: 0 } }],
+      [14, { lean: 0.45, by: 8, fa: { s: 0.9, e: 0 }, ba: { s: -0.9, e: 0 }, fl: { h: 1.0, k: -0.4 }, bl: { h: -0.9, k: 0 } }], [30, {}]],
+    hb: [HB(3, 7, 70, -70, 62, 10, 40, 8, 0.9, { auto: 1 })],
+    upd(F, f) { if (f === 4) BT.parts.push({ x: F.x + F.dir * 70, y: F.y - 72, cut: 1, ang: 0.5 * F.dir, len: 230, w: 9, life: 10, max: 10, col: '#cfe0ff' }); } },
+  // カウンター成功（次元モード中）：相手の背後へ瞬間移動して切り刻む
   dbc: { len: 50, intang: [0, 32], hide: [3, 7], keys: [[0, { by: 8, lean: -0.1, fa: { s: 1.4, e: 1.4 }, ba: { s: 1.2, e: 1.6 } }],
       [3, { by: 16, lean: 0.4, fa: { s: -0.6, e: 1.2 }, ba: { s: -0.9, e: 1.2 } }],
       [9, { by: 10, lean: 0.4, fa: { s: 2.9, e: 0 }, ba: { s: -2.4, e: 0 } }],
@@ -2106,8 +2130,8 @@ const CHARS = [
   { key: 'ichigo', name: '一瑚', kana: 'ICHIGO', img: ICHI, ar: ICHI_AR, eyes: false, scale: 1, run: 7.2, airs: 5.6, jv: -14.3, shv: -10, djv: -13.2, kbTake: 1.05, swords: true, hand: '#2a3a78', moves: IMOVES,
     outfit: { main: '#26346a', dark: '#141c3e', light: '#3c4d92', pants: '#141c3e', shoe: '#f1cdb8' },
     fsName: '次元千斬', fsDesc: '止まった時の中で千の斬撃を刻み、納刀とともに空間ごと断つ',
-    specials: [['居合一閃 ／ 次元斬', '必殺', 'ふだんは居合一閃。攻撃を当てる・受けるとたまるゲージが満タンになると次元モードになり、空間ごと切り刻む次元斬に'], ['神速斬', '横＋必殺', '一瞬でかけぬけ、止まった瞬間に切り刻む'],
-      ['つむじ双刃', '上＋必殺', '回転斬りで上昇（復帰用）'], ['受け流し', '下＋必殺', '受け止めたら背後へ瞬間移動して切り刻む']] },
+    specials: [['居合一閃 ／ 次元斬', '必殺', 'ふだんは居合一閃。攻撃を当てる・受けるとたまるゲージが満タンになると次元モードになり、空間ごと切り刻む次元斬に'], ['疾風斬 ／ 神速斬', '横＋必殺', 'ふだんは突進して斬る疾風斬。次元モード中は、かけぬけて納刀と同時に切り刻む神速斬'],
+      ['つむじ双刃', '上＋必殺', '回転斬りで上昇（復帰用）'], ['受け流し', '下＋必殺', '受け止めて斬り返す。次元モード中は背後へ瞬間移動して切り刻む']] },
   { key: 'berserker', name: 'バーサーカー', kana: 'BERSERKER', img: BERS, ar: BERS_AR, eyes: false, swords: false, muscle: true, berserk: true,
     fsName: '覇王無双撃', fsDesc: '突進してつかまえ、拳の連打から最後の一撃でぶっ飛ばす',
     scale: 1.38, run: 5.6, airs: 4.6, jv: -13.6, shv: -9.4, djv: -12.4, kbTake: 0.7, lightArmor: 7, hand: '#e6b08f', moves: BMOVES,
@@ -2379,7 +2403,7 @@ class Fighter {
     if (hx) {
       if (!this.ground && this.usedSideB) return;
       this.dir = hx; if (!this.ground) this.usedSideB = true;
-      return this.startMove('sb');
+      return this.startMove(this.ch.key === 'ichigo' && !(this.dimT > 0) ? 'sb0' : 'sb');
     }
     this.startMove(this.ch.key === 'ichigo' && !(this.dimT > 0) ? 'nb0' : 'nb');
   }
@@ -4305,9 +4329,13 @@ function archerHitFx(B, hx, hy, dmg) {
   B.parts.push({ x: hx, y: hy, cut: 1, ang: (R() - 0.5) * 0.6, len: 110 + dmg * 9, w: 5 + dmg * 0.4, life: 11, max: 11, col: '#ff3a4a' });
   if (dmg >= 10) B.parts.push({ x: hx, y: hy, shock: 1, r: 14, vr: 16, life: 14, max: 14, col: '#ff2a3a', w: 10 });
 }
-function ichigoHitFx(B, hx, hy, dmg, big) {
+function ichigoHitFx(B, hx, hy, dmg, big, mode = true) {
   const R = Math.random, ang = -0.5 + (R() - 0.5) * 0.8;
   B.parts.push({ x: hx, y: hy, cut: 1, ang, len: 140 + dmg * 10, w: 6 + dmg * 0.5, life: 12, max: 12, col: '#9fc4ff' });
+  if (!mode) {   // ふだん：斬撃の線だけ（漢字・空間の裂け目は次元モード中だけ）
+    if (dmg >= 8) B.parts.push({ x: hx, y: hy, cut: 1, ang: ang + 1.3, len: 100 + dmg * 6, w: 4, life: 10, max: 10, col: '#ffffff' });
+    return;
+  }
   if (dmg >= 4) {
     const K = dmg >= 13 ? ['斬', '滅', '断'] : dmg >= 8 ? ['斬', '断', '閃', '裂'] : ['斬', '閃', '刃'];
     const size = dmg >= 13 ? 130 : dmg >= 8 ? 86 : 54;
@@ -5729,7 +5757,7 @@ SC_.battle = (o) => {
   B.applyHit = (A, T, hb, charge, ds, isProj, hx, hy) => {
     if (!T.alive || T.inv > 0 || T.intangible || !isFoe(A, T)) return false;
     if (T.state === 'move' && T.move.counter && T.mf >= T.move.counter[0] && T.mf <= T.move.counter[1]) {
-      T.dir = -ds; T.cTarget = A; T.startMove('dbc'); T.inv = 30; T.hitlag = 6; A.hitlag = Math.max(A.hitlag, 28);
+      T.dir = -ds; T.cTarget = A; T.startMove(T.ch.key === 'ichigo' && !(T.dimT > 0) ? 'dbc0' : 'dbc'); T.inv = 30; T.hitlag = 6; A.hitlag = Math.max(A.hitlag, 28);
       B.burst(hx, hy, '#ffffff', 18); B.burst(hx, hy, '#ff7aa2', 10); B.flashScr = 4; B.shake = Math.max(B.shake, 8);
       Snd.shield(); Snd.hitC(T.ch, 12);
       return true;
@@ -5781,7 +5809,7 @@ SC_.battle = (o) => {
     // キャラごとのヒット演出
     if (A.ch.psychic) B.parts.push({ x: hx, y: hy, psy: 1, r: 34 + dmg * 2.2, life: 16, max: 16 });
     else if (A.ch.swords) {
-      ichigoHitFx(B, hx, hy, dmg, dmg >= 13);
+      ichigoHitFx(B, hx, hy, dmg, dmg >= 13, A.dimT > 0);
       const r0 = rnd(-1.0, -0.4);
       B.parts.push({ x: hx, y: hy, slash: 1, rot: r0, len: 80 + dmg * 5, life: 10, max: 10, col: '#ff8fb0' });
       if (dmg >= 8) B.parts.push({ x: hx, y: hy, slash: 1, rot: r0 + 1.4, len: 60 + dmg * 4, life: 9, max: 9, col: '#ffd0dc' });
