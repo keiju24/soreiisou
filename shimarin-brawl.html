@@ -4483,7 +4483,7 @@ function drawFighterExtras(F, t) {
     }
   }
   // 名前タグ
-  if (F.state !== 'hitstun' || !F.tumble) {
+  if ((F.state !== 'hitstun' || !F.tumble) && !F._nomark) {
     const ty = F.y - 194 * F.ch.scale;
     ctx.fillStyle = C.main; ctx.beginPath(); ctx.moveTo(F.x - 7, ty + 6); ctx.lineTo(F.x + 7, ty + 6); ctx.lineTo(F.x, ty + 14); ctx.fill();
     text(C.tag, F.x, ty - 4, 20, C.main, 'center', '900', '#000');
@@ -6399,101 +6399,326 @@ SC_.battle = (o) => {
     ctx.restore();
   }
   // ---- バーサーカーの切り札ムービー ----
-  const MOV = {
-    stand: mk({ by: 6, lean: 0.2, fa: A_(0.9, 1.6), ba: A_(0.6, 1.6), fl: G_(0.6, -0.4), bl: G_(-0.6, -0.1) }),
-    pl: mk({ lean: 0.4, by: 8, fa: A_(1.65, 0), ba: A_(0.4, 1.7), fl: G_(0.8, -0.3), bl: G_(-0.7, 0) }),
-    pr: mk({ lean: 0.4, by: 8, fa: A_(0.4, 1.7), ba: A_(1.65, 0), fl: G_(0.8, -0.3), bl: G_(-0.7, 0) }),
-    wind: mk({ lean: -0.45, by: 12, hd: 0.15, fa: A_(-1.3, 1.6), ba: A_(1.0, 1.2), fl: G_(0.9, -0.6), bl: G_(-0.9, -0.2) }),
-    fin: mk({ lean: 0.75, by: 16, fa: A_(1.62, 0), ba: A_(-1.0, 0.6), fl: G_(1.15, -0.4), bl: G_(-1.05, 0) }),
-    hurt: mk({ lean: -0.45, hd: -0.3, fa: A_(2.5, 0.4), ba: A_(-2.4, 0.4), fl: G_(0.6, -0.4), bl: G_(-0.4, -0.2) }),
-    hurt2: mk({ lean: -0.65, hd: -0.45, fa: A_(2.8, 0.2), ba: A_(-2.7, 0.2), fl: G_(0.9, -0.2), bl: G_(-0.2, -0.4) }),
-  };
+  // =================================================================
+  //  覇王無双撃のムービー（見た目だけ。判定は updSuper 側の S.mt で進む）
+  //  ワールド座標：地面 y=0、バーサーカーの立ち位置 x=0 付近。カメラが動きながら撮る
+  // =================================================================
+  const MOV = (() => {
+    const air = { fl: G_(1.3, -1.9), bl: G_(0.4, -1.7) };
+    return {
+      stand: mk({ by: 6, lean: 0.2, fa: A_(0.9, 1.6), ba: A_(0.6, 1.6), fl: G_(0.6, -0.4), bl: G_(-0.6, -0.1) }),
+      roar: mk({ by: 14, lean: -0.35, hd: -0.55, fa: A_(0.7, 2.3), ba: A_(-0.7, 2.3), fl: G_(0.8, -0.5), bl: G_(-0.8, -0.2) }),
+      grab: mk({ by: 10, lean: 0.45, fa: A_(1.5, 0.3), ba: A_(1.2, 0.6), fl: G_(0.9, -0.4), bl: G_(-0.8, 0) }),
+      // 連打：W = 引き、H = 当たり
+      W: [
+        mk({ by: 12, lean: -0.15, fa: A_(0.5, 2.1), ba: A_(1.0, 1.9), fl: G_(0.7, -0.4), bl: G_(-0.7, -0.1) }),                 // ジャブ
+        mk({ by: 14, lean: -0.3, fa: A_(1.1, 1.8), ba: A_(-0.5, 1.9), fl: G_(0.7, -0.4), bl: G_(-0.8, -0.1) }),                 // ストレート
+        mk({ by: 12, lean: -0.25, hd: 0.1, fa: A_(-0.2, 1.4), ba: A_(1.0, 1.9), fl: G_(0.6, -0.4), bl: G_(-0.8, -0.2) }),       // フック
+        mk({ by: 22, lean: 0.1, fa: A_(1.0, 1.8), ba: A_(-0.7, 1.7), fl: G_(0.9, -0.8), bl: G_(-0.9, -0.3) }),                  // ボディ
+        mk({ by: 12, lean: -0.25, hd: 0.1, fa: A_(-0.3, 1.4), ba: A_(1.0, 1.9), fl: G_(0.6, -0.4), bl: G_(-0.8, -0.2) }),       // フック
+        mk({ by: 14, lean: -0.35, fa: A_(1.1, 1.8), ba: A_(-0.7, 1.9), fl: G_(0.7, -0.4), bl: G_(-0.9, -0.1) }),                // ストレート
+        mk({ by: 44, lean: 0.45, hd: 0.2, fa: A_(1.0, 1.8), ba: A_(0.1, 2.3), fl: G_(1.3, -1.6), bl: G_(-0.6, -1.0) }),        // アッパー（深くしずむ）
+        mk({ lean: -0.2, fa: A_(0.4, 2.1), ba: A_(1.2, 1.6), ...air }),                                                          // 空中ジャブ
+        mk({ lean: -0.3, fa: A_(1.2, 1.6), ba: A_(-0.6, 1.9), ...air }),                                                         // 空中ストレート
+        mk({ lean: -0.2, rot: -0.3, fa: A_(0.3, 2.1), ba: A_(1.2, 1.6), ...air }),                                               // 空中ジャブ（回転ぎみ）
+        mk({ lean: -0.4, rot: -0.4, fa: A_(1.2, 1.6), ba: A_(-0.8, 1.9), ...air }),                                              // 空中ストレート
+        mk({ lean: -0.5, hd: -0.3, fa: A_(3.3, 0.5), ba: A_(3.1, 0.6), fl: G_(0.9, -1.4), bl: G_(-0.2, -1.2) }),               // 叩きつけ（両拳を振りかぶる）
+      ],
+      H: [
+        mk({ by: 10, lean: 0.4, fa: A_(1.72, 0), ba: A_(0.9, 1.8), fl: G_(0.95, -0.3), bl: G_(-0.8, 0) }),
+        mk({ by: 12, lean: 0.6, hd: 0.1, fa: A_(0.3, 1.7), ba: A_(1.68, 0), fl: G_(1.0, -0.5), bl: G_(-1.05, 0) }),
+        mk({ by: 10, lean: 0.45, hd: -0.1, fa: A_(2.0, 1.5), ba: A_(0.8, 1.8), fl: G_(0.9, -0.4), bl: G_(-0.9, 0) }),
+        mk({ by: 36, lean: 0.85, fa: A_(0.6, 1.8), ba: A_(1.3, 0.15), fl: G_(1.35, -1.3), bl: G_(-1.2, 0) }),
+        mk({ by: 10, lean: 0.5, hd: -0.1, fa: A_(2.05, 1.5), ba: A_(0.7, 1.8), fl: G_(0.95, -0.4), bl: G_(-0.95, 0) }),
+        mk({ by: 12, lean: 0.7, hd: 0.15, fa: A_(0.2, 1.7), ba: A_(1.7, 0), fl: G_(1.1, -0.5), bl: G_(-1.15, 0) }),
+        mk({ by: -14, lean: -0.3, hd: -0.45, fa: A_(0.6, 1.8), ba: A_(3.05, 0.15), fl: G_(0.3, -0.1), bl: G_(-0.4, -0.6) }),
+        mk({ lean: 0.35, fa: A_(1.75, 0), ba: A_(0.7, 1.7), ...air }),
+        mk({ lean: 0.55, fa: A_(0.3, 1.7), ba: A_(1.72, 0), ...air }),
+        mk({ lean: 0.4, rot: 0.25, fa: A_(1.85, 0), ba: A_(0.6, 1.7), ...air }),
+        mk({ lean: 0.6, rot: 0.35, fa: A_(0.2, 1.7), ba: A_(1.8, 0), ...air }),
+        mk({ lean: 0.9, hd: 0.4, fa: A_(0.6, 0.15), ba: A_(0.5, 0.2), fl: G_(0.4, -1.6), bl: G_(-0.4, -1.3) }),
+      ],
+      land: mk({ by: 46, lean: 0.55, hd: -0.2, fa: A_(1.2, 0.8), ba: A_(-0.4, 1.0), fl: G_(1.4, -2.1), bl: G_(-0.9, -1.0) }),
+      wind: mk({ by: 36, lean: -0.55, hd: 0.25, fa: A_(1.45, 0.4), ba: A_(-1.7, 1.3), fl: G_(1.25, -1.0), bl: G_(-1.3, -0.2) }),
+      dash: mk({ by: 30, lean: 0.95, hd: -0.2, fa: A_(0.2, 1.2), ba: A_(-1.6, 1.2), fl: G_(1.5, -0.9), bl: G_(-1.4, -0.2) }),
+      fin: mk({ by: 28, lean: 0.95, hd: 0.1, fa: A_(-1.1, 0.9), ba: A_(1.62, 0), fl: G_(1.45, -0.7), bl: G_(-1.45, 0) }),
+      after: mk({ by: 18, lean: 0.55, hd: -0.25, fa: A_(-0.8, 1.2), ba: A_(1.5, 0.3), fl: G_(1.2, -0.6), bl: G_(-1.2, 0) }),
+      // やられ
+      caught: mk({ lean: -0.2, hd: -0.2, fa: A_(1.9, 0.6), ba: A_(-1.6, 0.6), fl: G_(0.4, -0.4), bl: G_(-0.4, -0.2) }),
+      hurt: mk({ lean: -0.45, hd: -0.3, fa: A_(2.5, 0.4), ba: A_(-2.4, 0.4), fl: G_(0.6, -0.4), bl: G_(-0.4, -0.2) }),
+      hurtB: mk({ lean: -0.8, hd: -0.7, fa: A_(2.9, 0.2), ba: A_(-2.8, 0.2), fl: G_(0.9, -0.2), bl: G_(-0.2, -0.5) }),
+      fold: mk({ by: 20, lean: 0.85, hd: 0.5, fa: A_(0.6, 2.0), ba: A_(0.4, 2.1), fl: G_(0.5, -0.9), bl: G_(-0.5, -0.6) }),
+      side: mk({ lean: -0.3, hd: 0.7, fa: A_(2.4, 0.3), ba: A_(-1.0, 0.5), fl: G_(0.5, -0.3), bl: G_(-0.5, -0.3) }),
+      tumble: mk({ lean: -0.5, hd: -0.6, fa: A_(3.0, 0.3), ba: A_(-2.9, 0.3), fl: G_(1.1, -1.4), bl: G_(-0.6, -1.0) }),
+      lie: mk({ lean: -0.2, hd: -0.3, fa: A_(2.8, 0.2), ba: A_(2.6, 0.3), fl: G_(0.1, -0.1), bl: G_(-0.1, -0.2) }),
+      wobble: mk({ by: 16, lean: 0.4, hd: 0.5, fa: A_(0.3, 0.6), ba: A_(-0.2, 0.5), fl: G_(0.7, -0.9), bl: G_(-0.4, -0.7) }),
+    };
+  })();
+  const MV_KIND = ['jab', 'str', 'hook', 'body', 'hook', 'str', 'upper', 'air', 'air', 'air', 'air', 'spike'];
   function drawFigureAt(F, sx, sy, sc, pose, dir, t, rot = 0) {
-    const sv = { x: F.x, y: F.y, pose: F.pose, dir: F.dir, state: F.state, hitlag: F.hitlag, flash: F.flash, inv: F.inv };
-    F.x = 0; F.y = 0; F.pose = { ...pose, rot }; F.dir = dir; F.state = 'victory'; F.hitlag = 0; F.inv = 0;
+    const sv = { x: F.x, y: F.y, pose: F.pose, dir: F.dir, state: F.state, hitlag: F.hitlag, flash: F.flash, inv: F.inv, hasFS: F.hasFS };
+    F.x = 0; F.y = 0; F.pose = { ...pose, rot: (pose.rot || 0) + rot }; F.dir = dir; F.state = 'victory'; F.hitlag = 0; F.inv = 0; F.hasFS = false; F._nomark = true;
     ctx.save(); ctx.translate(sx, sy); ctx.scale(sc, sc);
-    try { drawFighter(F, t); } finally { ctx.restore(); Object.assign(F, sv); }
+    try { drawFighter(F, t); } finally { ctx.restore(); Object.assign(F, sv); F._nomark = false; }
   }
+  const dec = (mt, p, k) => mt >= p ? Math.exp(-(mt - p) / k) : 0;   // 当たった瞬間から減っていく
+  // ある瞬間の「ふたりの位置・ポーズ」とカメラの狙いを計算する
+  function movieState(mt) {
+    const o = { bx: 0, by: 0, bp: MOV.stand, bsx: 1, bsy: 1, vx: 200, vy: 0, vp: MOV.caught, vrot: 0, vsc: 1, cam: null, hit: -1, hitK: 0 };
+    const H0 = 24, HN = 12, fin = 168;
+    // 直前の当たり（揺れ・ひかり用）
+    for (let n = HN - 1; n >= 0; n--) { const P = H0 + n * 9; if (mt >= P) { o.hit = n; o.hitK = dec(mt, P, 3); break; } }
+    const ground = Math.min(6, mt < H0 ? 0 : Math.floor((mt - H0) / 9) + 1) * 13;   // 連打で少しずつ押しこむ
+    if (mt < 20) {   // つかんで引きよせ、ほえる
+      const k = ease(clamp(mt / 8, 0, 1));
+      o.bp = mt < 8 ? lp(MOV.grab, MOV.roar, k) : MOV.roar;
+      o.vx = lerp(320, 200, k); o.vp = MOV.caught; o.vy = -Math.sin(k * Math.PI) * 30;
+      if (mt >= 8) { o.bx = Math.sin(mt * 2.1) * 3; }
+      o.cam = { x: lerp(160, 40, ease(clamp(mt / 18, 0, 1))), y: -130, z: lerp(1.5, 2.25, ease(clamp(mt / 18, 0, 1))), r: -0.04 };
+      return o;
+    }
+    if (mt < H0 + HN * 9 - 4) {   // 連打（12発）
+      const n = Math.floor((mt - 20) / 9), f = mt - 20 - 9 * n, kind = MV_KIND[n];
+      const W = MOV.W[n], Hp = MOV.H[n], prev = n ? MOV.H[n - 1] : MOV.roar, nextW = MOV.W[n + 1] || Hp;
+      o.bp = f < 3 ? lp(prev, W, ease(f / 3)) : f < 4 ? W : lp(Hp, lp(Hp, nextW, 0.35), clamp((f - 4) / 5, 0, 1));
+      const imp = f >= 4 ? Math.exp(-(f - 4) / 2.5) : 0, pre = f < 4 ? f / 4 : 0;
+      if (f >= 4 && f < 6) { o.bsx = 1.08; o.bsy = 0.94; }   // 当たりの瞬間につぶれる
+      if (n <= 6) {   // 地上
+        o.bx = ground + imp * 24 - pre * 8; o.vx = 200 + ground + imp * 38;
+        o.vp = kind === 'body' && f >= 4 ? MOV.fold : kind === 'hook' && f >= 4 ? MOV.side : f >= 4 ? MOV.hurtB : MOV.hurt;
+        o.vrot = kind === 'hook' && f >= 4 ? 0.25 * imp : 0;
+        o.cam = { x: (o.bx + o.vx) / 2 + 10, y: -125, z: 2.0 + 0.12 * o.hitK, r: (n % 2 ? 0.035 : -0.035) * o.hitK };
+        if (kind === 'upper') {   // アッパー：相手を打ち上げる
+          o.by = f >= 4 ? -Math.min(1, (f - 4) / 5) * 60 : 0;
+          if (f >= 4) { const q = (f - 4) / 5; o.vy = -ease(clamp(q, 0, 1)) * 300; o.vp = MOV.tumble; o.vrot = -q * 1.2; }
+          o.cam.y = lerp(-125, -260, clamp((f - 2) / 7, 0, 1)); o.cam.z = 2.0 - 0.15 * clamp((f - 4) / 5, 0, 1);
+        }
+      } else if (kind !== 'spike') {   // 空中：追いかけてなぐり続ける
+        const a = n - 7, base = 300 + a * 22;
+        o.vy = -(base + imp * 26 - Math.sin(f / 9 * Math.PI) * 6); o.vx = 290 + a * 12 + imp * 30; o.vp = MOV.tumble; o.vrot = -1.2 - a * 0.9 - imp * 0.5;
+        o.bx = 110 + a * 12 + imp * 20; o.by = -(base - 20 + Math.sin(f / 9 * Math.PI) * 14);
+        if (a === 0 && f < 4) { o.by = -lerp(60, base - 20, ease(f / 4)); o.bx = lerp(78, 110, f / 4); }
+        o.cam = { x: (o.bx + o.vx) / 2, y: (o.by + o.vy) / 2 - 130, z: 1.85 + 0.12 * o.hitK, r: (a % 2 ? 0.05 : -0.05) * o.hitK - 0.03 };
+      } else {   // 叩きつけ
+        o.bx = 150; o.by = -(388 - (f >= 4 ? 0 : f * 6)); o.vx = 336; o.vy = -388 + 10; o.vp = MOV.tumble; o.vrot = -4.6;
+        if (f >= 4) { o.vp = MOV.hurtB; o.vrot = 1.2; }
+        o.cam = { x: 240, y: (o.by + o.vy) / 2 - 120, z: 1.8 + 0.15 * o.hitK, r: 0.06 * o.hitK };
+      }
+      return o;
+    }
+    if (mt < 136) {   // 相手を地面へたたきつけ、着地
+      const q = mt - (H0 + HN * 9 - 4);   // 0..
+      o.vx = 340 + q * 2; o.vy = -Math.max(0, 388 * (1 - q / 4)); if (q >= 4) o.vy = -Math.abs(Math.sin((q - 4) / 8 * Math.PI)) * 60 * Math.exp(-(q - 4) / 8);
+      o.vp = q < 4 ? MOV.hurtB : MOV.lie; o.vrot = q < 4 ? 1.3 : 1.5;
+      o.bx = 150; o.by = -Math.max(0, 380 * (1 - (q / 8) ** 2)); o.bp = q < 8 ? MOV.H[11] : MOV.land;
+      o.cam = { x: 260, y: lerp(-300, -120, ease(clamp(q / 5, 0, 1))), z: 1.75, r: 0 };
+      return o;
+    }
+    if (mt < 160) {   // ため：相手はふらふら立ち上がり、王は低く構えて力をためる
+      const q = (mt - 136) / 24;
+      o.vx = 380; o.vy = 0; o.vp = q < 0.35 ? lp(MOV.lie, MOV.wobble, ease(q / 0.35)) : MOV.wobble; o.vrot = q < 0.35 ? lerp(1.5, 0, ease(q / 0.35)) : Math.sin(mt * 0.3) * 0.08;
+      o.bx = lerp(150, 40, ease(clamp(q * 1.6, 0, 1))); o.bp = lp(MOV.land, MOV.wind, ease(clamp(q * 1.8, 0, 1)));
+      o.bx += Math.sin(mt * 3.1) * 2 * q;
+      o.cam = { x: o.bx + lerp(60, -20, q), y: lerp(-130, -150, q), z: lerp(1.9, 2.5, ease(q)), r: lerp(0, -0.07, q) };
+      return o;
+    }
+    if (mt < fin) {   // 突進
+      const q = (mt - 160) / 8;
+      o.vx = 380; o.vp = MOV.wobble; o.vrot = 0.05;
+      o.bx = lerp(40, 180, q * q); o.bp = lp(MOV.wind, MOV.dash, ease(clamp(q * 2, 0, 1)));
+      o.cam = { x: 210, y: -120, z: 1.65, r: 0.02 };
+      return o;
+    }
+    // 最後の一撃 → 止まる → ぶっ飛ぶ
+    const q = mt - fin, stop = 7;
+    o.bx = 180; o.bp = q < stop + 10 ? MOV.fin : lp(MOV.fin, MOV.after, ease(clamp((q - stop - 10) / 12, 0, 1)));
+    if (q < stop) { o.vx = 380 - q; o.vp = MOV.fold; o.vrot = -0.1; o.bsx = 1.06; o.bsy = 0.95; }
+    else { const p = q - stop; o.vx = 380 + p * 46; o.vy = -p * 20 + p * p * 0.05; o.vp = MOV.tumble; o.vrot = -p * 0.55; o.vsc = Math.max(0.2, 1 - p * 0.022); }
+    o.cam = q < stop ? { x: 300, y: -120, z: 2.5, r: 0.06 } : { x: lerp(300, 330, clamp((q - stop) / 20, 0, 1)), y: lerp(-120, -170, clamp((q - stop) / 20, 0, 1)), z: lerp(2.3, 1.35, ease(clamp((q - stop) / 18, 0, 1))), r: lerp(0.06, 0, clamp((q - stop) / 14, 0, 1)) };
+    return o;
+  }
+  const MCAM = { x: 0, y: 0, z: 2, r: 0, last: -9, hist: [] };
   function drawSuperMovie(S) {
     const F = S.F, T = S.T, mt = S.mt || 0, t = B.t + mt;
     const fin = 168, inv = mt >= fin && mt < fin + 6;
-    const zin = ease(clamp(mt / 14, 0, 1)), zout = mt > 196 ? clamp((210 - mt) / 14, 0, 1) : 1;
+    const zin = ease(clamp(mt / 10, 0, 1)), zout = mt > 198 ? clamp((210 - mt) / 12, 0, 1) : 1;
+    const o = movieState(mt);
+    // カメラ：カットの切りかわりは一気に、それ以外はなめらかに追う
+    const cut = mt < MCAM.last || mt === 0 || mt === 20 || mt === 136 || mt === 160 || mt === fin || mt === fin + 7;
+    const ck = cut ? 1 : 0.3;
+    MCAM.x = lerp(MCAM.x, o.cam.x, ck); MCAM.y = lerp(MCAM.y, o.cam.y, ck); MCAM.z = lerp(MCAM.z, o.cam.z * 0.78, ck); MCAM.r = lerp(MCAM.r, o.cam.r, ck);
+    if (mt < MCAM.last) MCAM.hist = [];
+    MCAM.last = mt;
+    // ゆれ
+    const big = o.hit === 6 || o.hit === 11;
+    let shk = o.hitK * (big ? 26 : 12);
+    if (mt >= 136 && mt < 160) shk += (mt - 136) / 24 * 7;
+    if (mt >= fin && mt < fin + 30) shk += 60 * Math.exp(-(mt - fin) / 8);
+    const shx = rnd(-shk, shk), shy = rnd(-shk, shk);
     ctx.save();
-    // 背景：真紅の空と回る光の筋
+    ctx.globalAlpha = zin * zout;
+    // ---- 背景（画面に固定。カメラの回転に少しだけついてくる） ----
     const bg = ctx.createRadialGradient(VW / 2, VH * 0.55, 30, VW / 2, VH * 0.55, VW * 0.8);
-    bg.addColorStop(0, mt >= fin ? '#ffeedd' : '#a0101c'); bg.addColorStop(0.35, '#4a0008'); bg.addColorStop(1, '#050002');
-    ctx.globalAlpha = zin * zout; ctx.fillStyle = bg; ctx.fillRect(0, 0, VW, VH);
-    ctx.save(); ctx.translate(VW / 2 + 60, VH * 0.55); ctx.rotate(t * (mt >= fin ? 0.03 : 0.008)); ctx.globalCompositeOperation = 'lighter';
-    for (let i = 0; i < 20; i++) { ctx.rotate(TAU / 20); ctx.fillStyle = i % 2 ? 'rgba(255,60,40,.10)' : 'rgba(255,200,160,.05)'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(1400, -90); ctx.lineTo(1400, 90); ctx.fill(); }
+    const hot = mt >= fin ? '#ffeedd' : mt >= 136 ? `rgb(${170 + (mt - 136) * 2},${10 + (mt - 136) * 2},20)` : big ? '#ff3a2a' : '#a0101c';
+    bg.addColorStop(0, hot); bg.addColorStop(0.35, '#4a0008'); bg.addColorStop(1, '#050002');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, VW, VH);
+    ctx.save(); ctx.translate(VW / 2, VH * 0.5); ctx.rotate(t * (mt >= fin ? 0.035 : mt >= 136 ? 0.02 : 0.008) + MCAM.r * 3); ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 20; i++) { ctx.rotate(TAU / 20); ctx.fillStyle = i % 2 ? 'rgba(255,60,40,.11)' : 'rgba(255,200,160,.05)'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(1400, -90); ctx.lineTo(1400, 90); ctx.fill(); }
     ctx.restore();
-    // 連打中の集中線
-    if (mt >= 20 && mt < 140) {
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5;
-      for (let i = 0; i < 40; i++) { const a = rnd(0, TAU), r0 = rnd(200, 320); ctx.strokeStyle = i % 3 ? 'rgba(255,255,255,.7)' : 'rgba(255,60,60,.8)'; ctx.lineWidth = rnd(1, 4); line(VW * 0.6 + Math.cos(a) * r0, VH * 0.5 + Math.sin(a) * r0, VW * 0.6 + Math.cos(a) * 1500, VH * 0.5 + Math.sin(a) * 1500); }
+    // 舞い上がる火の粉
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 26; i++) {
+      const sp = 2 + (i % 5), life = ((t * sp + i * 97) % 900) / 900, px = ((i * 211 + Math.sin(t * 0.02 + i) * 40) % VW + VW) % VW - (MCAM.x * 0.3 % VW), py = VH - life * (VH + 100);
+      ctx.globalAlpha = 0.6 * Math.sin(life * Math.PI); ctx.drawImage(glowSprite('rgba(255,90,40,.9)'), ((px % VW) + VW) % VW - 8, py - 8, 16, 16);
+    }
+    ctx.restore();
+    // ---- ここからワールド（カメラ）座標 ----
+    ctx.save();
+    ctx.translate(VW / 2 + shx, VH * 0.6 + shy); ctx.rotate(MCAM.r); ctx.scale(MCAM.z, MCAM.z); ctx.translate(-MCAM.x, -MCAM.y);
+    const L = MCAM.x - 1200, R2 = MCAM.x + 1200;
+    // 地面：流れる模様で、カメラの動きがわかるように
+    ctx.fillStyle = 'rgba(8,0,2,.82)'; ctx.fillRect(L, 0, R2 - L, 900);
+    ctx.strokeStyle = 'rgba(255,60,40,.7)'; ctx.lineWidth = 3 / MCAM.z; line(L, 0, R2, 0);
+    ctx.strokeStyle = 'rgba(255,60,40,.18)'; ctx.lineWidth = 2 / MCAM.z;
+    for (let gx = Math.floor(L / 90) * 90; gx < R2; gx += 90) line(gx, 0, gx + (gx - MCAM.x) * 0.9, 600);
+    for (const gy of [40, 110, 230]) line(L, gy, R2, gy);
+    // 叩きつけで地面がわれる
+    if (mt >= 124) {
+      const q = mt - 124, R = srand(77);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.max(0.25, 1 - q / 30);
+      for (let b = 0; b < 9; b++) { let x = 340, y = 0; const s = b % 2 ? 1 : -1; ctx.beginPath(); ctx.moveTo(x, y); for (let j = 0; j < 5; j++) { x += s * (20 + R() * 40) * Math.min(1, q / 6); y += (R() * 10 + 2) * Math.min(1, q / 6); ctx.lineTo(x, y); } ctx.strokeStyle = '#ff3020'; ctx.lineWidth = 4; ctx.stroke(); }
       ctx.restore();
     }
-    // 地面
-    ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(0, VH * 0.78, VW, VH * 0.22);
-    ctx.strokeStyle = 'rgba(255,60,40,.6)'; ctx.lineWidth = 3; line(0, VH * 0.78, VW, VH * 0.78);
-    // 人物
-    const hitPhase = mt >= 24 && mt < 24 + 12 * 9, ph = hitPhase ? (mt - 24) % 9 : 0, n = hitPhase ? Math.floor((mt - 24) / 9) : 0;
-    let fp = MOV.stand;
-    if (hitPhase) fp = ph < 5 ? (n % 2 ? MOV.pr : MOV.pl) : MOV.stand;
-    else if (mt >= 130 && mt < fin) fp = MOV.wind;
-    else if (mt >= fin) fp = MOV.fin;
-    const bx = VW * 0.36 + (mt >= fin ? 40 : 0), fy = VH * 0.78;
-    // 被害者（右）
-    if (T) {
-      let tx = VW * 0.66 + (hitPhase && ph < 4 ? 14 : 0) + (mt >= 130 && mt < fin ? 6 * Math.sin(mt) : 0), ty = fy, rot = 0, tp = hitPhase && ph < 4 ? MOV.hurt2 : MOV.hurt, sc = 1.9;
-      if (mt >= fin) { const q = mt - fin; tx += q * 38; ty -= q * 14 - q * q * 0.1; rot = q * 0.5; sc = 1.9 - q * 0.02; }
-      if (tx < VW + 300) drawFigureAt(T, tx, ty, sc, tp, -1, t, rot);
-    }
-    // 残像の拳（連打）
-    if (hitPhase) {
+    // ため：地面のひび＋浮き上がる岩
+    if (mt >= 136 && mt < fin + 30) {
+      const q = Math.min(24, mt - 136), k = q / 24, R = srand(99);
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < 6; i++) { const fx = VW * 0.5 + rnd(-20, 120), fyy = VH * 0.48 + rnd(-110, 60), r = rnd(26, 46); ctx.globalAlpha = 0.4; ctx.drawImage(glowSprite('rgba(255,90,60,.9)'), fx - r, fyy - r, r * 2, r * 2); ctx.globalAlpha = 0.8; ctx.fillStyle = '#2b2c34'; ctx.beginPath(); ctx.arc(fx, fyy, r * 0.42, 0, TAU); ctx.fill(); }
+      for (let b = 0; b < 12; b++) {
+        let x = o.bx, y = 2; const s = b % 2 ? 1 : -1; ctx.beginPath(); ctx.moveTo(x, y);
+        for (let j = 0; j < 6; j++) { x += s * (14 + R() * 30) * k; y += (R() * 8 + 1) * k; ctx.lineTo(x, y); }
+        ctx.globalAlpha = 0.5 + 0.5 * Math.sin(t * 0.5 + b); ctx.strokeStyle = '#ff2a1a'; ctx.lineWidth = 5; ctx.stroke(); ctx.strokeStyle = '#ffd0a0'; ctx.lineWidth = 1.5; ctx.stroke();
+      }
       ctx.restore();
-    }
-    drawFigureAt(F, bx, fy, 2.0, fp, 1, t);
-    // ためている拳の光
-    if (mt >= 130 && mt < fin) {
-      const k = (mt - 130) / (fin - 130), r = 40 + k * 160;
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5 + k * 0.5;
-      ctx.drawImage(glowSprite('rgba(220,10,30,.95)'), bx - 160 - r, VH * 0.42 - r, r * 2, r * 2);
-      ctx.drawImage(glowSprite('rgba(255,200,140,.9)'), bx - 160 - r * 0.35, VH * 0.42 - r * 0.35, r * 0.7, r * 0.7);
-      for (let i = 0; i < 10; i++) { const a = t * 0.2 + i * TAU / 10, rr2 = (1 - ((t * 0.05 + i / 10) % 1)) * 260; ctx.drawImage(glowSprite('rgba(255,40,40,.9)'), bx - 160 + Math.cos(a) * rr2 - 8, VH * 0.42 + Math.sin(a) * rr2 - 8, 16, 16); }
-      ctx.restore();
-    }
-    // 連打の衝撃
-    if (hitPhase && ph < 4) {
-      const ix = VW * 0.6 + rnd(-20, 20), iy = VH * 0.48 + rnd(-60, 40), r = 90 + rnd(0, 40);
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(ix, iy); ctx.rotate(rnd(0, TAU));
-      ctx.globalAlpha = 1 - ph / 4; ctx.drawImage(glowSprite('rgba(255,220,180,.95)'), -r, -r, r * 2, r * 2);
-      for (let i = 0; i < 12; i++) { ctx.rotate(TAU / 12); ctx.fillStyle = i % 2 ? '#ffffff' : '#ff3a2a'; ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(r * (i % 2 ? 0.7 : 1.3), 0); ctx.lineTo(0, 6); ctx.fill(); }
-      ctx.restore();
-    }
-    // 文字
-    if (mt < 30) { const q = ease(clamp(mt / 12, 0, 1)); ctx.save(); ctx.globalAlpha = q * Math.min(1, (30 - mt) / 8); ctx.translate(VW / 2, 110); ctx.scale(1.6 - 0.6 * q, 1.6 - 0.6 * q); text('覇王無双撃', 0, 0, 84, '#ffffff', 'center', '900', '#8a0010', 14); ctx.restore(); }
-    if (mt >= 136 && mt < fin) { const q = ease(clamp((mt - 136) / 10, 0, 1)); ctx.save(); ctx.globalAlpha = q; ctx.translate(VW / 2, VH - 110); text('覇王・終撃', 0, 0, 70, '#ffffff', 'center', '900', '#b00014', 12); ctx.restore(); }
-    // ---- 最後の一撃：色の反転＋大爆発 ----
-    if (mt >= fin) {
-      const q = mt - fin, cx = VW * 0.62, cy = VH * 0.46;
-      ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < 4; i++) { const r = (q - i * 4) * 60; if (r <= 0) continue; ctx.globalAlpha = Math.max(0, 1 - r / 1600); ctx.strokeStyle = i % 2 ? '#ffffff' : '#ff2030'; ctx.lineWidth = 28 * Math.max(0, 1 - r / 1600) + 2; ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.stroke(); }
-      ctx.globalAlpha = Math.max(0, 1 - q / 30); const r = 300 + q * 30; ctx.drawImage(glowSprite('rgba(255,240,220,.95)'), cx - r, cy - r, r * 2, r * 2);
-      // 赤い稲妻
-      const R = srand(q * 31 + 7);
-      for (let b = 0; b < 8; b++) { let x = cx, y = cy; const a = R() * TAU; ctx.beginPath(); ctx.moveTo(x, y); for (let j = 0; j < 8; j++) { x += Math.cos(a) * 70 + (R() - 0.5) * 60; y += Math.sin(a) * 70 + (R() - 0.5) * 60; ctx.lineTo(x, y); } ctx.globalAlpha = Math.max(0, 1 - q / 26); ctx.strokeStyle = '#ff2a2a'; ctx.lineWidth = 6; ctx.stroke(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke(); }
-      ctx.restore();
-      // 画面のひび
-      if (q < 30) {
-        const R2 = srand(4242);
-        ctx.save(); ctx.globalAlpha = Math.max(0, 1 - q / 30); ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 3;
-        for (let b = 0; b < 12; b++) { let x = cx, y = cy; const a = b / 12 * TAU + R2() * 0.3; ctx.beginPath(); ctx.moveTo(x, y); for (let j = 0; j < 6; j++) { x += Math.cos(a + (R2() - 0.5) * 0.6) * 120; y += Math.sin(a + (R2() - 0.5) * 0.6) * 120; ctx.lineTo(x, y); } ctx.stroke(); }
+      if (mt < fin) for (let i = 0; i < 14; i++) {
+        const R3 = srand(500 + i), ox = (R3() - 0.5) * 360, sz = 6 + R3() * 14, sp = 0.6 + R3() * 1.4;
+        const rx = 40 + ox + Math.sin(t * 0.07 + i) * 6, ry = -Math.max(0, (mt - 136 - R3() * 8)) * sp * 4 - Math.sin(t * 0.1 + i) * 4;
+        ctx.save(); ctx.translate(rx, ry); ctx.rotate(t * 0.05 * (i % 2 ? 1 : -1) + i);
+        ctx.fillStyle = '#1a0a0a'; ctx.strokeStyle = '#ff3a2a'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(-sz, -sz * 0.4); ctx.lineTo(-sz * 0.2, -sz); ctx.lineTo(sz, -sz * 0.3); ctx.lineTo(sz * 0.6, sz * 0.8); ctx.lineTo(-sz * 0.7, sz * 0.6); ctx.closePath(); ctx.fill(); ctx.stroke();
         ctx.restore();
       }
-      // 「滅殺」
-      if (q > 4) { const k = ease(clamp((q - 4) / 8, 0, 1)); ctx.save(); ctx.translate(VW / 2, VH / 2); ctx.scale(2.4 - 1.4 * k, 2.4 - 1.4 * k); ctx.globalAlpha = k * zout; ctx.rotate(-0.08); text('滅殺', 0, 0, 200, '#ffffff', 'center', '900', '#b00014', 24); ctx.restore(); }
+    }
+    // 影
+    const shadow = (x, y, w) => { ctx.save(); ctx.globalAlpha = 0.5 * Math.max(0.2, 1 + y / 400); ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(x, 2, w * Math.max(0.3, 1 + y / 500), 10, 0, 0, TAU); ctx.fill(); ctx.restore(); };
+    shadow(o.bx, o.by, 80); if (T && mt < fin + 12) shadow(o.vx, o.vy, 50);
+    // 相手
+    if (T && o.vx < MCAM.x + 1400) {
+      const vy = o.vy;
+      if (mt >= fin + 7) {   // ぶっ飛んでいく残像
+        for (let i = 3; i >= 1; i--) { const p = movieState(mt - i * 2); ctx.save(); ctx.globalAlpha = 0.18 * (4 - i); drawFigureAt(T, p.vx, p.vy, p.vsc, p.vp, -1, t, p.vrot); ctx.restore(); }
+      }
+      drawFigureAt(T, o.vx, vy, o.vsc, o.vp, -1, t, o.vrot);
+    }
+    // 王の残像（連打中・突進中）
+    const trail = (mt >= 20 && mt < 128) || (mt >= 158 && mt < fin + 4);
+    MCAM.hist.push({ x: o.bx, y: o.by, p: o.bp }); if (MCAM.hist.length > 6) MCAM.hist.shift();
+    if (trail) {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const hs = MCAM.hist;
+      for (let i = 0; i < hs.length - 1; i += 2) { ctx.globalAlpha = 0.14 + i * 0.03; drawFigureAt(F, hs[i].x - (mt >= 158 ? (hs.length - i) * 18 : 0), hs[i].y, 1, hs[i].p, 1, t); }
+      ctx.restore();
+    }
+    // 拳の軌跡（三日月のような光）
+    if (mt >= 20 && mt < 128) {
+      const n = Math.floor((mt - 20) / 9), f = mt - 20 - 9 * n, kind = MV_KIND[n];
+      if (f >= 3 && f <= 7) {
+        const a = 1 - (f - 3) / 5, sx = o.bx + 20, sy = o.by - 135, ex = o.vx - 40, ey = (o.vy || 0) - (kind === 'body' ? 80 : 120);
+        const cx = (sx + ex) / 2 + (kind === 'hook' ? 0 : 0), cy = (sy + ey) / 2 + (kind === 'hook' ? -110 : kind === 'upper' ? 120 : kind === 'spike' ? -160 : -30);
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+        for (const [w, col] of [[46, 'rgba(255,40,30,.35)'], [22, 'rgba(255,150,100,.6)'], [8, 'rgba(255,255,255,.95)']]) {
+          ctx.globalAlpha = a; ctx.strokeStyle = col; ctx.lineWidth = w * a; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(cx, cy, ex, ey); ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
+    // 王（本体）
+    ctx.save(); ctx.translate(o.bx, o.by); ctx.scale(o.bsx, o.bsy); drawFigureAt(F, 0, 0, 1, o.bp, 1, t); ctx.restore();
+    // ためている拳の光
+    if (mt >= 140 && mt < fin + 2) {
+      const k = clamp((mt - 140) / 20, 0, 1), r = 30 + k * 120, hx = o.bx - 70, hy = o.by - 120;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5 + k * 0.5;
+      ctx.drawImage(glowSprite('rgba(220,10,30,.95)'), hx - r, hy - r, r * 2, r * 2);
+      ctx.drawImage(glowSprite('rgba(255,220,170,.95)'), hx - r * 0.3, hy - r * 0.3, r * 0.6, r * 0.6);
+      for (let i = 0; i < 12; i++) { const a = t * 0.25 + i * TAU / 12, rr = (1 - ((t * 0.06 + i / 12) % 1)) * 200; ctx.drawImage(glowSprite('rgba(255,40,40,.9)'), hx + Math.cos(a) * rr - 6, hy + Math.sin(a) * rr - 6, 12, 12); }
+      // 渦をまく赤い気
+      ctx.strokeStyle = 'rgba(255,40,30,.7)'; ctx.lineWidth = 3;
+      for (let i = 0; i < 4; i++) { ctx.beginPath(); for (let j = 0; j < 30; j++) { const a = t * 0.15 + i * TAU / 4 + j * 0.25, rr = 200 * (1 - j / 30) * (0.4 + 0.6 * k); ctx.lineTo(o.bx + Math.cos(a) * rr, o.by - 110 + Math.sin(a) * rr * 0.6); } ctx.stroke(); }
+      ctx.restore();
+    }
+    // 当たったところの火花
+    if (mt >= 24 && mt < 132 && o.hitK > 0.15) {
+      const n = o.hit, kind = MV_KIND[n], ix = o.vx - 30, iy = o.vy - (kind === 'body' ? 85 : 120), R = srand(n * 13 + 5), r = (big ? 130 : 70) * (0.6 + 0.4 * o.hitK);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(ix, iy); ctx.rotate(R() * TAU);
+      ctx.globalAlpha = o.hitK * 0.75; ctx.drawImage(glowSprite('rgba(255,220,180,.95)'), -r * 0.8, -r * 0.8, r * 1.6, r * 1.6); ctx.globalAlpha = o.hitK;
+      for (let i = 0; i < 14; i++) { ctx.rotate(TAU / 14); ctx.fillStyle = i % 2 ? '#ffffff' : '#ff3a2a'; ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(r * (i % 2 ? 0.7 : 1.35) * (0.7 + R() * 0.6), 0); ctx.lineTo(0, 5); ctx.fill(); }
+      ctx.globalAlpha = o.hitK * 0.9; ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, r * (1.4 - o.hitK * 0.6), 0, TAU); ctx.stroke();
+      ctx.restore();
+    }
+    // 叩きつけ・着地の土煙
+    if (mt >= 127 && mt < 150) {
+      const q = mt - 127;
+      ctx.save();
+      for (let i = 0; i < 16; i++) { const s = i % 2 ? 1 : -1, d = q * (5 + (i % 4) * 3), r = 20 + q * 2 + (i % 3) * 8; ctx.globalAlpha = Math.max(0, 0.6 - q / 40); ctx.drawImage(puffSprite('rgba(40,20,20,.9)'), 340 + s * d - r, -r * 0.8 - (i % 5) * 6, r * 2, r * 2); }
+      ctx.restore();
+    }
+    // 最後の一撃
+    if (mt >= fin) {
+      const q = mt - fin, cx = 330, cy = -115;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 5; i++) { const r = (q - i * 3) * 34; if (r <= 0) continue; ctx.globalAlpha = Math.max(0, 1 - r / 900); ctx.strokeStyle = i % 2 ? '#ffffff' : '#ff2030'; ctx.lineWidth = 18 * Math.max(0, 1 - r / 900) + 1; ctx.beginPath(); ctx.ellipse(cx, cy, r, r * (i % 2 ? 1 : 0.45), 0, 0, TAU); ctx.stroke(); }
+      ctx.globalAlpha = Math.max(0, 1 - q / 26); const r = 160 + q * 18; ctx.drawImage(glowSprite('rgba(255,240,220,.95)'), cx - r, cy - r, r * 2, r * 2);
+      // 突き抜ける衝撃の円すい
+      ctx.globalAlpha = Math.max(0, 1 - q / 20);
+      for (let i = 0; i < 18; i++) { const a = (i / 18 - 0.5) * 1.1, len = 200 + q * 60 + (i % 3) * 80; ctx.strokeStyle = i % 2 ? '#fff' : '#ff4030'; ctx.lineWidth = 5; line(cx + Math.cos(a) * 40, cy + Math.sin(a) * 40, cx + Math.cos(a) * len, cy + Math.sin(a) * len); }
+      const R = srand(q * 31 + 7);
+      for (let b = 0; b < 9; b++) { let x = cx, y = cy; const a = R() * TAU; ctx.beginPath(); ctx.moveTo(x, y); for (let j = 0; j < 8; j++) { x += Math.cos(a) * 40 + (R() - 0.5) * 36; y += Math.sin(a) * 40 + (R() - 0.5) * 36; ctx.lineTo(x, y); } ctx.globalAlpha = Math.max(0, 1 - q / 24); ctx.strokeStyle = '#ff2a2a'; ctx.lineWidth = 5; ctx.stroke(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke(); }
+      ctx.restore();
+      // 飛んでいった先できらり
+      if (q > 30) { const k = clamp((q - 30) / 6, 0, 1) * clamp((44 - q) / 6, 0, 1); if (k > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = k; const sx = o.vx, sy = o.vy - 40; ctx.drawImage(glowSprite('rgba(255,255,255,.95)'), sx - 60, sy - 60, 120, 120); star(sx, sy, 34 * k, '#ffffff'); ctx.restore(); } }
+    }
+    ctx.restore();   // ワールドおわり
+    // ---- 画面に固定するもの ----
+    // 集中線（連打・突進）
+    if ((mt >= 20 && mt < 132) || (mt >= 158 && mt < fin + 10)) {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.55;
+      const dash = mt >= 158;
+      for (let i = 0; i < 44; i++) {
+        ctx.strokeStyle = i % 3 ? 'rgba(255,255,255,.7)' : 'rgba(255,60,60,.8)'; ctx.lineWidth = rnd(1, 4);
+        if (dash) { const y = rnd(0, VH), x = rnd(-200, VW); line(x, y, x + rnd(200, 600), y); }
+        else { const a = rnd(0, TAU), r0 = rnd(220, 340); line(VW / 2 + Math.cos(a) * r0, VH * 0.45 + Math.sin(a) * r0, VW / 2 + Math.cos(a) * 1500, VH * 0.45 + Math.sin(a) * 1500); }
+      }
+      ctx.restore();
+    }
+    // 大きな当たりの一瞬のひかり
+    if (big && o.hitK > 0.7) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (o.hitK - 0.7) * 2; ctx.fillStyle = '#ff6040'; ctx.fillRect(0, 0, VW, VH); ctx.restore(); }
+    // 文字
+    if (mt < 30) { const q = ease(clamp(mt / 10, 0, 1)); ctx.save(); ctx.globalAlpha = q * Math.min(1, (30 - mt) / 8); ctx.translate(VW / 2 + (1 - q) * 300, 110); ctx.rotate(-0.06); ctx.scale(1.8 - 0.8 * q, 1.8 - 0.8 * q); text('覇王無双撃', 0, 0, 84, '#ffffff', 'center', '900', '#8a0010', 14); ctx.restore(); }
+    if (mt >= 24 && mt < 132) {   // ヒット数
+      const n = o.hit + 1, pop = 1 + o.hitK * 0.5;
+      ctx.save(); ctx.translate(VW - 150, 150); ctx.rotate(0.08); ctx.scale(pop, pop);
+      text(n + '', 0, 0, 96, '#ffffff', 'center', '900', '#b00014', 12); text('HIT', 0, 56, 34, '#ffd34e', 'center', '900', '#000', 6); ctx.restore();
+    }
+    if (mt >= 140 && mt < fin) { const q = ease(clamp((mt - 140) / 8, 0, 1)); ctx.save(); ctx.globalAlpha = q; ctx.translate(VW / 2 + rnd(-3, 3), VH - 110 + rnd(-3, 3)); ctx.scale(1.4 - 0.4 * q, 1.4 - 0.4 * q); text('覇王・終撃', 0, 0, 70, '#ffffff', 'center', '900', '#b00014', 12); ctx.restore(); }
+    if (mt >= fin) {
+      const q = mt - fin;
+      // 画面のひび（画面そのものが割れる）
+      if (q < 34) {
+        const R2s = srand(4242), cx = VW * 0.62, cy = VH * 0.42;
+        ctx.save(); ctx.globalAlpha = Math.max(0, 1 - q / 34); ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 3;
+        for (let b = 0; b < 14; b++) { let x = cx, y = cy; const a = b / 14 * TAU + R2s() * 0.3; ctx.beginPath(); ctx.moveTo(x, y); for (let j = 0; j < 7; j++) { x += Math.cos(a + (R2s() - 0.5) * 0.7) * 110; y += Math.sin(a + (R2s() - 0.5) * 0.7) * 110; ctx.lineTo(x, y); } ctx.stroke(); }
+        ctx.restore();
+      }
+      if (q > 7) { const k = ease(clamp((q - 7) / 7, 0, 1)); ctx.save(); ctx.translate(VW / 2 + rnd(-2, 2) * (1 - k), VH / 2); ctx.scale(3 - 2 * k, 3 - 2 * k); ctx.globalAlpha = k * zout; ctx.rotate(-0.08); text('滅殺', 0, 0, 200, '#ffffff', 'center', '900', '#b00014', 24); ctx.restore(); }
     }
     // 色の反転（最後の一撃が当たった瞬間）
     if (inv) {
@@ -6501,7 +6726,7 @@ SC_.battle = (o) => {
       if (mt >= fin + 3) { ctx.save(); ctx.globalCompositeOperation = 'saturation'; ctx.fillStyle = '#808080'; ctx.fillRect(0, 0, VW, VH); ctx.restore(); }
     }
     // 上下の黒い帯（映画のような画面）
-    const bar = 70 * zin * zout; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, bar); ctx.fillRect(0, VH - bar, VW, bar);
+    const bar = 70 * zin * zout; ctx.globalAlpha = 1; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, bar); ctx.fillRect(0, VH - bar, VW, bar);
     ctx.restore();
   }
   // ---- 切り札のカットイン（画面全体） ----
