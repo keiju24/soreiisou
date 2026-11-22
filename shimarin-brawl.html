@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>大乱交しまりんブラザーズ</title>
 <style>
+/* 一瑚の漢字演出用の筆文字：Yuji Syuku（SIL Open Font License）から使う字だけを切り出したもの */
+@font-face { font-family: 'KanjiBrush'; src: url(data:font/woff2;base64,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) format('woff2'); font-display: block; }
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   #game { width: 100%; height: 100%; }
   #game canvas { display: block; }
@@ -927,15 +929,18 @@ Object.assign(IMOVES, {
       [20, { fa: { s: 0.1, e: 0 }, ba: { s: -0.1, e: 0 }, fl: { h: 0.7, k: -1.6 }, bl: { h: 0.5, k: -1.4 } }], [40, {}]],
     hb: [HB(12, 16, 0, 12, 32, 13, -80, 6, 0.8)] },
   // 通常必殺：次元斬（居合の構えから抜きはなち、狙った場所の空間そのものを切り刻む）
-  nb: { len: 54, keys: [[0, {}],
-      [6, { by: 16, lean: 0.35, hd: 0.1, fa: { s: -0.4, e: 1.7 }, ba: { s: -0.6, e: 1.5 }, fl: { h: 1.05, k: -0.9 }, bl: { h: -0.85, k: -0.3 } }],
-      [16, { by: 18, lean: 0.4, hd: 0.15, fa: { s: -0.45, e: 1.75 }, ba: { s: -0.65, e: 1.55 }, fl: { h: 1.1, k: -1.0 }, bl: { h: -0.9, k: -0.3 } }],
-      [18, { by: 12, lean: 0.6, fa: { s: 2.0, e: 0 }, ba: { s: -2.3, e: 0 }, fl: { h: 1.25, k: -0.5 }, bl: { h: -1.25, k: 0 } }],
-      [44, { by: 12, lean: 0.6, fa: { s: 2.0, e: 0 }, ba: { s: -2.3, e: 0 }, fl: { h: 1.25, k: -0.5 }, bl: { h: -1.25, k: 0 } }], [54, {}]],
+  nb: { len: 56, sheathe: [[0, 16], [39, 56]], keys: [[0, {}],
+      [6, { by: 26, lean: 0.6, hd: 0.25, fa: { s: 0.35, e: 2.3 }, ba: { s: -0.15, e: 1.9 }, fl: { h: 1.3, k: -1.35 }, bl: { h: -1.05, k: -0.55 } }],
+      [16, { by: 30, lean: 0.68, hd: 0.3, fa: { s: 0.35, e: 2.35 }, ba: { s: -0.15, e: 1.95 }, fl: { h: 1.35, k: -1.45 }, bl: { h: -1.1, k: -0.6 } }],
+      [18, { by: 16, lean: 0.8, hd: 0.05, fa: { s: 2.35, e: 0 }, ba: { s: -1.5, e: 0.5 }, fl: { h: 1.45, k: -0.55 }, bl: { h: -1.4, k: 0 } }],
+      [22, { by: 14, lean: 0.55, hd: -0.05, fa: { s: 2.95, e: 0.15 }, ba: { s: -1.4, e: 0.6 }, fl: { h: 1.4, k: -0.5 }, bl: { h: -1.35, k: 0 } }],
+      [33, { by: 16, lean: 0.4, hd: 0.15, fa: { s: 1.0, e: 0 }, ba: { s: -0.7, e: 1.3 }, fl: { h: 1.2, k: -0.6 }, bl: { h: -1.2, k: -0.1 } }],
+      [38, { by: 14, lean: 0.25, hd: 0.3, fa: { s: 0.4, e: 2.3 }, ba: { s: -0.15, e: 1.9 }, fl: { h: 1.0, k: -0.5 }, bl: { h: -1.0, k: -0.1 } }],
+      [48, { by: 10, lean: 0.15, hd: 0.35, fa: { s: 0.4, e: 2.3 }, ba: { s: -0.15, e: 1.9 }, fl: { h: 0.8, k: -0.4 }, bl: { h: -0.8, k: -0.1 } }], [56, {}]],
     hb: [],
     upd(F, f, c, B) {
-      if (!F.ground && f < 44) F.vy = Math.min(F.vy, 0.8);
-      if (f === 3) Snd.sheath();
+      if (!F.ground && f < 46) F.vy = Math.min(F.vy, 0.8);
+      if (f >= 6 && f < 16 && f % 2 === 0) B.parts.push({ x: F.x + F.dir * rnd(-60, 60), y: F.y - rnd(0, 150), vx: -F.dir * rnd(0.5, 1.5), vy: rnd(-2.5, -1), life: 26, max: 26, col: 'rgba(160,190,255,.7)', size: rnd(3, 6), g: -0.02, spark: 1 });
       if (f === 10) {   // ねらう場所：前方にいる一番近い相手、いなければ少し先
         let best = null, bd = 1e9;
         for (const T of B.fs) { if (!T.alive || !isFoe(F, T) || T.state === 'respawn') continue; const dx = (T.x - F.x) * F.dir, dy = Math.abs(T.y - F.y); if (dx > -20 && dx < 560 && dy < 280 && dx < bd) { bd = dx; best = T; } }
@@ -962,7 +967,8 @@ Object.assign(IMOVES, {
         for (let i = 0; i < 2; i++) B.parts.push({ x: Z.x + rnd(-50, 50), y: Z.y + rnd(-50, 50), cut: 1, ang: rnd(0, TAU), len: rnd(160, 260), w: rnd(4, 8), life: 9, max: 9, col: i ? '#ffffff' : '#9fc4ff' });
         hitZone({ dmg: 1.3, ang: 90, base: 1, gr: 0 }, false); Snd.katanaSwing(0.4);
       }
-      if (f === 40) {   // 空間ごと断つ
+      if (f === 39) Snd.sheath();
+      if (f === 40) {   // 納刀の「チャキッ」と同時に、空間ごと断つ
         for (let i = 0; i < 3; i++) B.parts.push({ x: Z.x, y: Z.y, rift: 1, ang: -0.6 + i * 0.6, len: 300, w: 18, life: 26, max: 26, seed: f * 7 + i });
         B.parts.push({ x: Z.x, y: Z.y - 10, kanji: '斬', size: 150, rot: -0.1, life: 44, max: 44 });
         B.parts.push({ x: Z.x, y: Z.y, shock: 1, r: 30, vr: 26, life: 20, max: 20, col: '#cfe0ff', w: 14 });
@@ -971,20 +977,22 @@ Object.assign(IMOVES, {
       }
     } },
   // 横必殺：神速斬（一瞬で横へかけぬけ、止まった瞬間に通りすぎた相手が切り刻まれる）
-  sb: { len: 52, slide: true, intang: [7, 16], keys: [[0, {}],
-      [6, { by: 18, lean: 0.55, fa: { s: -0.5, e: 1.4 }, ba: { s: -0.8, e: 1.2 }, fl: { h: 1.1, k: -1.4 }, bl: { h: -0.6, k: -0.7 } }],
-      [8, { by: 20, lean: 0.85, fa: { s: 1.85, e: 0 }, ba: { s: -2.0, e: 0 }, fl: { h: 1.3, k: -0.6 }, bl: { h: -1.3, k: -0.2 } }],
-      [16, { by: 20, lean: 0.85, fa: { s: 1.85, e: 0 }, ba: { s: -2.0, e: 0 }, fl: { h: 1.3, k: -0.6 }, bl: { h: -1.3, k: -0.2 } }],
-      [21, { by: 14, lean: 0.35, fa: { s: 0.4, e: 1.9 }, ba: { s: -1.9, e: 0.1 }, fl: { h: 1.0, k: -0.9 }, bl: { h: -1.0, k: -0.3 } }],
-      [40, { by: 14, lean: 0.35, fa: { s: 0.4, e: 1.9 }, ba: { s: -1.9, e: 0.1 }, fl: { h: 1.0, k: -0.9 }, bl: { h: -1.0, k: -0.3 } }],
-      [44, { by: 6, lean: 0.1, fa: { s: -0.3, e: 1.6 }, ba: { s: -0.6, e: 1.5 } }], [52, {}]],
+  sb: { len: 54, slide: true, intang: [7, 16], hide: [8, 15], sheathe: [[0, 7], [31, 54]], keys: [[0, {}],
+      [6, { by: 28, lean: 0.75, hd: 0.3, fa: { s: 0.35, e: 2.3 }, ba: { s: -0.15, e: 1.9 }, fl: { h: 1.4, k: -1.5 }, bl: { h: -1.15, k: -0.6 } }],
+      [8, { by: 22, lean: 0.95, fa: { s: 1.9, e: 0 }, ba: { s: -2.0, e: 0 }, fl: { h: 1.4, k: -0.6 }, bl: { h: -1.4, k: -0.2 } }],
+      [16, { by: 22, lean: 0.95, fa: { s: 1.9, e: 0 }, ba: { s: -2.0, e: 0 }, fl: { h: 1.4, k: -0.6 }, bl: { h: -1.4, k: -0.2 } }],
+      [18, { by: 40, lean: 0.55, hd: 0.35, fa: { s: -2.35, e: 0.05 }, ba: { s: -2.0, e: 0.1 }, fl: { h: 1.55, k: -1.95 }, bl: { h: -0.35, k: -2.3 } }],
+      [27, { by: 40, lean: 0.55, hd: 0.4, fa: { s: -2.35, e: 0.05 }, ba: { s: -2.0, e: 0.1 }, fl: { h: 1.55, k: -1.95 }, bl: { h: -0.35, k: -2.3 } }],
+      [31, { by: 12, lean: 0.2, hd: 0.3, fa: { s: 0.4, e: 2.3 }, ba: { s: -0.15, e: 1.9 }, fl: { h: 0.9, k: -0.5 }, bl: { h: -0.9, k: -0.1 } }],
+      [46, { by: 10, lean: 0.1, hd: 0.35, fa: { s: 0.4, e: 2.3 }, ba: { s: -0.15, e: 1.9 }, fl: { h: 0.8, k: -0.4 }, bl: { h: -0.8, k: -0.1 } }], [54, {}]],
     hb: [],
     upd(F, f, c, B) {
       if (f < 7) { F.sbT = []; F.vx *= 0.7; if (!F.ground) { F.vy *= 0.5; return false; } return; }
       if (f === 7) { Snd.dashCut(); B.parts.push({ x: F.x, y: F.y - 70, flare: 1, r: 60, life: 10, max: 10, col: '#ffb3c7', rot: 0, n: 6 }); }
       if (f <= 16) {
         F.vx = 27 * F.dir;
-        B.parts.push({ x: F.x - F.dir * 60, y: F.y - 62, cut: 1, ang: 0, len: 150, w: 7, life: 10, max: 10, col: '#ff7aa2' });
+        B.parts.push({ x: F.x - F.dir * 60, y: F.y - 62, cut: 1, ang: 0, len: 190, w: 12, life: 12, max: 12, col: '#9fc4ff' });
+        B.parts.push({ x: F.x - F.dir * 40, y: F.y - 100, cut: 1, ang: 0, len: 120, w: 5, life: 10, max: 10, col: '#ffffff' });
         for (const T of B.fs) {   // かけぬけた相手を覚えて、その場で止める
           if (!T.alive || !isFoe(F, T) || T.inv > 0 || F.sbT.includes(T) || T.state === 'respawn') continue;
           if (Math.abs(T.x - F.x) < 80 && Math.abs(T.y - F.y) < 120) { F.sbT.push(T); T.hitlag = Math.max(T.hitlag, 40); B.parts.push({ x: T.x, y: T.y - 70, flare: 1, r: 36, life: 8, max: 8, col: '#ffffff', rot: 0, n: 4 }); }
@@ -993,33 +1001,34 @@ Object.assign(IMOVES, {
         return;
       }
       F.vx *= 0.6;
-      if (f === 18) Snd.sheath();
-      // 止まった瞬間、相手に斬撃が走る
-      const cuts = [21, 24, 27, 30], ang = [-0.6, 0.7, -1.4, 0.15];
+      if (f === 30) Snd.sheath();
+      // 納刀の「チャキッ」と同時に、通りすぎた相手に斬撃が走る
+      const cuts = [31, 33, 35, 37], ang = [-0.6, 0.7, -1.4, 0.15];
       const ci = cuts.indexOf(f);
-      if (F.sbT.length && (ci >= 0 || f === 35)) {
-        const fin = f === 35;
+      if (F.sbT.length && (ci >= 0 || f === 41)) {
+        const fin = f === 41;
         for (const T of F.sbT) {
           if (!T.alive) continue;
           const y = T.y - 72 * T.ch.scale;
           B.parts.push({ x: T.x, y, cut: 1, ang: fin ? -0.35 : ang[ci], len: fin ? 300 : 190, w: fin ? 14 : 8, life: fin ? 18 : 12, max: fin ? 18 : 12, col: '#ff4f86' });
-          if (fin) B.parts.push({ x: T.x, y, cut: 1, ang: 1.2, len: 240, w: 10, life: 18, max: 18, col: '#ffd0dc' });
+          if (fin) { B.parts.push({ x: T.x, y, cut: 1, ang: 1.2, len: 240, w: 10, life: 18, max: 18, col: '#ffd0dc' }); B.parts.push({ x: T.x, y: y - 20, kanji: '断', size: 130, rot: 0.08, life: 40, max: 40 }); }
           T.hitlag = 0; T.inv = 0;
           B.applyHit(F, T, fin ? { dmg: 7, ang: 40, base: 7.5, gr: 0.95 } : { dmg: 2, ang: 80, base: 2, gr: 0.02 }, 1, sgn(T.x - F.x) || -F.dir, false, T.x, y);
           if (!fin) T.hitlag = Math.max(T.hitlag, 6);
         }
         if (fin) { Snd.iai(); B.shake = Math.max(B.shake, 12); } else Snd.katanaSwing(0.6);
       }
-      if (!F.ground && f < 36) { F.vy = Math.min(F.vy, 0.5); }
+      if (!F.ground && f < 42) { F.vy = Math.min(F.vy, 0.5); }
     } },
   // 上必殺：つむじ双刃（回転しながら上昇、連続ヒット）
-  ub: { len: 46, air: true, landLag: 18, after: 'helpless', sfx: 4, keys: [[0, { by: 12 }],
-      [4, { rot: 0, fa: { s: 1.7, e: 0 }, ba: { s: -1.7, e: 0 }, fl: { h: 0.2, k: -0.4 }, bl: { h: -0.2, k: -0.4 } }],
-      [26, { rot: -3 * TAU, fa: { s: 1.7, e: 0 }, ba: { s: -1.7, e: 0 }, fl: { h: 0.2, k: -0.4 }, bl: { h: -0.2, k: -0.4 } }],
+  ub: { len: 46, air: true, landLag: 18, after: 'helpless', sfx: 4, keys: [[0, { by: 26, lean: 0.4, fa: { s: -0.6, e: 1.2 }, ba: { s: -0.9, e: 1.0 }, fl: { h: 1.3, k: -1.8 }, bl: { h: -0.5, k: -1.2 } }],
+      [4, { rot: 0, lean: -0.1, fa: { s: 2.2, e: 0 }, ba: { s: -2.2, e: 0 }, fl: { h: 1.2, k: -2.0 }, bl: { h: 0.7, k: -1.8 } }],
+      [26, { rot: -3 * TAU, lean: -0.1, fa: { s: 2.2, e: 0 }, ba: { s: -2.2, e: 0 }, fl: { h: 1.2, k: -2.0 }, bl: { h: 0.7, k: -1.8 } }],
       [46, { rot: -3 * TAU }]],
     hb: [HB(4, 21, 0, -74, 74, 3, 90, 3, 0.05, { auto: 1 }), HB(23, 26, 0, -90, 74, 6, 80, 7, 0.75, { auto: 1 })],
     upd(F, f, c) {
-      if (f === 4) { F.vy = -16.5; F.ground = null; Snd.jumpC(F.ch); }
+      if (f === 4) { F.vy = -16.5; F.ground = null; Snd.jumpC(F.ch); BT.parts.push({ x: F.x, y: F.y, shock: 1, r: 20, vr: 14, life: 14, max: 14, col: '#9fc4ff', w: 8 }); }
+      if (f > 4 && f < 26 && f % 2 === 0) BT.parts.push({ x: F.x, y: F.y - 74, cut: 1, ang: (f * 0.9) % TAU, len: 190, w: 8, life: 8, max: 8, col: f % 4 ? '#9fc4ff' : '#ffffff' });
       if (f > 4 && f < 27) F.vx = c.hx * 3.5;
       if ((f % 5 === 0 && f < 22) || f === 23) F.hitIds.clear();
     } },
@@ -1057,7 +1066,7 @@ Object.assign(IMOVES, {
         F.hitIds.clear(); Snd.katanaSwing(f === 27 ? 1 : 0.5);
         const x = F.x + F.dir * 62, y = F.y - 74, fin = f === 27;
         B.parts.push({ x, y, cut: 1, ang: fin ? -0.3 * F.dir : [0.8, -0.7, 1.5, 0.2][[10, 13, 17, 20].indexOf(f)], len: fin ? 280 : 180, w: fin ? 13 : 8, life: fin ? 18 : 12, max: fin ? 18 : 12, col: '#ff4f86' });
-        if (fin) { B.parts.push({ x, y, cut: 1, ang: 1.25, len: 220, w: 9, life: 18, max: 18, col: '#ffd0dc' }); Snd.iai(); B.shake = Math.max(B.shake, 12); }
+        if (fin) { B.parts.push({ x, y, cut: 1, ang: 1.25, len: 220, w: 9, life: 18, max: 18, col: '#ffd0dc' }); B.parts.push({ x, y: y - 20, kanji: '閃', size: 120, rot: -0.08, life: 38, max: 38 }); Snd.iai(); B.shake = Math.max(B.shake, 12); }
       }
     } },
 });
@@ -3215,6 +3224,29 @@ function drawFace(x, y, h, ang, glow, t, ch, sx = 1) {
   }
   ctx.restore();
 }
+// 腰の鞘（2本）。full のときは刀が納まっていて柄とつばが見える
+function drawSaya(J, P, full) {
+  const h = J.hip;
+  for (let i = 1; i >= 0; i--) {
+    const a = Math.PI - 0.42 + P.lean * 0.4 + i * 0.16, dx = Math.cos(a), dy = Math.sin(a);
+    const b = { x: h.x + 10 - i * 3, y: h.y - 6 + i * 6 }, e = { x: b.x + dx * 78, y: b.y + dy * 78 };
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#06060a'; ctx.lineWidth = 9; line(b.x, b.y, e.x, e.y);
+    ctx.strokeStyle = i ? '#241824' : '#331f2e'; ctx.lineWidth = 5.5; line(b.x, b.y, e.x, e.y);
+    ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = 1.5; line(b.x - dy * 1.5, b.y + dx * 1.5, e.x - dy * 1.5, e.y + dx * 1.5);
+    ctx.strokeStyle = '#c9a24a'; ctx.lineWidth = 6; line(e.x - dx * 6, e.y - dy * 6, e.x, e.y);           // こじり
+    ctx.strokeStyle = '#c9a24a'; ctx.lineWidth = 6.5; line(b.x + dx * 2, b.y + dy * 2, b.x + dx * 6, b.y + dy * 6);   // こいぐち
+    if (full) {   // つかとつば
+      const hx = b.x - dx * 24, hy = b.y - dy * 24;
+      ctx.strokeStyle = '#06060a'; ctx.lineWidth = 8.5; line(b.x, b.y, hx, hy);
+      ctx.strokeStyle = '#f4f1ea'; ctx.lineWidth = 5; line(b.x, b.y, hx, hy);
+      ctx.strokeStyle = '#141820'; ctx.lineWidth = 1.6;
+      for (let u = 4; u < 22; u += 4) { const q = { x: b.x - dx * u, y: b.y - dy * u }; line(q.x - dy * 2.4 - dx * 1.2, q.y + dx * 2.4 - dy * 1.2, q.x + dy * 2.4 + dx * 1.2, q.y - dx * 2.4 + dy * 1.2); }
+      ctx.fillStyle = '#06060a'; ctx.beginPath(); ctx.ellipse(b.x, b.y, 3.6, 8.5, a, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#c9a24a'; ctx.beginPath(); ctx.ellipse(b.x, b.y, 2.2, 6.6, a, 0, TAU); ctx.fill();
+    }
+  }
+}
 function drawSword(h, a, len) {
   len *= 1.18;
   const dx = Math.sin(a), dy = Math.cos(a), nx = dy, ny = -dx;   // n：刃の背の向き（反りの外側）
@@ -4034,7 +4066,7 @@ function headBack(J, hc, ha, C, CH, t, BD) {
 function headFront(hc, ha, fh, C, CH, t, fsx = 1) {
   ctx.save(); ctx.translate(hc.x, hc.y); ctx.rotate(ha); ctx.scale(fsx, 1);
   const k = fh / 66;
-  if (CH.swords) {   // 赤いはちまき：うしろに2本の布がなびく
+  if (CH.hachimaki) {   // 赤いはちまき（いまは使っていない）
     ctx.fillStyle = '#d7191f'; ctx.strokeStyle = '#14121f'; ctx.lineWidth = 2.2;
     ctx.beginPath(); ctx.rect(-25 * k, -22 * k, 50 * k, 7 * k); ctx.fill(); ctx.stroke();
     for (let i = 0; i < 2; i++) {
@@ -4064,6 +4096,8 @@ function headFront(hc, ha, fh, C, CH, t, fsx = 1) {
   ctx.restore();
 }
 // ---- 一瑚の演出：漢字（墨の一筆つき）・次元の裂け目・次元斬の球（ふつうの合成でかく）----
+const KANJI_FONT = '"KanjiBrush", "Yu Mincho", "Hiragino Mincho ProN", serif';
+try { document.fonts && document.fonts.load('100px "KanjiBrush"', '斬'); } catch (e) {}
 function drawFxDark(p) {
   const k = p.life / p.max, q = 1 - k;
   if (p.kanji) {
@@ -4074,8 +4108,10 @@ function drawFxDark(p) {
     ctx.moveTo(-S * 0.75, S * 0.12); ctx.quadraticCurveTo(-S * 0.2, -S * 0.32, S * 0.8, -S * 0.18); ctx.lineTo(S * 0.72, S * 0.02); ctx.quadraticCurveTo(-S * 0.1, -S * 0.08, -S * 0.7, S * 0.3); ctx.closePath(); ctx.fill();
     ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a * 0.6; ctx.drawImage(glowSprite('rgba(255,40,60,.9)'), -S * 0.8, -S * 0.8, S * 1.6, S * 1.6);
     ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = a;
-    text(p.kanji, 3, S * 0.06 + 3, S, '#000000', 'center', '900');
-    text(p.kanji, 0, S * 0.06, S, '#ffffff', 'center', '900', p.col || '#c8001e', Math.max(4, S * 0.09));
+    ctx.font = `${S}px ${KANJI_FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(5, S * 0.11); ctx.strokeStyle = '#000'; ctx.strokeText(p.kanji, 4, S * 0.06 + 4);
+    ctx.lineWidth = Math.max(4, S * 0.075); ctx.strokeStyle = p.col || '#c8001e'; ctx.strokeText(p.kanji, 0, S * 0.06);
+    ctx.fillStyle = '#ffffff'; ctx.fillText(p.kanji, 0, S * 0.06);
     ctx.restore(); return;
   }
   if (p.rift) {   // 空間の裂け目：黒い切れ目が開いて、閉じる
@@ -4428,6 +4464,7 @@ function drawFighter(F, t) {
   const SW = CH.swords, SL = 60;
   if (!F.trail) F.trail = { f: [], b: [] };
   const swinging = SW && F.state === 'move' && F.move.hb.length;
+  const sheathed = SW && F.state === 'move' && F.move.sheathe && F.move.sheathe.some(r => F.mf >= r[0] && F.mf <= r[1]);
   if (!swinging) { F.trail.f.length = 0; F.trail.b.length = 0; }
   updSwoosh(F, J);
   // ---- 顔の向き：移動に合わせて上下に傾き、振り向くと横向きになって回る ----
@@ -4453,7 +4490,7 @@ function drawFighter(F, t) {
     });
   }
   if (CH.arms4) { limbC(J.ba2, 4.8, 4.2, 3.6, C.dark); glove(J.ba2, hand); }
-  if (SW) { if (swinging) drawTrail(F.trail.b); const tp = drawSword(J.ba[2], P.ba.s + P.ba.e, SL); if (swinging) { F.trail.b.push(tp); if (F.trail.b.length > 7) F.trail.b.shift(); } }
+  if (SW && !sheathed) { if (swinging) drawTrail(F.trail.b); const tp = drawSword(J.ba[2], P.ba.s + P.ba.e, SL); if (swinging) { F.trail.b.push(tp); if (F.trail.b.length > 7) F.trail.b.shift(); } }
   drawArm(J.ba, BD, CH, C, false); glove(J.ba, hand);
   // 腰（骨盤）と前の脚
   ctx.fillStyle = '#14121f'; ctx.beginPath(); ctx.ellipse(J.hip.x, J.hip.y + 2, BD.hiW + 0.5, 10.5, P.lean, 0, TAU); ctx.fill();
@@ -4464,6 +4501,7 @@ function drawFighter(F, t) {
   const hc = { x: J.neck.x + Math.sin(ha) * BD.head + (F.state === 'run' ? 3 : 0), y: J.neck.y - Math.cos(ha) * BD.head };
   neckPart(J.neck, { x: J.neck.x + Math.sin(ha) * 14, y: J.neck.y - Math.cos(ha) * 14 }, hand);
   drawTorso(J, P, C, CH, t, BD);
+  if (SW) drawSaya(J, P, sheathed);
   headBack(J, hc, ha, C, CH, t, BD);
   if (CH.arms4) { limbC(J.fa2, 4.8, 4.2, 3.6, C.main); glove(J.fa2, hand); }
   let glow = 0.25;
@@ -4484,7 +4522,7 @@ function drawFighter(F, t) {
     ctx.restore();
   }
   drawArm(J.fa, BD, CH, C, true);
-  if (SW) { if (swinging) drawTrail(F.trail.f); const tp = drawSword(J.fa[2], P.fa.s + P.fa.e, SL); if (swinging) { F.trail.f.push(tp); if (F.trail.f.length > 7) F.trail.f.shift(); } }
+  if (SW && !sheathed) { if (swinging) drawTrail(F.trail.f); const tp = drawSword(J.fa[2], P.fa.s + P.fa.e, SL); if (swinging) { F.trail.f.push(tp); if (F.trail.f.length > 7) F.trail.f.shift(); } }
   if (CH.bow) drawBow(J, P, F);
   if (CH.voice) drawMic(J, P);
   // ヘンリー：走ると足元に電光が散る
