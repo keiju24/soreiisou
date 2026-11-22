@@ -189,6 +189,16 @@ const Snd = {
   fsStart() { this.tone(110, 1.0, 'sawtooth', 0.08, 440); this.noise(0.8, 0.2, 3000); [392, 523, 659, 784].forEach((f, i) => setTimeout(() => this.tone(f, 0.35, 'square', 0.05), 150 + i * 90)); },
   ledge() { this.tone(520, 0.05, 'square', 0.05); this.noise(0.05, 0.08, 2500); },
   warp() { this.tone(1300, 0.22, 'sine', 0.06, 180); this.noise(0.15, 0.06, 4000); },
+  beamCharge() {   // ためきった「キィィン」
+    this.osc('sine', 880, 0.5, 0.08, 1760); this.osc('triangle', 1320, 0.4, 0.05, 2640, 0.05);
+    this.nz(0.4, 0.08, 'bandpass', 5000, 3, 0, 9000);
+  },
+  beamBlast() {   // ビームの発射「ズゴォォォン」
+    this.osc('sine', 95, 1.6, 0.32, 28); this.osc('sawtooth', 240, 1.3, 0.1, 70); this.osc('square', 480, 0.9, 0.04, 120);
+    this.nz(1.5, 0.35, 'bandpass', 1600, 0.8, 0, 260, 6); this.nz(0.25, 0.3, 'highpass', 4000, 0.7);
+    this.osc('sawtooth', 1800, 1.0, 0.035, 500, 0.05);
+    this.koBoom();
+  },
   bow(k = 0) {   // 弦が鳴る「ビィン」＋矢が空気を切る音
     this.osc('triangle', 180 + k * 60, 0.22 + k * 0.1, 0.09, 95);
     this.osc('sine', 360 + k * 120, 0.16, 0.05, 200);
@@ -1754,6 +1764,56 @@ makeGrabs(CMOVES, { reach: 1, hv: [52, -8],
   for (const k of ['ftilt', 'utilt', 'dtilt', 'dash', 'fsmash', 'usmash', 'dsmash', 'nair', 'fair', 'bair', 'uair', 'dair']) AMOVES[k].K = AMOVES[k].keys.map(([f, o]) => [f, mk(o)]);
 }
 
+
+// ---- 恵授：横必殺「疾風斬」（弓の刃で斬りながら横へ突進）・必殺は最大ためで極太ビーム ----
+{
+  const RUSH = { by: 10, lean: 0.85, fa: A_(1.57, 0), ba: A_(-1.2, 0.3), fl: G_(1.4, -0.3), bl: G_(-1.1, -0.2) };
+  Object.assign(AMOVES, {
+    sb: { len: 42, slide: true, keys: [[0, {}], [5, { by: 18, lean: 0.6, fa: A_(1.2, 0.6), ba: A_(0.6, 1.2), fl: G_(1.1, -1.6), bl: G_(-0.4, -1.2) }],
+        [8, RUSH], [18, RUSH], [22, { by: -4, lean: -0.2, hd: -0.3, fa: A_(3.0, 0), ba: A_(-1.5, 0.3), fl: G_(0.5, -0.3), bl: G_(-0.5, -0.2) }], [42, {}]],
+      hb: [HB(7, 18, 52, -70, 42, 3, 25, 3, 0.05), HB(21, 24, 50, -110, 56, 9, 65, 8, 0.95)],
+      upd(F, f) {
+        const sc = F.ch.scale;
+        if (f === 6) { Snd.swingC(F.ch, 10); BT.dust(F.x, F.y, 10); }
+        if (f < 6) { F.vx *= 0.7; if (!F.ground) F.vy = Math.min(F.vy, 0.5); return; }
+        if (f <= 18) {
+          F.vx = 15 * F.dir; if (f % 4 === 2) F.hitIds.clear();
+          BT.parts.push({ x: F.x - F.dir * 30 * sc, y: F.y - rnd(40, 130) * sc, vx: -F.dir * rnd(12, 22), vy: 0, life: 10, max: 10, streak: 1, col: f % 2 ? '#ffe680' : '#ffffff', size: rnd(2, 4), g: 0 });
+          if (f % 2 === 0) BT.parts.push({ x: F.x + F.dir * 40 * sc, y: F.y - 75 * sc, slash: 1, rot: rnd(-0.4, 0.4), len: 110, life: 7, max: 7, col: '#ffd34e' });
+          if (f % 3 === 0) BT.parts.push({ x: F.x - F.dir * 20, y: F.y - 70 * sc, vx: 0, vy: 0, life: 18, max: 18, col: 'rgba(30,30,40,.55)', size: 22, g: 0, smoke: 1 });
+          if (!F.ground) { F.vy = 0; return false; }
+          return;
+        }
+        F.vx *= 0.82;
+        if (f === 21) {
+          F.hitIds.clear(); Snd.swingC(F.ch, 14);
+          BT.parts.push({ x: F.x + F.dir * 50 * sc, y: F.y - 110 * sc, slash: 1, rot: -1.3 * F.dir, len: 190, life: 12, max: 12, col: '#ffd34e' });
+          BT.parts.push({ x: F.x + F.dir * 50 * sc, y: F.y - 110 * sc, flare: 1, r: 80, life: 12, max: 12, col: '#ffe680', rot: rnd(0, TAU), n: 8 });
+        }
+      } },
+    // 最大ためで撃つビーム（撃っている間は構えたまま、反動でじりじり下がる）
+    nbb: { len: 58, keys: [[0, AIM], [6, { ...AIM, lean: -0.25, by: 10, ba: A_(0.6, 0.4), fl: G_(0.7, -0.3), bl: G_(-0.7, 0) }],
+        [46, { ...AIM, lean: -0.3, by: 12, hd: -0.1, ba: A_(0.6, 0.4), fl: G_(0.75, -0.3), bl: G_(-0.75, 0) }], [58, {}]], hb: [], drawF: [0, 0],
+      upd(F, f) {
+        if (f === 1) BT.fireBeam(F);
+        F.vx = f < 44 ? -F.dir * 0.7 : F.vx * 0.8;
+        if (!F.ground && f < 46) { F.vy = 0; return false; }
+      } },
+  });
+  const nb = AMOVES.nb, nbUpd = nb.upd;
+  nb.upd = (F, f, c, B) => {
+    if (f === 7 && F.chargeT >= 58) { F.startMove('nbb'); return; }   // 最大までためていたらビーム
+    return nbUpd(F, f, c, B);
+  };
+  nb.fullFx = F => {   // ためが最大になった瞬間
+    const sc = F.ch.scale, x = F.x + F.dir * 40 * sc, y = F.y - 88 * sc;
+    BT.parts.push({ x, y, flare: 1, r: 110, life: 16, max: 16, col: '#ffe680', rot: rnd(0, TAU), n: 10 });
+    BT.parts.push({ x, y, shock: 1, r: 14, vr: 14, life: 16, max: 16, col: '#ffd34e', w: 10 });
+    Snd.beamCharge();
+  };
+  for (const k of ['sb', 'nbb']) AMOVES[k].K = AMOVES[k].keys.map(([f, o]) => [f, mk(o)]);
+}
+
 const CHARS = [
   { key: 'shimarin', name: 'しまりん', kana: 'PSYCHIC', img: FACE, ar: FACE_AR, eyes: true, scale: 1, run: 7.0, airs: 5.8, jv: -14.6, shv: -10, djv: -13.4, airJumps: 2,
     kbTake: 0.95, swords: false, arms4: true, psychic: true, hand: '#c9c3f2', moves: SMOVES,
@@ -1776,7 +1836,7 @@ const CHARS = [
     outfit: { main: '#2a2a35', dark: '#101016', light: '#55556a', pants: '#16161d', shoe: '#0c0c10' },
     scarf: { col: '#121218', col2: '#d4a017', n: 10, seg: 11, w: 8 },
     fsName: '天弓・流星群', fsDesc: '天高く跳び、光の矢を流星のように降らせる',
-    specials: [['チャージショット', '必殺', '押しっぱなしでためるほど強い矢'], ['三連射', '横＋必殺', '前方へ矢を３本連続で放つ'],
+    specials: [['チャージショット', '必殺', 'ためるほど強い矢。最大までためると極太ビーム'], ['疾風斬', '横＋必殺', '弓の刃で斬りながら横へ突進（空中でも横へ飛べる）'],
       ['跳躍射', '上＋必殺', '高く跳んで斜め下へ射つ（復帰用）'], ['雨矢', '下＋必殺', '空へ射った矢が前方に降りそそぐ']] },
   { key: 'hammer', name: 'おうち', kana: 'HAMMER', img: HOUSE, ar: HOUSE_AR, faceH: 52, eyes: false, swords: false, hammer: true,
     scale: 1.32, run: 5.2, airs: 4.4, jv: -13.2, shv: -9.2, djv: -12, kbTake: 0.66, lightArmor: 6, hand: '#e2b48c', moves: HMOVES,
@@ -2030,6 +2090,7 @@ class Fighter {
     if (m.charge && this.mf === m.charge && chargeHeld && this.chargeT < 60) {
       this.chargeT++; this.charge = 1 + this.chargeT / 60 * 0.45;
       if (m.chargeSnd && this.chargeT % 6 === 1) Snd[m.chargeSnd](this.chargeT / 60);
+      if (this.chargeT === 58 && m.fullFx) m.fullFx(this);
       if (this.ground) this.vx *= 0.8;
       return true;
     }
@@ -5703,6 +5764,71 @@ SC_.battle = (o) => {
     const sides = new Set(alive.map(f => f.team !== undefined ? 't' + f.team : 'p' + f.id));
     if (sides.size <= 1) { B.phase = 'end'; B.endT = 0; B.winner = alive[0] || null; }
   }
+  // ---- 恵授の極太ビーム ----
+  B.beams = [];
+  B.fireBeam = (F) => {
+    B.beams.push({ F, t: 0, life: 48, hit: {} });
+    B.flashScr = 10; B.flashRGB = '255,230,140'; B.shake = Math.max(B.shake, 22); B.zoomP = Math.max(B.zoomP, 0.13); B.impactF = 2;
+    Snd.beamBlast();
+  };
+  const beamGeom = b => { const F = b.F, sc = F.ch.scale; return { x0: F.x + F.dir * 52 * sc, y: F.y - 88 * sc, dir: F.dir, len: 1800, h: 70 * sc }; };
+  function updBeams() {
+    for (const b of B.beams) {
+      b.t++;
+      if (!b.F.alive || b.F.state !== 'move' || b.F.moveName !== 'nbb') b.t = Math.max(b.t, b.life - 6);
+      const g = beamGeom(b), bx1 = g.dir > 0 ? g.x0 : g.x0 - g.len, bx2 = g.dir > 0 ? g.x0 + g.len : g.x0;
+      if (b.t < 4 || b.t > 38) continue;
+      const last = b.t >= 36;
+      for (const T of fs) {
+        if (!isFoe(b.F, T) || !T.alive) continue;
+        const R = T.hurt();
+        if (R.x + R.w < bx1 || R.x > bx2 || R.y + R.h < g.y - g.h / 2 || R.y > g.y + g.h / 2) continue;
+        const h = b.hit[T.id];
+        if (last ? h === 'fin' : (typeof h === 'number' && h > b.t - 5)) continue;
+        const hb = last ? { dmg: 11, ang: 32, base: 9, gr: 1.15 } : { dmg: 2.2, ang: 8, base: 2.4, gr: 0.03 };
+        if (B.applyHit(b.F, T, hb, 1, g.dir, true, T.x, g.y)) b.hit[T.id] = last ? 'fin' : b.t;
+      }
+    }
+    B.beams = B.beams.filter(b => b.t < b.life);
+  }
+  function drawBeams() {
+    for (const b of B.beams) {
+      const g = beamGeom(b), k = b.t < 4 ? b.t / 4 : b.t > b.life - 10 ? Math.max(0, (b.life - b.t) / 10) : 1;
+      const w = g.h * (0.85 + 0.15 * Math.sin(b.t * 1.3)) * k, x1 = g.x0, x2 = g.x0 + g.dir * g.len, xl = Math.min(x1, x2);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      // 外側の光の帯
+      const gr = ctx.createLinearGradient(0, g.y - w * 1.8, 0, g.y + w * 1.8);
+      gr.addColorStop(0, 'rgba(255,180,40,0)'); gr.addColorStop(0.28, 'rgba(255,180,50,.35)'); gr.addColorStop(0.5, 'rgba(255,240,170,.85)'); gr.addColorStop(0.72, 'rgba(255,180,50,.35)'); gr.addColorStop(1, 'rgba(255,180,40,0)');
+      ctx.fillStyle = gr; ctx.fillRect(xl, g.y - w * 1.8, g.len, w * 3.6);
+      // 白い芯（ゆらぐ）
+      ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.fillRect(xl, g.y - w * 0.3, g.len, w * 0.6);
+      ctx.fillStyle = 'rgba(255,255,230,.6)'; ctx.fillRect(xl, g.y - w * 0.5 - Math.sin(b.t * 2) * 3, g.len, w * 1.0);
+      // 流れる光のリング
+      for (let i = 0; i < 16; i++) {
+        const q = ((i / 16) + b.t * 0.035) % 1, x = x1 + g.dir * q * g.len;
+        ctx.globalAlpha = 0.55 * k; ctx.strokeStyle = i % 2 ? '#ffe680' : '#ffffff'; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.ellipse(x, g.y, w * 0.32, w * 0.95, 0, 0, TAU); ctx.stroke();
+      }
+      // ふちを走る稲妻
+      const R = srand((b.t >> 1) * 977 + 13);
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      for (const sd of [-1, 1]) for (const [lw, col] of [[7, 'rgba(255,200,60,.6)'], [2.5, '#ffffff']]) {
+        ctx.globalAlpha = k; ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.beginPath();
+        for (let s = 0; s <= 24; s++) { const x = x1 + g.dir * s / 24 * g.len, y = g.y + sd * (w * 0.8 + (R() - 0.5) * w * 0.7); s ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+        ctx.stroke();
+      }
+      // 発射口の大きな光と星
+      ctx.globalAlpha = k; const r = (130 + Math.sin(b.t * 0.9) * 25) * (0.6 + 0.4 * k);
+      ctx.drawImage(glowSprite('rgba(255,230,140,.95)'), x1 - r, g.y - r, r * 2, r * 2);
+      ctx.save(); ctx.translate(x1, g.y); ctx.rotate(b.t * 0.08);
+      for (let i = 0; i < 16; i++) { ctx.rotate(TAU / 16); ctx.fillStyle = i % 2 ? '#ffe680' : '#ffffff'; const L = (i % 2 ? 0.6 : 1) * r * 1.3; ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(L, 0); ctx.lineTo(0, 5); ctx.fill(); }
+      ctx.restore();
+      ctx.restore();
+      // 火花
+      if (b.t < b.life - 8) for (let i = 0; i < 3; i++) B.parts.push({ x: x1 + g.dir * rnd(0, 1000), y: g.y + rnd(-w, w), vx: g.dir * rnd(10, 24), vy: rnd(-5, 5), life: 16, max: 16, spark: 1, size: rnd(2, 5), g: 0, col: i % 2 ? '#ffffff' : '#ffd34e' });
+    }
+  }
+
   B.forfeit = (F) => {
     if (F.state === 'out') return;
     for (const o of fs) if (o.heldBy === F) { o.heldBy = null; if (o.state === 'held') o.setState('air'); }
@@ -5812,6 +5938,7 @@ SC_.battle = (o) => {
       }
     }
     updOrcs();
+    updBeams();
     for (const p of B.proj) if (p.type === 'hammer' && p.life <= 0) p.thrower.hammerOut = false;   // ハンマーが手元に戻った
     B.proj = B.proj.filter(p => p.life > 0);
     // 雨矢：少し遅れて前方に矢が降りそそぐ（位置は共通の乱数なのでオンラインでも同じ）
@@ -6325,6 +6452,7 @@ SC_.battle = (o) => {
     for (const O of B.orcs) drawOrc(O, B.t);
     for (const F of fs) drawFighter(F, B.t + B.introT);
     drawBall();
+    drawBeams();
     for (const p of B.proj) {
       if (p.type === 'ink') {   // 墨の玉
         ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(Math.atan2(p.vy, p.vx));
@@ -6677,6 +6805,7 @@ SC_.battle = (o) => {
     },
     draw() {
       drawWorld();
+      if (B.beams.length) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,190,80,.10)'; ctx.fillRect(0, 0, VW, VH); ctx.restore(); }
       if (B.intro > 0) drawIntro();
       if (B.speed) drawSpeedLines(B.speed);
       // インパクトフレーム：最初の2フレームは色を反転、残りは白黒で強く光らせる
