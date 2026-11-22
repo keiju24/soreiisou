@@ -227,6 +227,7 @@ const Snd = {
     this.osc('sawtooth', 1800, 1.0, 0.035, 500, 0.05);
     this.koBoom();
   },
+  reload() { this.osc('square', 2200, 0.03, 0.04, 1600); this.nz(0.03, 0.12, 'bandpass', 3800, 3); this.osc('triangle', 900, 0.06, 0.04, 700, 0.04); },   // つがえ終わり「カチッ」
   bowDraw() { if (!this.smp('bowdraw', 0.6, 1.05)) this.osc('triangle', 140, 0.3, 0.05, 220); },   // 弓を引きしぼる「ギリ…」
   // 恵授の矢：録音の「ビュッ」＋赤黒い気の低いうなり（強い矢ほど重く）
   bow(k = 0) {
@@ -451,6 +452,9 @@ const Snd = {
           this.osc('triangle', this.vary(560), 0.07, v * 0.45, 150);
           this.nz(0.05, v * 0.6, 'bandpass', 3200, 2.5);
           this.osc('sine', 140, 0.09, v * 0.35, 70);
+        } else if (this.smp('punch', Math.min(0.9, v * 1.8), 1.25 + Math.random() * 0.15)) {   // 弓の刃で打つ「バシッ」
+          this.nz(0.05, v * 0.8, 'highpass', 3000, 0.7);
+          this.osc('sine', this.vary(170), 0.12, v * 0.5, 60);
         } else {         // 弓で殴る木の「コッ」
           this.osc('triangle', this.vary(330), 0.09, v * 0.55, 150);
           this.nz(0.06, v * 0.7, 'bandpass', 950, 2.5);
@@ -1394,8 +1398,18 @@ function fireArrow(F, ang, sp, dmg, k = 0, extra) {
   BT.parts.push({ x: x + Math.cos(d) * 70 * P, y: y + Math.sin(d) * 70 * P, cut: 1, ang: d, len: 170 * P, w: 6 * P, life: 8, max: 8, col: '#ff5a5a' });
   BT.parts.push({ x, y, shock: 1, r: 8, vr: 9 * P, life: 9, max: 9, col: '#ff3040', w: 5 });
   for (let i = 0; i < 4; i++) BT.parts.push({ x, y, vx: Math.cos(d + rnd(-0.5, 0.5)) * rnd(6, 14), vy: Math.sin(d + rnd(-0.5, 0.5)) * rnd(6, 14), life: 12, max: 12, spark: 1, size: rnd(2, 4), g: 0, col: i % 2 ? '#ff3040' : '#ffd0d0' });
-  F.vx -= Math.sign(a.vx) * (0.8 + k * 1.6);
-  if (k > 0.5 || dmg >= 9) BT.shake = Math.max(BT.shake, 3 + k * 5);
+  // 反動：体がのけぞって後ろへすべり、画面がゆれる（強い矢ほど大きい）
+  const kick = 0.6 + Math.min(1, dmg / 12) * 0.6 + k * 0.8;
+  if (F._recoilAt !== BT.t) {   // 同じ瞬間に何本も撃つワザでも反動は1回だけ
+    F._recoilAt = BT.t;
+    F.vx -= Math.sign(a.vx || F.dir) * (F.ground ? 4 + kick * 7 : 2.5 + kick * 4.5); if (!F.ground) F.vy = Math.min(F.vy, -1.5 * kick);
+    F.recoilT = 12; F.recoilK = Math.min(1.6, kick);
+    BT.shake = Math.max(BT.shake, 3 + kick * 6);
+  }
+  BT.parts.push({ x: x - Math.cos(d) * 30, y, vx: -Math.cos(d) * 3, vy: -1, life: 22, max: 22, col: 'rgba(40,8,14,.6)', size: 26 * kick, g: 0, smoke: 1 });
+  if (kick > 1) BT.parts.push({ x, y, shock: 1, r: 14, vr: 18 * kick, life: 14, max: 14, col: '#ffffff', w: 6 });
+  // リロード：次の矢をつがえるまで、矢のワザは出せない（近接ワザはすぐ出せる）
+  F.reloadT = Math.max(F.reloadT || 0, Math.round(30 + k * 22 + Math.min(1, dmg / 12) * 10));
 }
 const AIM = { lean: 0.05, fa: { s: 1.57, e: 0 }, ba: { s: 1.3, e: 1.9 } };   // 弓を引いた構え
 const AMOVES = {};
@@ -1949,7 +1963,7 @@ makeGrabs(CMOVES, { reach: 1, hv: [52, -8],
         if (f === 16) {
           const k = K(F), dmg = Math.round(10 + k * 6);
           fireArrow(F, 0, 25 + k * 8, dmg, 1, { r: 18, glow: 1, big: true, life: 42, g: 0.04, hb: { dmg, ang: 35, base: 6 + k * 2, gr: 0.8 + k * 0.25 } });
-          F.vx = -F.dir * 4; shotFx(F, 0, '#ff7a5a', 90); BT.shake = Math.max(BT.shake, 6); Snd.bow(1);
+          shotFx(F, 0, '#ff7a5a', 90); Snd.bow(1);
         }
       } },
     // 上スマッシュ：天穿ち（上へ扇形に3本）
@@ -2032,6 +2046,40 @@ makeGrabs(CMOVES, { reach: 1, hv: [52, -8],
   };
   for (const k of ['sb', 'nbb']) AMOVES[k].K = AMOVES[k].keys.map(([f, o]) => [f, mk(o)]);
 }
+// ---- 恵授：近接もできる弓使い。強・ダッシュ・空中N/前/上は弓の刃で斬る（つながりやすい）。スマッシュ・空中後/下・必殺は矢 ----
+{
+  const arc = (F, ang, len = 150, col = '#ff3a4a') => BT.parts.push({ x: F.x + F.dir * 58 * F.ch.scale, y: F.y - 78 * F.ch.scale, cut: 1, ang: F.dir > 0 ? ang : Math.PI - ang, len, w: 9, life: 9, max: 9, col });
+  const AIR = { fl: G_(0.9, -1.4), bl: G_(0.2, -1.1) };
+  Object.assign(AMOVES, {
+    // 弱：弓の先で鋭く突く（ほとんどふっとばない → 強や掴みにつなぐ）
+    jab: { len: 17, sfx: 2, keys: [[0, {}], [3, { lean: 0.35, by: 4, fa: A_(1.7, 0), ba: A_(0.6, 1.6), fl: G_(0.8, -0.3), bl: G_(-0.7, 0) }], [8, { lean: 0.35, by: 4, fa: A_(1.7, 0), ba: A_(0.6, 1.6), fl: G_(0.8, -0.3), bl: G_(-0.7, 0) }], [17, {}]],
+      hb: [HB(3, 5, 62, -80, 30, 3, 75, 3.5, 0.08, { hs: 22 })], upd(F, f) { if (f === 3) arc(F, 0, 110, '#ff7a7a'); } },
+    // 横強：弓の刃で横なぎ
+    ftilt: { len: 25, sfx: 5, keys: [[0, {}], [5, { lean: -0.15, fa: A_(2.9, 0.2), ba: A_(0.3, 1.6) }],
+        [8, { lean: 0.5, by: 8, fa: A_(0.9, 0), ba: A_(-0.4, 1.2), fl: G_(1.0, -0.4), bl: G_(-0.9, 0) }], [15, { lean: 0.5, by: 8, fa: A_(0.9, 0), ba: A_(-0.4, 1.2), fl: G_(1.0, -0.4), bl: G_(-0.9, 0) }], [25, {}]],
+      hb: [HB(6, 9, 70, -76, 38, 7, 38, 5.5, 0.6)], upd(F, f) { if (f === 7) arc(F, 0.6, 180); } },
+    // 上強：弓を頭上で振りまわす（お手玉しやすい）
+    utilt: { len: 24, sfx: 5, keys: [[0, {}], [4, { lean: 0.2, fa: A_(0.8, 0.2) }], [8, { lean: -0.15, hd: -0.3, fa: A_(3.2, 0), ba: A_(0.4, 1.5) }], [12, { lean: -0.2, hd: -0.3, fa: A_(4.2, 0), ba: A_(0.4, 1.5) }], [24, {}]],
+      hb: [HB(6, 12, 10, -150, 46, 6, 88, 6.5, 0.42, { auto: 1, hs: 26 })], upd(F, f) { if (f === 8) arc(F, -1.3, 170); } },
+    // 下強：低い足払い＋弓（浮かせてつなぐ）
+    dtilt: { len: 22, sfx: 4, keys: [[0, {}], [4, { by: 22, lean: 0.4, fl: G_(1.6, -0.4), bl: G_(0.4, -2.0), fa: A_(1.2, 0.4) }], [12, { by: 22, lean: 0.4, fl: G_(1.6, -0.4), bl: G_(0.4, -2.0), fa: A_(1.4, 0) }], [22, {}]],
+      hb: [HB(4, 7, 78, -24, 32, 5, 78, 5, 0.32, { hs: 28 })], upd(F, f) { if (f === 5) arc(F, 0.15, 150); } },
+    // ダッシュ攻撃：弓を突き出して体当たり
+    dash: { len: 32, slide: true, sfx: 4, keys: [[0, { lean: 0.4 }], [5, { lean: 0.75, by: 10, fa: A_(1.65, 0), ba: A_(-0.8, 0.8), fl: G_(1.2, -0.3), bl: G_(-1.1, -0.2) }], [14, { lean: 0.75, by: 10, fa: A_(1.65, 0), ba: A_(-0.8, 0.8), fl: G_(1.2, -0.3), bl: G_(-1.1, -0.2) }], [32, {}]],
+      hb: [HB(4, 12, 62, -72, 36, 7, 55, 6, 0.5)], upd(F, f) { if (f >= 14) F.vx *= 0.85; if (f === 5) arc(F, 0, 200); } },
+    // 空中N：弓をまわして周りを斬る
+    nair: { len: 30, air: true, drift: true, landLag: 7, sfx: 3, keys: [[0, {}], [3, { rot: 0, fa: A_(1.6, 0), ba: A_(-1.6, 0), ...AIR }], [16, { rot: -TAU, fa: A_(1.6, 0), ba: A_(-1.6, 0), ...AIR }], [30, { rot: -TAU }]],
+      hb: [HB(3, 14, 0, -76, 62, 6, 60, 4.5, 0.45, { auto: 1, hs: 24 })], upd(F, f) { if (f === 5 || f === 10) BT.parts.push({ x: F.x, y: F.y - 76, shock: 1, r: 20, vr: 9, life: 10, max: 10, col: '#ff3a4a', w: 6 }); } },
+    // 空中前：弓の刃で斜めに振りおろす
+    fair: { len: 30, air: true, drift: true, landLag: 9, sfx: 5, keys: [[0, {}], [5, { lean: -0.2, fa: A_(3.0, 0.2), ...AIR }], [9, { lean: 0.45, fa: A_(0.8, 0), ...AIR }], [16, { lean: 0.45, fa: A_(0.8, 0), ...AIR }], [30, {}]],
+      hb: [HB(7, 11, 66, -66, 42, 8, 45, 5, 0.65)], upd(F, f) { if (f === 8) arc(F, 0.9, 190); } },
+    // 空中上：頭上を弧で斬る
+    uair: { len: 28, air: true, drift: true, landLag: 8, sfx: 4, keys: [[0, {}], [4, { fa: A_(0.6, 0), ...AIR }], [8, { fa: A_(3.0, 0), lean: -0.15, ...AIR }], [11, { fa: A_(4.4, 0), lean: -0.2, ...AIR }], [28, {}]],
+      hb: [HB(6, 11, 0, -150, 48, 7, 85, 5, 0.5, { auto: 1, hs: 24 })], upd(F, f) { if (f === 8) arc(F, -1.4, 180); } },
+  });
+  for (const k of ['jab', 'ftilt', 'utilt', 'dtilt', 'dash', 'nair', 'fair', 'uair']) AMOVES[k].K = AMOVES[k].keys.map(([f, o]) => [f, mk(o)]);
+  for (const k of ['fsmash', 'usmash', 'dsmash', 'bair', 'dair', 'nb', 'sb']) AMOVES[k].arrow = true;   // 矢のワザ（リロード中は出せない）
+}
 
 const CHARS = [
   { key: 'shimarin', name: 'しまりん', kana: 'PSYCHIC', img: FACE, ar: FACE_AR, eyes: true, scale: 1, run: 7.0, airs: 5.8, jv: -14.6, shv: -10, djv: -13.4, airJumps: 2,
@@ -2056,7 +2104,7 @@ const CHARS = [
     scarf: { col: '#121218', col2: '#c8102e', n: 10, seg: 11, w: 8 },
     fsName: '紅天・流星群', fsDesc: '天高く跳び、赤黒い矢を流星のように降らせる',
     specials: [['紅蓮射', '必殺', 'ためるほど強い赤黒の矢。最大までためると螺旋の極大矢'], ['穿影', '横＋必殺', '敵をつらぬく矢。刺さった刻印が少しあとに爆ぜる'],
-      ['跳躍射', '上＋必殺', '高く跳んで斜め下へ射つ（復帰用）'], ['紅雨', '下＋必殺', '空へ射った矢が赤い雨になって前方に降りそそぐ']] },
+      ['跳躍射', '上＋必殺', '高く跳んで斜め下へ射つ（復帰用。リロード中でも出せる）'], ['紅雨', '下＋必殺', '空へ射った矢が赤い雨になって前方に降りそそぐ']] },
   { key: 'hammer', name: 'おうち', kana: 'HAMMER', img: HOUSE, ar: HOUSE_AR, faceH: 52, eyes: false, swords: false, hammer: true,
     scale: 1.32, run: 5.2, airs: 4.4, jv: -13.2, shv: -9.2, djv: -12, kbTake: 0.66, lightArmor: 6, hand: '#e2b48c', moves: HMOVES,
     outfit: { main: '#7a5432', dark: '#3e2814', light: '#b08356', pants: '#3a3f55', shoe: '#2a1d10' },
@@ -2123,6 +2171,8 @@ class Fighter {
   }
   setState(s) { this.state = s; this.sf = 0; }
   startMove(n) {
+    const nm = this.ch.moves[n];
+    if (nm && nm.arrow && this.reloadT > 0) { this.reloadNo = 14; return; }   // 矢をつがえている途中
     this.ctrl.clear(); this.ubBoost = false;
     this.move = this.ch.moves[n]; this.moveName = n; this.mf = 0; this.hitIds = new Set(); this.psyFx = new Set(); this.charge = 1; this.chargeT = 0;
     this.setState('move');
@@ -2153,6 +2203,8 @@ class Fighter {
     if (this.djT > 0) this.djT--;
     if (this.ledgeCD > 0) this.ledgeCD--;
     if (this.inkT > 0) this.inkT--;   // 墨（今井のインク弾）の効果時間
+    if (this.recoilT > 0) this.recoilT--;
+    if (this.reloadT > 0 && --this.reloadT === 0 && this.alive) { Snd.reload(); if (BT) BT.parts.push({ x: this.x + this.dir * 30, y: this.y - 90 * this.ch.scale, flare: 1, r: 26, life: 8, max: 8, col: '#ff5a5a', rot: 0, n: 4 }); }
     if (this.state !== 'shield') this.shieldHP = Math.min(100, this.shieldHP + 0.14);
     const hx = c.hx;
     let grav = true;
@@ -2448,7 +2500,14 @@ class Fighter {
 
   updatePose() {
     const s = this.state, t = this.t;
-    if (s === 'move') { this.pose = keyPose(this.move.K, this.mf); return; }
+    if (s === 'move') {
+      let P = keyPose(this.move.K, this.mf);
+      if (this.recoilT > 0) {   // 矢を放った反動でのけぞる
+        const q = (this.recoilT / 12) * (this.recoilK || 1);
+        P = { ...P, lean: P.lean - 0.32 * q, hd: P.hd - 0.25 * q, by: (P.by || 0) + 6 * q, fa: { s: P.fa.s + 0.35 * q, e: P.fa.e }, ba: { s: P.ba.s - 0.6 * q, e: P.ba.e * (1 - 0.5 * q) } };
+      }
+      this.pose = P; return;
+    }
     let tgt;
     switch (s) {
       case 'idle': case 'respawn': {
@@ -4834,6 +4893,17 @@ function drawFighterExtras(F, t) {
     }
     ctx.restore();
   }
+  // 恵授のリロード：頭の上に小さな輪（たまっていく）。出せなかったときは赤く点滅
+  if (F.ch.bow && F.alive && (F.reloadT > 0 || F.reloadNo > 0)) {
+    if (F.reloadNo > 0) F.reloadNo--;
+    const x = F.x, y = F.y - 222 * F.ch.scale, max = F._reloadMax = Math.max(F._reloadMax || 0, F.reloadT || 0), q = F.reloadT > 0 ? 1 - F.reloadT / max : 1;
+    if (!F.reloadT) F._reloadMax = 0;
+    ctx.save(); ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(x, y, 11, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = F.reloadNo > 0 && (t >> 2) % 2 ? '#ffffff' : '#ff3040'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x, y, 11, -Math.PI / 2, -Math.PI / 2 + TAU * q); ctx.stroke();
+    ctx.translate(x, y); ctx.rotate(-0.8); ctx.strokeStyle = '#ffd0d0'; ctx.lineWidth = 1.6; line(-5, 0, 5, 0); ctx.fillStyle = '#ff3040'; ctx.beginPath(); ctx.moveTo(7, 0); ctx.lineTo(3, -2.5); ctx.lineTo(3, 2.5); ctx.fill();
+    ctx.restore();
+  }
   // 穿影の刻印（赤い輪がまわり、爆ぜる直前に速くなる）
   if (F.markT > 0 && F.alive) {
     const cy = F.y - 75 * F.ch.scale, k = 1 - F.markT / 48, r = 36 + 10 * Math.sin(t * (0.2 + k * 0.6));
@@ -5650,7 +5720,7 @@ SC_.battle = (o) => {
     T.vx = Math.cos(a) * kb * KBV * ds; T.vy = -Math.sin(a) * kb * KBV;
     if (T.ground && T.vy > 0) T.vy = -T.vy * 0.6;
     if (T.vy < -0.5) T.ground = null;
-    T.hitstun = Math.min(90, Math.floor(kb * 2.1)); T.move = null; T.tumble = kb > 14; T.spin = 0; T.usedSideB = false;
+    T.hitstun = Math.min(90, Math.max(hb.hs || 0, Math.floor(kb * 2.1))); T.move = null; T.tumble = kb > 14; T.spin = 0; T.usedSideB = false;
     T.setState('hitstun');
     if (hb.ink) T.inkT = hb.ink;   // 墨：しばらく動きが鈍る
     if (hb.stun && kb < 22) { T.setState('dizzy'); T.dizzyT = hb.stun; T.vx *= 0.3; if (!T.ground) T.vy = Math.min(T.vy, -3); }   // ハウリング：くらくら
