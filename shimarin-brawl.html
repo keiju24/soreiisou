@@ -1161,14 +1161,14 @@ for (const k in HMOVES) HMOVES[k].K = HMOVES[k].keys.map(([f, o]) => [f, o.lean 
 function fireArrow(F, ang, sp, dmg, k = 0, extra) {
   const sc = F.ch.scale;
   BT.proj.push(Object.assign({ type: 'arrow', x: F.x + F.dir * 42 * sc, y: F.y - 88 * sc, vx: Math.cos(ang) * sp * F.dir, vy: Math.sin(ang) * sp,
-    g: 0.12, life: 90, owner: F, r: 12, big: k > 0.9,
-    hb: { dmg, ang: 30 + k * 10, base: 3 + k * 4, gr: 0.3 + k * 0.6 } }, extra || {}));
+    g: 0.12, life: 90, owner: F, r: 15, big: k > 0.9,
+    hb: { dmg, ang: 30 + k * 10, base: 4 + k * 6, gr: 0.4 + k * 0.8 } }, extra || {}));
 }
 const AIM = { lean: 0.05, fa: { s: 1.57, e: 0 }, ba: { s: 1.3, e: 1.9 } };   // 弓を引いた構え
 const AMOVES = {};
 for (const k in MOVES) {
   const m = MOVES[k];
-  AMOVES[k] = { ...m, hb: m.hb.map(h => ({ ...h, dmg: Math.max(1, Math.round(h.dmg * 0.9)) })) };
+  AMOVES[k] = { ...m, hb: m.hb.map(h => ({ ...h, dmg: Math.max(1, Math.round(h.dmg * 1.2)), base: h.base + 1.5, gr: h.gr * 1.1, r: h.r * 1.12 })) };   // 恵授：強化版
 }
 Object.assign(AMOVES, {
   // 必殺：チャージショット（必殺ボタン押しっぱなしでためる）
@@ -1176,23 +1176,23 @@ Object.assign(AMOVES, {
       [12, { lean: 0.15, fa: { s: 1.57, e: 0 }, ba: { s: 0.9, e: 0.6 } }], [34, {}]], hb: [],
     upd(F, f) {
       if (!F.ground) F.vy = Math.min(F.vy, 1.2);
-      if (f === 7) { const k = (F.charge - 1) / 0.45; fireArrow(F, 0, 13 + k * 11, Math.round(4 + k * 9), k); Snd.bow(k); }
+      if (f === 7) { const k = (F.charge - 1) / 0.45; fireArrow(F, 0, 16 + k * 13, Math.round(6 + k * 14), k); Snd.bow(k); }
     } },
   // 横必殺：三連射
-  sb: { len: 40, drawF: [3, 30], keys: [[0, {}], [4, AIM], [32, AIM], [40, {}]], hb: [],
+  sb: { len: 34, drawF: [3, 26], keys: [[0, {}], [4, AIM], [26, AIM], [34, {}]], hb: [],
     upd(F, f) {
       F.vx *= 0.8; if (!F.ground) F.vy = Math.min(F.vy, 0.8);
-      if (f === 8 || f === 16 || f === 24) { fireArrow(F, -0.03, 17, 4); Snd.bow(0); }
+      if (f === 7 || f === 13 || f === 19) { fireArrow(F, -0.03, 21, 6); Snd.bow(0.2); }
     } },
   // 上必殺：跳躍射（高く跳んで斜め下へ射つ）
   ub: { len: 44, air: true, landLag: 14, after: 'helpless', drawF: [8, 14], keys: [[0, { by: 12 }],
       [4, { lean: -0.2, fl: { h: 0.9, k: -1.6 }, bl: { h: 0.3, k: -1.4 }, fa: { s: 2.3, e: 0 }, ba: { s: 2.0, e: 1.6 } }],
       [12, { lean: 0.35, fa: { s: 0.75, e: 0 }, ba: { s: 0.6, e: 1.9 }, fl: { h: 0.5, k: -1.0 }, bl: { h: -0.2, k: -0.8 } }], [44, {}]],
-    hb: [HB(4, 10, 0, -60, 50, 5, 85, 6, 0.5, { auto: 1 })],
+    hb: [HB(4, 10, 0, -60, 56, 8, 85, 7, 0.65, { auto: 1 })],
     upd(F, f, c) {
       if (f === 4) { F.vy = -19; F.ground = null; Snd.jumpC(F.ch); BT.dust(F.x, F.y + 10, 6); }
       if (f > 4 && f < 24) F.vx = c.hx * 3.8;
-      if (f === 14) { fireArrow(F, 0.95, 16, 6); Snd.bow(0); }
+      if (f === 14) { fireArrow(F, 0.95, 19, 9, 0.4); Snd.bow(0.3); }
     } },
   // 下必殺：雨矢（空へ射った矢が前方に降りそそぐ）
   db: { len: 46, drawF: [4, 12], keys: [[0, {}], [6, { lean: -0.35, hd: -0.3, fa: { s: 2.9, e: 0 }, ba: { s: 2.6, e: 1.8 } }],
@@ -1602,7 +1602,7 @@ makeGrabs(BMOVES, { reach: 1.15, pow: 1.3, hv: [64, -60],
 
 // ---- 恵授：手首をとって、けり＋矢・転がって投げる・真上に射る ----
 { const H = { lean: 0.1, fa: A_(1.4, 0.1), ba: A_(1.2, 0.6), fl: G_(0.4, -0.15), bl: G_(-0.35, 0) };
-makeGrabs(AMOVES, { reach: 1, hv: [52, -6],
+makeGrabs(AMOVES, { reach: 1.1, pow: 1.15, hv: [52, -6],
   grab: [[0, {}], [4, { lean: 0.35, fa: A_(1.7, 0), ba: A_(1.5, 0.3), fl: G_(0.6, -0.2), bl: G_(-0.5, 0) }], [11, { lean: 0.35, fa: A_(1.7, 0), ba: A_(1.5, 0.3), fl: G_(0.6, -0.2), bl: G_(-0.5, 0) }], [30, {}]],
   hold: [[0, H], [400, H]],
   pum: [[0, H], [5, { ...H, fl: G_(1.1, -1.4) }], [16, H]],
@@ -5740,9 +5740,9 @@ SC_.battle = (o) => {
     // 雨矢：少し遅れて前方に矢が降りそそぐ（位置は共通の乱数なのでオンラインでも同じ）
     for (const r of B.rains) {
       r.t++;
-      if (r.t >= 30 && r.t <= 74 && r.t % 3 === 0)
-        B.proj.push({ type: 'arrow', x: r.x + R(-130, 130) - 60, y: -780, vx: 3, vy: 30, g: 0.2, life: 60, owner: r.owner, r: 12,
-          hb: { dmg: 2, ang: 75, base: 2.5, gr: 0.15 } });
+      if (r.t >= 30 && r.t <= 74 && r.t % 2 === 0)
+        B.proj.push({ type: 'arrow', x: r.x + R(-150, 150) - 60, y: -780, vx: 3, vy: 30, g: 0.2, life: 60, owner: r.owner, r: 15,
+          hb: { dmg: 3.5, ang: 75, base: 3.5, gr: 0.25 } });
     }
     B.rains = B.rains.filter(r => r.t < 80);
     // ふっとびの煙
