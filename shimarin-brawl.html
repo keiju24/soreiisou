@@ -353,10 +353,7 @@ const Snd = {
         this.osc('sine', this.vary(426), 0.24 + k * 0.1, 0.04, 1230 + k * 600);
         this.nz(0.18, 0.035, 'bandpass', 2200, 6, 0, 6500);
         break;
-      case 'ichigo':     // 刀の風切り＋刃の「シャン」
-        this.nz(0.08 + k * 0.05, 0.13 + k * 0.05, 'highpass', 3200, 0.8, 0, 8000);
-        this.osc('triangle', this.vary(2900), 0.14, 0.022, 3600, 0.015);
-        break;
+      case 'ichigo': this.katanaSwing(k); break;   // 刀が空気を裂く「ヒュンッ」
       case 'berserker':  // 重い腕が空気を押しのける低い「ブォン」
         this.nz(0.22 + k * 0.12, 0.15 + k * 0.08, 'lowpass', 600, 1.2, 0, 160);
         this.osc('sine', this.vary(95), 0.2 + k * 0.1, 0.07 + k * 0.04, 48);
@@ -398,13 +395,7 @@ const Snd = {
         this.nz(0.1 + d * 0.006, v * 0.6, 'bandpass', 2000, 3, 0, 900);
         if (big) this.osc('sine', 110, 0.45, v * 0.45, 45);
         break;
-      case 'ichigo':     // 斬撃：鋭いノイズ＋金属の余韻
-        this.nz(0.07 + d * 0.004, v, 'highpass', 2600, 0.7, 0, 5200);
-        this.osc('triangle', this.vary(3300), 0.3, v * 0.1, 2900, 0.004);
-        this.osc('sine', this.vary(4900), 0.2, v * 0.05, 4500, 0.004);
-        this.osc('sine', 190, 0.08, v * 0.3, 80);
-        if (big) this.nz(0.25, v * 0.5, 'bandpass', 4200, 4, 0.02, 1800);
-        break;
+      case 'ichigo': this.katanaHit(v, d); break;   // 斬った「ズバッ」
       case 'berserker':  // 重い打撃：歪んだ低音の「ドゴッ」
         this.osc('sine', this.vary(125), 0.3 + d * 0.012, v * 0.95, 36);
         this.nz(0.18 + d * 0.01, v * 1.1, 'lowpass', 900, 1, 0, 160, 25);
@@ -553,9 +544,45 @@ const Snd = {
     this.osc('triangle', 310, 1.4, 0.12, 290, 0.02); this.osc('triangle', 470, 1.2, 0.08, 455, 0.02);
   },
   // ---------- キャラ別のワザ音 ----------
-  slashWave() {   // 一瑚：いちごクロス（交差する2つの刃音）
-    this.nz(0.2, 0.13, 'highpass', 2500, 0.8, 0, 7000);
-    this.osc('triangle', 3000, 0.35, 0.05, 2600); this.osc('triangle', 3600, 0.35, 0.04, 3100, 0.05);
+  slashWave() {   // 一瑚：いちごクロス（交差する2つの刃が空を裂く）
+    this.katanaSwing(0.8); setTimeout(() => this.katanaSwing(0.9), 60);
+    this.osc('triangle', 2400, 0.6, 0.05, 2300, 0.05); this.osc('sine', 3710, 0.5, 0.03, 3650, 0.05);
+  },
+  // ---- 一瑚の刀 ----
+  // 振り：空気が裂ける「ヒュンッ」（高い音から低い音へ一気に流れる）＋重さのある風圧
+  katanaSwing(k = 0.5) {
+    this.nz(0.13 + k * 0.06, 0.22 + k * 0.1, 'bandpass', 5200, 1.6, 0, 700);
+    this.nz(0.16 + k * 0.06, 0.12 + k * 0.08, 'lowpass', 1400, 0.9, 0.01, 180);
+    this.nz(0.03, 0.08 + k * 0.05, 'highpass', 6500, 0.7, 0.07);
+  },
+  // 斬った：肉を断つ鋭い「ズバッ」＋刃の重み＋鋼の余韻
+  katanaHit(v = 0.3, d = 8) {
+    const big = d >= 11;
+    this.nz(0.025, v * 1.6, 'highpass', 3500, 0.7);                          // 刃が入る瞬間
+    this.nz(0.16 + d * 0.006, v * 1.3, 'bandpass', 3000, 1.1, 0.005, 500, 3); // 裂ける音
+    this.osc('sine', this.vary(170), 0.16 + d * 0.006, v * 0.9, 55, 0.004);   // 重み
+    this.nz(0.1, v * 0.7, 'lowpass', 700, 1, 0.01, 120, 6);
+    // 鋼の余韻（ずれた音程を重ねて金属らしく）
+    for (const [f, a] of [[2150, 0.06], [3420, 0.04], [5260, 0.025]]) this.osc('sine', this.vary(f), 0.5 + (big ? 0.5 : 0), v * a, f * 0.985, 0.012);
+    if (big) { this.osc('sine', 80, 0.45, v * 0.7, 32, 0.01); this.nz(0.35, v * 0.5, 'lowpass', 400, 1, 0.02, 60, 8); }
+  },
+  // 居合のとどめ：「ザンッ」＋長く響く鋼＋納刀の「チャキッ」
+  iai() {
+    this.katanaHit(0.5, 16);
+    this.nz(0.5, 0.25, 'bandpass', 2600, 0.9, 0.02, 300, 4);
+    this.osc('sine', 60, 0.9, 0.3, 25, 0.02);
+    for (const f of [1870, 2930, 4410]) this.osc('triangle', f, 1.4, 0.025, f * 0.99, 0.05);
+    this.sheath(0.45);
+  },
+  sheath(delay = 0) {   // 刀を鞘に納める「チャキッ」
+    this.osc('square', 2600, 0.035, 0.06, 1800, delay); this.nz(0.03, 0.18, 'bandpass', 4200, 3, delay);
+    this.osc('triangle', 1300, 0.08, 0.05, 900, delay + 0.03); this.nz(0.025, 0.14, 'bandpass', 3000, 3, delay + 0.035);
+  },
+  blink() {   // 瞬間移動「シュッ」
+    this.nz(0.12, 0.22, 'bandpass', 7000, 1.2, 0, 1500); this.osc('sine', 2400, 0.12, 0.06, 500);
+  },
+  dashCut() {   // 神速の踏みこみ「シュバッ」
+    this.nz(0.2, 0.3, 'bandpass', 3000, 1, 0, 600); this.nz(0.25, 0.18, 'lowpass', 900, 1, 0, 120, 4); this.osc('sine', 140, 0.2, 0.15, 50);
   },
   roar() {   // バーサーカー：咆哮（ゆらぐ低いノコギリ波＋歪んだうなり）
     if (!this._heavy) return this.heavy(() => { this.roar(); this.doom(0.9); });
@@ -861,20 +888,47 @@ Object.assign(IMOVES, {
         Snd.slashWave();
       }
     } },
-  // 横必殺：疾風二連斬（突進して2回斬る）
-  sb: { len: 48, slide: true, sfx: 6, keys: [[0, { lean: -0.2, fa: { s: -1, e: 0.5 }, ba: { s: -1.2, e: 0.5 } }],
-      [6, { lean: 0.6, fa: { s: 1.7, e: 0 }, ba: { s: -1.4, e: 0 }, fl: { h: 0.9, k: -0.2 }, bl: { h: -0.9, k: 0 } }],
-      [18, { lean: 0.6, fa: { s: 1.7, e: 0 }, ba: { s: -1.4, e: 0 }, fl: { h: 0.9, k: -0.2 }, bl: { h: -0.9, k: 0 } }],
-      [24, { lean: 0.2, fa: { s: 2.9, e: 0 }, ba: { s: 2.7, e: 0 } }], [28, { lean: 0.5, fa: { s: 0.8, e: 0 }, ba: { s: 1.0, e: 0 } }], [48, {}]],
-    hb: [HB(6, 18, 72, -72, 34, 6, 30, 4, 0.4), HB(26, 29, 86, -62, 38, 8, 40, 7, 0.8)],
-    upd(F, f) {
-      if (f < 6) { F.vx *= 0.8; if (!F.ground) F.vy *= 0.5; }
-      else if (f < 18) {
-        F.vx = 15 * F.dir;
-        if (f % 2 === 0) BT.puff(F.x - F.dir * 30, F.y - 60, '#ffb3c7');
-        if (!F.ground) { F.vy = 0.3; return false; }
-      } else F.vx *= 0.85;
-      if (f === 22) F.hitIds.clear();
+  // 横必殺：神速斬（一瞬で横へかけぬけ、止まった瞬間に通りすぎた相手が切り刻まれる）
+  sb: { len: 52, slide: true, intang: [7, 16], keys: [[0, {}],
+      [6, { by: 18, lean: 0.55, fa: { s: -0.5, e: 1.4 }, ba: { s: -0.8, e: 1.2 }, fl: { h: 1.1, k: -1.4 }, bl: { h: -0.6, k: -0.7 } }],
+      [8, { by: 20, lean: 0.85, fa: { s: 1.85, e: 0 }, ba: { s: -2.0, e: 0 }, fl: { h: 1.3, k: -0.6 }, bl: { h: -1.3, k: -0.2 } }],
+      [16, { by: 20, lean: 0.85, fa: { s: 1.85, e: 0 }, ba: { s: -2.0, e: 0 }, fl: { h: 1.3, k: -0.6 }, bl: { h: -1.3, k: -0.2 } }],
+      [21, { by: 14, lean: 0.35, fa: { s: 0.4, e: 1.9 }, ba: { s: -1.9, e: 0.1 }, fl: { h: 1.0, k: -0.9 }, bl: { h: -1.0, k: -0.3 } }],
+      [40, { by: 14, lean: 0.35, fa: { s: 0.4, e: 1.9 }, ba: { s: -1.9, e: 0.1 }, fl: { h: 1.0, k: -0.9 }, bl: { h: -1.0, k: -0.3 } }],
+      [44, { by: 6, lean: 0.1, fa: { s: -0.3, e: 1.6 }, ba: { s: -0.6, e: 1.5 } }], [52, {}]],
+    hb: [],
+    upd(F, f, c, B) {
+      if (f < 7) { F.sbT = []; F.vx *= 0.7; if (!F.ground) { F.vy *= 0.5; return false; } return; }
+      if (f === 7) { Snd.dashCut(); B.parts.push({ x: F.x, y: F.y - 70, flare: 1, r: 60, life: 10, max: 10, col: '#ffb3c7', rot: 0, n: 6 }); }
+      if (f <= 16) {
+        F.vx = 27 * F.dir;
+        B.parts.push({ x: F.x - F.dir * 60, y: F.y - 62, cut: 1, ang: 0, len: 150, w: 7, life: 10, max: 10, col: '#ff7aa2' });
+        for (const T of B.fs) {   // かけぬけた相手を覚えて、その場で止める
+          if (!T.alive || !isFoe(F, T) || T.inv > 0 || F.sbT.includes(T) || T.state === 'respawn') continue;
+          if (Math.abs(T.x - F.x) < 80 && Math.abs(T.y - F.y) < 120) { F.sbT.push(T); T.hitlag = Math.max(T.hitlag, 40); B.parts.push({ x: T.x, y: T.y - 70, flare: 1, r: 36, life: 8, max: 8, col: '#ffffff', rot: 0, n: 4 }); }
+        }
+        if (!F.ground) { F.vy = 0; return false; }
+        return;
+      }
+      F.vx *= 0.6;
+      if (f === 18) Snd.sheath();
+      // 止まった瞬間、相手に斬撃が走る
+      const cuts = [21, 24, 27, 30], ang = [-0.6, 0.7, -1.4, 0.15];
+      const ci = cuts.indexOf(f);
+      if (F.sbT.length && (ci >= 0 || f === 35)) {
+        const fin = f === 35;
+        for (const T of F.sbT) {
+          if (!T.alive) continue;
+          const y = T.y - 72 * T.ch.scale;
+          B.parts.push({ x: T.x, y, cut: 1, ang: fin ? -0.35 : ang[ci], len: fin ? 300 : 190, w: fin ? 14 : 8, life: fin ? 18 : 12, max: fin ? 18 : 12, col: '#ff4f86' });
+          if (fin) B.parts.push({ x: T.x, y, cut: 1, ang: 1.2, len: 240, w: 10, life: 18, max: 18, col: '#ffd0dc' });
+          T.hitlag = 0; T.inv = 0;
+          B.applyHit(F, T, fin ? { dmg: 7, ang: 40, base: 7.5, gr: 0.95 } : { dmg: 2, ang: 80, base: 2, gr: 0.02 }, 1, sgn(T.x - F.x) || -F.dir, false, T.x, y);
+          if (!fin) T.hitlag = Math.max(T.hitlag, 6);
+        }
+        if (fin) { Snd.iai(); B.shake = Math.max(B.shake, 12); } else Snd.katanaSwing(0.6);
+      }
+      if (!F.ground && f < 36) { F.vy = Math.min(F.vy, 0.5); }
     } },
   // 上必殺：つむじ双刃（回転しながら上昇、連続ヒット）
   ub: { len: 46, air: true, landLag: 18, after: 'helpless', sfx: 4, keys: [[0, { by: 12 }],
@@ -891,9 +945,39 @@ Object.assign(IMOVES, {
   db: { len: 36, counter: [4, 26], keys: [[0, {}], [4, { by: 8, lean: -0.1, fa: { s: 1.4, e: 1.4 }, ba: { s: 1.2, e: 1.6 } }],
       [26, { by: 8, lean: -0.1, fa: { s: 1.4, e: 1.4 }, ba: { s: 1.2, e: 1.6 } }], [36, {}]],
     hb: [], upd(F) { if (!F.ground) F.vy = Math.min(F.vy, 1); } },
-  dbc: { len: 30, sfx: 3, keys: [[0, { fa: { s: 2.9, e: 0 }, ba: { s: -2.6, e: 0 } }], [5, { lean: 0.4, fa: { s: 0.9, e: 0 }, ba: { s: -0.9, e: 0 } }],
-      [14, { lean: 0.4, fa: { s: 0.9, e: 0 }, ba: { s: -0.9, e: 0 } }], [30, {}]],
-    hb: [HB(3, 7, 70, -70, 62, 12, 40, 8, 0.95, { auto: 1 })] },
+  // カウンター成功：相手の背後へ瞬間移動して切り刻む
+  dbc: { len: 50, intang: [0, 32], hide: [3, 7], keys: [[0, { by: 8, lean: -0.1, fa: { s: 1.4, e: 1.4 }, ba: { s: 1.2, e: 1.6 } }],
+      [3, { by: 16, lean: 0.4, fa: { s: -0.6, e: 1.2 }, ba: { s: -0.9, e: 1.2 } }],
+      [9, { by: 10, lean: 0.4, fa: { s: 2.9, e: 0 }, ba: { s: -2.4, e: 0 } }],
+      [11, { lean: 0.5, fa: { s: 0.6, e: 0 }, ba: { s: 2.6, e: 0 } }],
+      [14, { lean: 0.35, fa: { s: 2.7, e: 0 }, ba: { s: 0.4, e: 0 } }],
+      [18, { lean: 0.55, fa: { s: 0.5, e: 0 }, ba: { s: -0.6, e: 0 }, fl: { h: 0.8, k: -0.3 }, bl: { h: -0.8, k: 0 } }],
+      [22, { by: -6, lean: 0.1, fa: { s: 3.1, e: 0 }, ba: { s: 2.9, e: 0 } }],
+      [27, { by: 14, lean: 0.75, fa: { s: 0.8, e: 0 }, ba: { s: 1.0, e: 0 }, fl: { h: 1.1, k: -0.5 }, bl: { h: -1.1, k: 0 } }],
+      [40, { by: 14, lean: 0.75, fa: { s: 0.8, e: 0 }, ba: { s: 1.0, e: 0 }, fl: { h: 1.1, k: -0.5 }, bl: { h: -1.1, k: 0 } }], [50, {}]],
+    hb: [HB(10, 11, 62, -74, 62, 2, 80, 2.5, 0.02, { auto: 1 }), HB(13, 14, 62, -74, 62, 2, 80, 2.5, 0.02, { auto: 1 }),
+      HB(17, 18, 62, -74, 62, 2, 80, 2.5, 0.02, { auto: 1 }), HB(20, 21, 62, -74, 62, 2, 80, 2.5, 0.02, { auto: 1 }),
+      HB(27, 29, 66, -74, 68, 8, 40, 8, 1.0, { auto: 1 })],
+    upd(F, f, c, B) {
+      const T = F.cTarget;
+      if (f === 2) { B.parts.push({ x: F.x, y: F.y - 70, flare: 1, r: 70, life: 12, max: 12, col: '#ffb3c7', rot: 0, n: 6 }); Snd.blink(); }
+      if (f === 5 && T && T.alive && Math.abs(T.x - F.x) < 900) {   // 背後へ瞬間移動
+        const ox = F.x, oy = F.y;
+        F.x = T.x - (T.dir || 1) * 88; F.y = T.y; F.ground = T.ground || null; F.vx = 0; F.vy = 0;
+        F.dir = sgn(T.x - F.x) || F.dir; T.hitlag = Math.max(T.hitlag, 14);
+        const mx = (ox + F.x) / 2, my = (oy + F.y) / 2 - 70;
+        B.parts.push({ x: mx, y: my, cut: 1, ang: Math.atan2(F.y - oy, F.x - ox), len: Math.hypot(F.x - ox, F.y - oy) + 60, w: 5, life: 12, max: 12, col: '#ffb3c7' });
+        for (let i = 0; i < 8; i++) B.parts.push({ x: F.x + rnd(-30, 30), y: F.y - rnd(20, 140), vx: rnd(-3, 3), vy: rnd(-3, 1), life: 40, max: 40, petal: 1, rot: rnd(0, TAU), size: rnd(4, 7), g: 0.06, col: '#ffb7cc' });
+        Snd.blink();
+      }
+      if (f > 5 && f < 32 && !F.ground) { F.vy = 0; F.vx = 0; return false; }
+      if ([10, 13, 17, 20, 27].includes(f)) {
+        F.hitIds.clear(); Snd.katanaSwing(f === 27 ? 1 : 0.5);
+        const x = F.x + F.dir * 62, y = F.y - 74, fin = f === 27;
+        B.parts.push({ x, y, cut: 1, ang: fin ? -0.3 * F.dir : [0.8, -0.7, 1.5, 0.2][[10, 13, 17, 20].indexOf(f)], len: fin ? 280 : 180, w: fin ? 13 : 8, life: fin ? 18 : 12, max: fin ? 18 : 12, col: '#ff4f86' });
+        if (fin) { B.parts.push({ x, y, cut: 1, ang: 1.25, len: 220, w: 9, life: 18, max: 18, col: '#ffd0dc' }); Snd.iai(); B.shake = Math.max(B.shake, 12); }
+      }
+    } },
 });
 for (const k in IMOVES) IMOVES[k].K = IMOVES[k].keys.map(([f, o]) => [f, mk(o)]);
 
@@ -1847,8 +1931,8 @@ const CHARS = [
   { key: 'ichigo', name: '一瑚', kana: 'ICHIGO', img: ICHI, ar: ICHI_AR, eyes: false, scale: 1, run: 7.2, airs: 5.6, jv: -14.3, shv: -10, djv: -13.2, kbTake: 1.05, swords: true, hand: '#f1cdb8', moves: IMOVES,
     scarf: { col: '#ff3d6e', col2: '#ffd0dc', n: 7, seg: 9, w: 7 },
     fsName: '桜花千刃', fsDesc: '神速の突進で捕らえ、千の斬撃をたたきこむ',
-    specials: [['いちごクロス', '必殺', 'X字の斬撃を飛ばす'], ['疾風二連斬', '横＋必殺', '突進して2回斬る'],
-      ['つむじ双刃', '上＋必殺', '回転斬りで上昇（復帰用）'], ['受け流し', '下＋必殺', '攻撃を受け止めて反撃']] },
+    specials: [['いちごクロス', '必殺', 'X字の斬撃を飛ばす'], ['神速斬', '横＋必殺', '一瞬でかけぬけ、止まった瞬間に切り刻む'],
+      ['つむじ双刃', '上＋必殺', '回転斬りで上昇（復帰用）'], ['受け流し', '下＋必殺', '受け止めたら背後へ瞬間移動して切り刻む']] },
   { key: 'berserker', name: 'バーサーカー', kana: 'BERSERKER', img: BERS, ar: BERS_AR, eyes: false, swords: false, muscle: true, berserk: true,
     fsName: '覇王無双撃', fsDesc: '突進してつかまえ、拳の連打から最後の一撃でぶっ飛ばす',
     scale: 1.38, run: 5.6, airs: 4.6, jv: -13.6, shv: -9.4, djv: -12.4, kbTake: 0.7, lightArmor: 7, hand: '#e6b08f', moves: BMOVES,
@@ -3848,6 +3932,16 @@ function drawFx(p) {
     }
     ctx.restore(); return;
   }
+  if (p.cut) {   // 斬撃の線（中央が太い三日月）
+    const q = 1 - k, L = p.len * Math.min(1, q * 3 + 0.35), w = p.w * (k > 0.7 ? 1 : k / 0.7);
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.ang);
+    ctx.globalAlpha = Math.min(1, k * 1.5) * 0.55; ctx.drawImage(glowSprite(p.col), -L * 0.6, -w * 3, L * 1.2, w * 6);
+    ctx.globalAlpha = Math.min(1, k * 1.8);
+    for (const [ww, c] of [[1, p.col], [0.45, '#ffffff']]) {
+      ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(-L / 2, 0); ctx.quadraticCurveTo(0, -w * ww * 2, L / 2, 0); ctx.quadraticCurveTo(0, w * ww * 0.6, -L / 2, 0); ctx.fill();
+    }
+    ctx.restore(); return;
+  }
   if (p.shock) {   // 広がる衝撃の輪
     ctx.globalAlpha = k; ctx.strokeStyle = p.col; ctx.lineWidth = p.w * k + 1;
     ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, TAU); ctx.stroke();
@@ -5191,7 +5285,7 @@ SC_.battle = (o) => {
   B.applyHit = (A, T, hb, charge, ds, isProj, hx, hy) => {
     if (!T.alive || T.inv > 0 || T.intangible || !isFoe(A, T)) return false;
     if (T.state === 'move' && T.move.counter && T.mf >= T.move.counter[0] && T.mf <= T.move.counter[1]) {
-      T.dir = -ds; T.startMove('dbc'); T.inv = 14; T.hitlag = 6; if (!isProj) A.hitlag = 20;
+      T.dir = -ds; T.cTarget = A; T.startMove('dbc'); T.inv = 30; T.hitlag = 6; A.hitlag = Math.max(A.hitlag, 28);
       B.burst(hx, hy, '#ffffff', 18); B.burst(hx, hy, '#ff7aa2', 10); B.flashScr = 4; B.shake = Math.max(B.shake, 8);
       Snd.shield(); Snd.hitC(T.ch, 12);
       return true;
@@ -6999,7 +7093,7 @@ SC_.battle = (o) => {
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
     for (const p of B.parts) {
       if (p.smoke || p.rock || p.petal || p.stuck || p.splat) continue;
-      if (p.flare || p.shock || p.bolt || p.note || p.drop || p.feather || p.shard || p.spark) { drawFx(p); continue; }
+      if (p.flare || p.shock || p.bolt || p.note || p.drop || p.feather || p.shard || p.spark || p.cut) { drawFx(p); continue; }
       if (p.sonic) {   // 音の波（水色とピンクの同心円）
         const k2 = p.life / p.max, r = p.r * (0.4 + (1 - k2) * 0.9);
         for (let j = 0; j < 3; j++) {
