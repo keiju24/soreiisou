@@ -776,6 +776,9 @@ const P_DODGE = mk({ by: 20, lean: 0.6, hd: 0.3, fa: { s: 1.0, e: 1.6 }, ba: { s
 //  ワザデータ
 //  HB(開始F, 終了F, x, y, 半径, ダメージ, 角度, 基礎ふっとび, 成長率)
 // =====================================================================
+// ---- 一瑚の次元ゲージ：満タンになると「次元モード」になり、通常必殺が次元斬になる ----
+const DIM_MAX = 100, DIM_TIME = 540;   // ゲージの最大・モードの長さ（9秒）
+function dimGain(F, v) { if (F && F.ch && F.ch.key === 'ichigo' && !(F.dimT > 0)) F.dimG = Math.min(DIM_MAX, (F.dimG || 0) + v); }
 const HB = (f0, f1, ox, oy, r, dmg, ang, base, gr, ex) => Object.assign({ f0, f1, ox, oy, r, dmg, ang, base, gr }, ex || {});
 let BT = null; // 現在のバトル
 
@@ -947,7 +950,19 @@ Object.assign(IMOVES, {
       [12, { fa: { s: 0.1, e: 0 }, ba: { s: -0.1, e: 0 }, fl: { h: 0.7, k: -1.6 }, bl: { h: 0.5, k: -1.4 } }],
       [20, { fa: { s: 0.1, e: 0 }, ba: { s: -0.1, e: 0 }, fl: { h: 0.7, k: -1.6 }, bl: { h: 0.5, k: -1.4 } }], [40, {}]],
     hb: [HB(12, 16, 0, 12, 32, 13, -80, 6, 0.8)] },
-  // 通常必殺：次元斬（居合の構えから抜きはなち、狙った場所の空間そのものを切り刻む）
+  // 通常必殺（ふだん）：居合一閃。すばやく抜いて横一文字に斬り、すぐ納める
+  nb0: { len: 34, sheathe: [[0, 7], [24, 34]], keys: [[0, {}],
+      [6, { by: 22, lean: 0.6, hd: 0.25, fa: { s: 0.35, e: 2.3 }, ba: { s: -0.15, e: 1.9 }, fl: { h: 1.3, k: -1.3 }, bl: { h: -1.05, k: -0.5 } }],
+      [9, { by: 14, lean: 0.75, fa: { s: 2.0, e: 0 }, ba: { s: -1.4, e: 0.5 }, fl: { h: 1.4, k: -0.5 }, bl: { h: -1.35, k: 0 } }],
+      [18, { by: 14, lean: 0.6, fa: { s: 2.0, e: 0 }, ba: { s: -1.4, e: 0.5 }, fl: { h: 1.4, k: -0.5 }, bl: { h: -1.35, k: 0 } }],
+      [24, { by: 10, lean: 0.25, hd: 0.3, fa: { s: 0.4, e: 2.3 }, ba: { s: -0.15, e: 1.9 } }], [34, {}]],
+    hb: [HB(8, 10, 84, -76, 44, 7, 38, 6, 0.65)],
+    upd(F, f) {
+      if (!F.ground && f < 20) F.vy = Math.min(F.vy, 0.8);
+      if (f === 8) { Snd.katanaSwing(0.9); BT.parts.push({ x: F.x + F.dir * 90, y: F.y - 76, cut: 1, ang: 0, len: 230, w: 9, life: 10, max: 10, col: '#cfe0ff' }); }
+      if (f === 23) Snd.sheath();
+    } },
+  // 通常必殺（次元モード中）：次元斬（居合の構えから抜きはなち、狙った場所の空間そのものを切り刻む）
   nb: { len: 56, sheathe: [[0, 16], [39, 56]], keys: [[0, {}],
       [6, { by: 26, lean: 0.6, hd: 0.25, fa: { s: 0.35, e: 2.3 }, ba: { s: -0.15, e: 1.9 }, fl: { h: 1.3, k: -1.35 }, bl: { h: -1.05, k: -0.55 } }],
       [16, { by: 30, lean: 0.68, hd: 0.3, fa: { s: 0.35, e: 2.35 }, ba: { s: -0.15, e: 1.95 }, fl: { h: 1.35, k: -1.45 }, bl: { h: -1.1, k: -0.6 } }],
@@ -2091,7 +2106,7 @@ const CHARS = [
   { key: 'ichigo', name: '一瑚', kana: 'ICHIGO', img: ICHI, ar: ICHI_AR, eyes: false, scale: 1, run: 7.2, airs: 5.6, jv: -14.3, shv: -10, djv: -13.2, kbTake: 1.05, swords: true, hand: '#2a3a78', moves: IMOVES,
     outfit: { main: '#26346a', dark: '#141c3e', light: '#3c4d92', pants: '#141c3e', shoe: '#f1cdb8' },
     fsName: '次元千斬', fsDesc: '止まった時の中で千の斬撃を刻み、納刀とともに空間ごと断つ',
-    specials: [['次元斬', '必殺', '狙った場所の空間ごと切り刻む'], ['神速斬', '横＋必殺', '一瞬でかけぬけ、止まった瞬間に切り刻む'],
+    specials: [['居合一閃 ／ 次元斬', '必殺', 'ふだんは居合一閃。攻撃を当てる・受けるとたまるゲージが満タンになると次元モードになり、空間ごと切り刻む次元斬に'], ['神速斬', '横＋必殺', '一瞬でかけぬけ、止まった瞬間に切り刻む'],
       ['つむじ双刃', '上＋必殺', '回転斬りで上昇（復帰用）'], ['受け流し', '下＋必殺', '受け止めたら背後へ瞬間移動して切り刻む']] },
   { key: 'berserker', name: 'バーサーカー', kana: 'BERSERKER', img: BERS, ar: BERS_AR, eyes: false, swords: false, muscle: true, berserk: true,
     fsName: '覇王無双撃', fsDesc: '突進してつかまえ、拳の連打から最後の一撃でぶっ飛ばす',
@@ -2204,6 +2219,19 @@ class Fighter {
     if (this.ledgeCD > 0) this.ledgeCD--;
     if (this.inkT > 0) this.inkT--;   // 墨（今井のインク弾）の効果時間
     if (this.recoilT > 0) this.recoilT--;
+    if (this.ch.key === 'ichigo' && this.alive) {
+      if (this.dimT > 0) { if (--this.dimT === 0 && BT) { BT.parts.push({ x: this.x, y: this.y - 80, shock: 1, r: 30, vr: -1.5, life: 14, max: 14, col: '#9fc4ff', w: 5 }); Snd.sheath(); } }
+      else if (this.dimG >= DIM_MAX && BT && this.state !== 'super') {   // 次元モード開始
+        this.dimG = 0; this.dimT = DIM_TIME;
+        const y = this.y - 80 * this.ch.scale;
+        BT.parts.push({ x: this.x, y, dzone: 1, r: 150, life: 26, max: 26 });
+        BT.parts.push({ x: this.x, y, shock: 1, r: 24, vr: 24, life: 20, max: 20, col: '#cfe0ff', w: 14 });
+        for (let i = 0; i < 3; i++) BT.parts.push({ x: this.x, y, rift: 1, ang: -0.7 + i * 0.7, len: 260, w: 14, life: 24, max: 24, seed: i * 13 + 5 });
+        BT.parts.push({ x: this.x, y: this.y - 230 * this.ch.scale, kanji: '次元', size: 84, rot: -0.05, life: 50, max: 50 });
+        BT.flashScr = 8; BT.flashRGB = '170,200,255'; BT.shake = Math.max(BT.shake, 10);
+        Snd.iai(); Snd.heavy(() => Snd.doom(0.5));
+      }
+    }
     if (this.reloadT > 0 && --this.reloadT === 0 && this.alive) { Snd.reload(); if (BT) BT.parts.push({ x: this.x + this.dir * 30, y: this.y - 90 * this.ch.scale, flare: 1, r: 26, life: 8, max: 8, col: '#ff5a5a', rot: 0, n: 4 }); }
     if (this.state !== 'shield') this.shieldHP = Math.min(100, this.shieldHP + 0.14);
     const hx = c.hx;
@@ -2353,7 +2381,7 @@ class Fighter {
       this.dir = hx; if (!this.ground) this.usedSideB = true;
       return this.startMove('sb');
     }
-    this.startMove('nb');
+    this.startMove(this.ch.key === 'ichigo' && !(this.dimT > 0) ? 'nb0' : 'nb');
   }
   moveUpd(c, B) {
     const m = this.move;
@@ -4996,6 +5024,25 @@ function drawFighterExtras(F, t) {
       star(F.x + Math.cos(a) * 34, F.y - 190 * F.ch.scale + Math.sin(a) * 8, 8, '#fff27a');
     }
   }
+  // 一瑚の次元ゲージ（名前タグの上）と、次元モードの気
+  if (F.ch.key === 'ichigo' && F.alive && F.state !== 'respawn') {
+    const x = F.x, y = F.y - 214 * F.ch.scale, W = 64, mode = F.dimT > 0, q = mode ? F.dimT / DIM_TIME : (F.dimG || 0) / DIM_MAX;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(x - W / 2 - 2, y - 4, W + 4, 8);
+    const g = ctx.createLinearGradient(x - W / 2, 0, x + W / 2, 0); g.addColorStop(0, '#3a5cff'); g.addColorStop(1, mode ? '#ffffff' : '#9fc4ff');
+    ctx.fillStyle = g; ctx.fillRect(x - W / 2, y - 2, W * q, 4);
+    if (!mode && q >= 0.999) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.6 + 0.4 * Math.sin(t * 0.4); ctx.fillStyle = '#cfe0ff'; ctx.fillRect(x - W / 2, y - 3, W, 6); }
+    ctx.restore();
+    if (mode) {   // 体のまわりに空間の裂け目がちらつく
+      const cy = F.y - 80 * F.ch.scale;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.35 + 0.15 * Math.sin(t * 0.3); ctx.drawImage(glowSprite('rgba(110,150,255,.85)'), F.x - 110, cy - 130, 220, 260);
+      ctx.strokeStyle = 'rgba(200,220,255,.8)'; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+      const R = srand(((t >> 2) + 3) * 2654435761 % 2147483647); R();
+      for (let i = 0; i < 4; i++) { const a = R() * TAU, r0 = 40 + R() * 40, L = 30 + R() * 50; line(F.x + Math.cos(a) * r0, cy + Math.sin(a) * r0 * 1.3, F.x + Math.cos(a + 0.3) * (r0 + L), cy + Math.sin(a + 0.3) * (r0 + L) * 1.3); }
+      ctx.restore();
+    }
+  }
   // 名前タグ
   if ((F.state !== 'hitstun' || !F.tumble) && !F._nomark) {
     const ty = F.y - 194 * F.ch.scale;
@@ -5709,6 +5756,7 @@ SC_.battle = (o) => {
     }
     const dmg = hb.dmg * charge * (A.rage ? 1.3 : 1);
     T.percent += dmg; A.stats.dmg += dmg; T.lastHitBy = A;
+    dimGain(A, dmg * 1.6); dimGain(T, dmg * 1.3);   // 一瑚の次元ゲージ
     const kb = (hb.base + hb.gr * T.percent * 0.13) * (T.ch.kbTake || 1);
     // スーパーアーマー：ワザ中や軽い攻撃ではひるまない
     if ((T.state === 'move' && T.move.armor && kb < 26) || kb < (T.ch.lightArmor || 0)) {
@@ -5844,7 +5892,7 @@ SC_.battle = (o) => {
   };
   const canCatch = T => T && T.alive && T.state !== 'respawn' && T.inv <= 0 && !T.intangible;
   function catchT(S) { const T = S.T; T.move = null; T.setState('caught'); T.vx = 0; T.vy = 0; T.ground = null; T.hitlag = 0; S.caught = true; }
-  function supHit(S, dmg) { const T = S.T; T.percent += dmg; S.F.stats.dmg += dmg; T.pctShake = 10; T.flash = 5; T.lastHitBy = S.F; }
+  function supHit(S, dmg) { const T = S.T; T.percent += dmg; S.F.stats.dmg += dmg; dimGain(T, dmg * 1.3); T.pctShake = 10; T.flash = 5; T.lastHitBy = S.F; }
   function supLaunch(S, hb, ds) { const T = S.T; T.setState('air'); T.inv = 0; B.applyHit(S.F, T, hb, 1, ds, true, T.x, T.y - 75 * T.ch.scale); }
   // true を返したら終了
   function updSuper() {
@@ -6118,7 +6166,7 @@ SC_.battle = (o) => {
     B.hudShake[F.id] = 36;
     B.lostStock = { id: F.id, idx: F.stocks - 1, life: 70, ch: F.ch };
     Snd.ko(); Snd.koBoom();
-    F.stocks--; F.stats.falls++; F.hasFS = false;
+    F.stocks--; F.stats.falls++; F.hasFS = false; F.dimT = 0; F.dimG = (F.dimG || 0) * 0.5;
     if (F.lastHitBy && F.lastHitBy !== F) { F.lastHitBy.stats.ko++; B.scorePop = { id: F.lastHitBy.id, life: 80 }; } else F.stats.sd++;
     F.ground = null; F.move = null;
     if (F.stocks > 0) { F.state = 'dead'; F.deadT = 75; } else { F.state = 'out'; F.stats.outT = B.time; }
