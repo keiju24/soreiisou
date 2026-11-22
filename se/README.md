@@ -15,6 +15,9 @@
 | dash1 | 高速移動（highspeed-movement1） |
 | punch1〜5 | 重いパンチ・パンチ・殴る（punch-heavy1〜3, punch-high1, blow5） |
 | boom2 | 必殺技ヒット（super-arts-hit1） |
+| bowdraw1 | 弓を引く（bow-draw1） |
+| release1 | 矢を放つ（arrow-release1） |
+| pierce1 | 矢が刺さる（arrow-pierce1） |
 
 ## OpenGameArt.org（CC0：パブリックドメイン）
 
