@@ -2294,6 +2294,12 @@ function bloodSpray(B, x, y, n, dir = 0, pow = 1, fy) {
   // 細い血の筋（勢いよく噴き出す）
   for (let i = 0; i < 2 + (n / 8 | 0); i++) { const a = dir ? (dir > 0 ? -0.5 : Math.PI + 0.5) + rnd(-0.5, 0.5) : rnd(-Math.PI, 0); B.parts.push({ x, y, vx: Math.cos(a) * rnd(8, 15) * pow, vy: Math.sin(a) * rnd(8, 15) * pow, g: 0.5, life: 22, max: 22, blood: 1, jet: 1, size: rnd(2, 3.5), fy, seed: Math.random() * 1e4 | 0 }); }
 }
+// 大地の割れ目を左右に走らせる（pl：足場。足場の端で止まる）
+function riftBurst(B, x, y, pl, speed = 22, life = 16) {
+  B.parts.push({ x, y, crack: 1, len: 60, life: 110, max: 110, seed: (x * 13 | 0) & 0xffff, big: 1 });
+  for (let i = 0; i < 3; i++) B.parts.push({ x: x + rnd(-20, 20), y, shaft: 1, w: rnd(14, 26), h: rnd(160, 260), life: 20, max: 20 });
+  for (const d of [-1, 1]) B.parts.push({ x: x + d * 20, y, runner: 1, vx: d * speed, x1: pl.x1, x2: pl.x2, life, max: life });
+}
 function bloodHitFx(B, x, y, dmg, A, T) {
   B.parts.push({ x, y, slash: 1, rot: rnd(-1.0, -0.4), len: 90 + dmg * 6, life: 11, max: 11, col: '#ff1028' });
   if (dmg >= 10) B.parts.push({ x, y, flare: 1, r: 70 + dmg * 5, life: 14, max: 14, col: '#a0000e', rot: rnd(0, TAU), n: 7 });
@@ -2384,8 +2390,10 @@ function bloodHitFx(B, x, y, dmg, A, T) {
     // 横必殺：ブラッディラッシュ（剣を突き出して一直線に突進）
     sb: { len: 48, slide: true, sfx: 8, keys: [[0, { lean: -0.3, fa: A_(2.6, 0.6) }], [8, { lean: 0.7, hd: 0.1, fa: A_(1.6, 0), ba: A_(1.3, 0.4), fl: G_(-0.4, -0.3), bl: G_(-1.0, 0) }],
         [28, { lean: 0.7, hd: 0.1, fa: A_(1.6, 0), ba: A_(1.3, 0.4), fl: G_(-0.4, -0.3), bl: G_(-1.0, 0) }], [48, S0]],
-      hb: [HB(8, 25, 120, -80, 44, 2, 20, 4, 0, { hs: 12 }), HB(26, 29, 125, -80, 48, 8, 38, 8, 0.85)],
-      upd(F, f) {
+      hb: [HB(8, 25, 120, -80, 44, 1, 20, 4, 0, { hs: 14 }), HB(26, 29, 120, -80, 48, 4, 82, 5, 0.2, { hs: 30 })],
+      upd(F, f, c) {
+        // 後半に 上＋必殺 で天墜斬へつなげる（当てた相手はそのまま巻きこまれる）
+        if (f >= 16 && c && c.p.special && c.h.up) { F.vx *= 0.3; F.startMove('ub'); F.charge = 0.6; return; }   // つなげたときはダメージ低め
         if (f < 8) { F.vx *= 0.8; if (!F.ground) F.vy *= 0.5; }
         else if (f < 28) {
           F.vx = (f < 26 ? 12 : 4) * F.dir;
@@ -2421,10 +2429,11 @@ function bloodHitFx(B, x, y, dmg, A, T) {
       },
       onLand(F) {
         if (F.mf < 30) { F.move = null; F.landLag = 10; F.setState('land'); return; }
-        const carried = F.carry || [];
-        F.startMove('ubl'); BT.shake = Math.max(BT.shake, 20); BT.dust(F.x, F.y, 22); Snd.guillotine();
+        const carried = F.carry || [], k = F.charge;
+        F.startMove('ubl'); F.charge = k; BT.shake = Math.max(BT.shake, 20); BT.dust(F.x, F.y, 22); Snd.guillotine();
         for (const id of carried) { const T = BT.fs.find(q => q.id === id); if (T && T.alive && T.state === 'hitstun') { T.x = F.x + F.dir * 20; T.y = F.y - 4; } }   // 地面にたたきつけた相手へ着地の一撃
         for (const d of [-1, 1]) BT.parts.push({ x: F.x + d * 30, y: F.y, shock: 1, r: 12, vr: 13, life: 18, max: 18, col: '#ff2030', w: 10 });
+        if (F.ground) riftBurst(BT, F.x + F.dir * 8, F.y, F.ground);
       } },
     ubl: { len: 26, keys: [[0, { by: 26, lean: 0.45, fa: A_(0.04, 0), ba: A_(0.3, 0.3), fl: G_(1.0, -2.0), bl: G_(-0.6, -1.5) }], [26, S0]],
       hb: [HB(1, 5, 30, -40, 56, 9, 70, 7, 0.8), HB(1, 5, 90, -26, 50, 9, 70, 7, 0.75, { auto: 1 }), HB(1, 5, -90, -26, 50, 9, 70, 7, 0.75, { auto: 1 })] },
@@ -2515,7 +2524,7 @@ const CHARS = [
   { key: 'bhenry', name: 'ヘンリー（寝たら朝は来ない）', kana: 'BLOODY', img: BHEN_FACE, ar: BHEN_FACE_AR, eyes: false, scale: 1.15, run: 6.4, airs: 5.2, jv: -14.2, shv: -9.8, djv: -13.2,
     kbTake: 0.92, swords: false, doodle: true, bloody: true, hand: '#ffffff', moves: BHMOVES,
     fsName: '寝たら朝は来ない', fsDesc: '目の前でなぐり続け、返り血をあびたまま大剣でたたき切る',
-    specials: [['地裂斬', '必殺', '大きくふりかぶって重い斬撃を飛ばす。地上では大地を割って突き進む（撃ったあと少し待つ）'], ['ブラッディラッシュ', '横＋必殺', '大剣を突き出して一直線に突っこむ'],
+    specials: [['地裂斬', '必殺', '大きくふりかぶって重い斬撃を飛ばす。地上では大地を割って突き進む（撃ったあと少し待つ）'], ['ブラッディラッシュ', '横＋必殺', '斬りつけながら突進する。後半に 上＋必殺 で天墜斬につながる'],
       ['天墜斬', '上＋必殺', '大剣を投げ上げて相手ごと舞い上がり、つかんだ剣で地面へたたき落とす（復帰用）'], ['断頭台', '下＋必殺', '跳び上がって大剣を真下に突き立てる。着地で血がふき上がる']] },
 ];
 // ---- 今井：触手の通常ワザ・スマッシュ・空中ワザ（当たり判定ひとつにつき1本の触手が伸びる）----
@@ -7578,6 +7587,15 @@ SC_.battle = (o) => {
     for (const p of B.parts) {
       p.life--;
       if (p.shock) { p.r += p.vr; p.vr *= 0.86; continue; }
+      if (p.runner) {   // 割れ目の先頭：進みながら裂け目・めくれる岩盤・光の柱・岩くずを残す
+        p.x += p.vx; p.vx *= 0.93;
+        if (p.x < p.x1 || p.x > p.x2) { p.life = 0; continue; }
+        B.parts.push({ x: p.x - p.vx * 0.5, y: p.y, crack: 1, len: Math.abs(p.vx) + 4, life: 100, max: 100, seed: (p.x * 7 | 0) ^ (p.life * 131) });
+        if (p.life % 2 === 0) B.parts.push({ x: p.x + rnd(-8, 8), y: p.y, slab: 1, w: rnd(16, 30), h: rnd(16, 34) * (0.5 + p.life / p.max), tilt: rnd(0.25, 0.6) * (Math.random() < 0.5 ? -1 : 1), life: 70, max: 70, seed: Math.random() * 1e4 | 0 });
+        if (p.life % 3 === 0) B.parts.push({ x: p.x, y: p.y, shaft: 1, w: rnd(8, 16), h: rnd(80, 160), life: 16, max: 16 });
+        B.parts.push({ x: p.x + rnd(-10, 10), y: p.y - 4, vx: rnd(-2, 2) + p.vx * 0.1, vy: rnd(-12, -5), life: 32, max: 32, rock: 1, size: rnd(3, 8), g: 0.6, col: '#4a3a36', rot: rnd(0, TAU) });
+        continue;
+      }
       if (p.feather || p.shard) p.rot += 0.18;
       if (p.ring) p.r += 6;
       else if (p.blood && p.fy !== undefined && p.vy > 0 && p.y >= p.fy) { p.blood = 0; p.bstain = 1; p.y = p.fy; p.vx = undefined; p.life = p.max = 220; p.size *= p.jet ? 1.6 : 2.6; }
@@ -8780,7 +8798,7 @@ SC_.battle = (o) => {
     // エフェクト（加算合成で光らせる）
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
     for (const p of B.parts) {
-      if (p.smoke || p.rock || p.petal || p.stuck || p.splat || p.blood || p.bstain || p.slab) continue;
+      if (p.smoke || p.rock || p.petal || p.stuck || p.splat || p.blood || p.bstain || p.slab || p.runner) continue;
       if (p.crack) {   // 裂け目の奥で光る溶けたような赤（だんだん冷える）
         const age = p.max - p.life, heat = Math.max(0, 1 - age / 60) * Math.min(1, age / 3), L = p.len || 40;
         if (heat <= 0) continue;
