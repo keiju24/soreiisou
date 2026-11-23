@@ -2437,18 +2437,49 @@ function bloodHitFx(B, x, y, dmg, A, T) {
       } },
     ubl: { len: 26, keys: [[0, { by: 26, lean: 0.45, fa: A_(0.04, 0), ba: A_(0.3, 0.3), fl: G_(1.0, -2.0), bl: G_(-0.6, -1.5) }], [26, S0]],
       hb: [HB(1, 5, 30, -40, 56, 9, 70, 7, 0.8), HB(1, 5, 90, -26, 50, 9, 70, 7, 0.75, { auto: 1 }), HB(1, 5, -90, -26, 50, 9, 70, 7, 0.75, { auto: 1 })] },
-    // 下必殺：断頭台（跳び上がって大剣を真下に突き立てる。着地で血がふき上がる）
-    db: { len: 90, air: true, sfx: 8, keys: [[0, { by: 10 }], [6, { by: -4, fa: A_(3.2, 0.3), ba: A_(3.0, 0.4), fl: G_(0.9, -2.0), bl: G_(0.7, -1.8) }],
-        [11, { fa: A_(0.04, 0), ba: A_(0.2, 0.3), fl: G_(0.2, -0.3), bl: G_(-0.1, -0.2) }], [90, { fa: A_(0.04, 0), ba: A_(0.2, 0.3), fl: G_(0.2, -0.3), bl: G_(-0.1, -0.2) }]],
-      hb: [HB(9, 90, 4, 30, 34, 12, -70, 5, 0.7)],
+    // 下必殺：処刑台（大剣を盾のように構えて受け止め、攻撃してきた相手をつかんでたたき伏せ、真上から突き刺す）
+    db: { len: 46, keys: [[0, S0], [5, { by: 8, lean: -0.1, hd: -0.1, fa: A_(1.05, 1.75), ba: A_(1.15, 1.45), fl: G_(0.5, -0.6), bl: G_(-0.4, -0.3) }],
+        [30, { by: 8, lean: -0.1, hd: -0.1, fa: A_(1.05, 1.75), ba: A_(1.15, 1.45), fl: G_(0.5, -0.6), bl: G_(-0.4, -0.3) }], [46, S0]],
+      counter: [5, 30], hb: [],
       upd(F, f) {
-        if (f === 1 && F.ground) { F.vy = -12; F.ground = null; }
-        if (f >= 9) { F.vy = 18; F.vx *= 0.9; return false; }
-      },
-      onLand(F) { F.startMove('dbl'); BT.shake = Math.max(BT.shake, 14); BT.dust(F.x, F.y, 18); Snd.guillotine(); heavy(F, 20, -4); } },
-    dbl: { len: 30, keys: [[0, { by: 24, lean: 0.4, fa: A_(0.04, 0), ba: A_(0.3, 0.3), fl: G_(1.0, -2.0), bl: G_(-0.6, -1.5) }], [30, S0]],
-      hb: [HB(1, 6, 90, -30, 52, 10, 65, 7, 0.75, { auto: 1 }), HB(1, 6, -90, -30, 52, 10, 65, 7, 0.75, { auto: 1 })],
-      upd(F, f) { if (f === 1) for (const s of [-1, 1]) BT.parts.push({ x: F.x + s * 40, y: F.y, shock: 1, r: 10, vr: 11, life: 18, max: 18, col: '#c0001a', w: 10 }); } },
+        F.vx *= 0.7; if (!F.ground) F.vy = Math.min(F.vy, 1.5);
+        if (f === 5) { BT.parts.push({ x: F.x + F.dir * 40, y: F.y - 110 * F.ch.scale, flare: 1, r: 60, life: 10, max: 10, col: '#ff3040', rot: 0.4, n: 4 }); Snd.smp('sheath', 0.6, 1.2); }
+      } },
+    // 受け止めたあと：つかむ → 地面にたたき伏せる → 大剣をかかげ → 真上から突き刺す
+    dbc: { len: 72, noCancel: true, keys: [[0, { lean: 0.5, fa: A_(1.3, 1.2), ba: A_(1.7, 0) }],
+        [8, { lean: 0.35, by: -4, fa: A_(2.6, 0.6), ba: A_(2.4, 0.3) }],
+        [13, { lean: 0.8, by: 18, fa: A_(1.0, 0.5), ba: A_(0.7, 0.2), fl: G_(1.0, -0.8), bl: G_(-0.8, 0) }], [20, { lean: 0.8, by: 18, fa: A_(1.0, 0.5), ba: A_(0.7, 0.2), fl: G_(1.0, -0.8), bl: G_(-0.8, 0) }],
+        [32, { lean: -0.35, by: -6, hd: -0.3, fa: A_(3.3, 0.3), ba: A_(3.1, 0.4), fl: G_(0.4, -0.3), bl: G_(-0.4, -0.2) }],
+        [37, { lean: 0.9, by: 22, fa: A_(0.4, 0.05), ba: A_(0.45, 0.2), fl: G_(1.15, -0.9), bl: G_(-0.85, 0) }], [56, { lean: 0.9, by: 22, fa: A_(0.4, 0.05), ba: A_(0.45, 0.2), fl: G_(1.15, -0.9), bl: G_(-0.85, 0) }], [72, S0]],
+      hb: [],
+      upd(F, f) {
+        F.vx = 0; if (!F.ground) F.vy = Math.min(F.vy, 1);
+        const T = F.cTarget, sc = F.ch.scale;
+        if (f === 1) {
+          F.exec = T && T.alive && Math.abs(T.x - F.x) < 260 && Math.abs(T.y - F.y) < 220 ? T.id : -1;   // 近くの相手だけつかむ（遠くからの飛び道具は受け止めるだけ）
+          Snd.shield(); Snd.smp('blade', 0.8, 1.3); BT.flashScr = 5; BT.flashRGB = '255,60,60'; BT.shake = Math.max(BT.shake, 8);
+        }
+        const V = F.exec >= 0 ? BT.fs.find(q => q.id === F.exec) : null;
+        if (!V || !V.alive) return;
+        // 相手の位置：持ち上げる → 足もとにたたき伏せる
+        const at = f < 10 ? { x: F.x + F.dir * 54 * sc, y: F.y - lerp(10, 60, f / 10) * sc } : { x: F.x + F.dir * 70 * sc, y: F.ground ? F.y : F.y + 10 };
+        if (f < 37) { V.x = lerp(V.x, at.x, 0.6); V.y = lerp(V.y, at.y, 0.6); V.vx = 0; V.vy = 0; V.hitstun = Math.max(V.hitstun, 10); if (V.state !== 'hitstun') { V.move = null; V.setState('hitstun'); } }
+        if (f === 12) {   // たたき伏せる
+          BT.applyHit(F, V, { dmg: 5, ang: 270, base: 0, gr: 0, hs: 40 }, 1, F.dir, true, V.x, V.y - 30);
+          V.vx = 0; V.vy = 0; BT.shake = Math.max(BT.shake, 16); BT.dust(V.x, F.y, 16);
+          BT.parts.push({ x: V.x, y: F.y, shock: 1, r: 14, vr: 12, life: 18, max: 18, col: '#ffffff', w: 10 });
+          if (F.ground) BT.parts.push({ x: V.x, y: F.y, crack: 1, len: 90, life: 100, max: 100, seed: BT.t, big: 1 });
+          Snd.hitC(F.ch, 12); Snd.osc('sine', 60, 0.4, 0.4, 30);
+        }
+        if (f === 26) Snd.berserkCharge(10);
+        if (f === 37) {   // 真上から突き刺す
+          BT.applyHit(F, V, { dmg: 13, ang: 78, base: 10, gr: 0.95 }, 1, F.dir, true, V.x, V.y - 20);
+          BT.shake = Math.max(BT.shake, 26); BT.flashScr = 10; BT.flashRGB = '180,0,20'; BT.zoomP = Math.max(BT.zoomP || 0, 0.1);
+          if (F.ground) riftBurst(BT, V.x, F.y, F.ground);
+          BT.parts.push({ x: V.x, y: F.y - 20, flare: 1, r: 160, life: 16, max: 16, col: '#ff1028', rot: 0, n: 9 });
+          Snd.guillotine(); Snd.heavy(() => { Snd.doom(1); Snd.subDrop(0.8); });
+        }
+      } },
   });
 }
 // 手足を元の絵の長さにちぢめたので、当たり判定の位置を体に合わせる
@@ -2525,7 +2556,7 @@ const CHARS = [
     kbTake: 0.92, swords: false, doodle: true, bloody: true, hand: '#ffffff', moves: BHMOVES,
     fsName: '寝たら朝は来ない', fsDesc: '目の前でなぐり続け、返り血をあびたまま大剣でたたき切る',
     specials: [['地裂斬', '必殺', '大きくふりかぶって重い斬撃を飛ばす。地上では大地を割って突き進む（撃ったあと少し待つ）'], ['ブラッディラッシュ', '横＋必殺', '斬りつけながら突進する。後半に 上＋必殺 で天墜斬につながる'],
-      ['天墜斬', '上＋必殺', '大剣を投げ上げて相手ごと舞い上がり、つかんだ剣で地面へたたき落とす（復帰用）'], ['断頭台', '下＋必殺', '跳び上がって大剣を真下に突き立てる。着地で血がふき上がる']] },
+      ['天墜斬', '上＋必殺', '大剣を投げ上げて相手ごと舞い上がり、つかんだ剣で地面へたたき落とす（復帰用）'], ['処刑台', '下＋必殺', '大剣を構えて受け止め、攻撃してきた相手をたたき伏せて真上から突き刺す']] },
 ];
 // ---- 今井：触手の通常ワザ・スマッシュ・空中ワザ（当たり判定ひとつにつき1本の触手が伸びる）----
 {
