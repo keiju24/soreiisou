@@ -2303,20 +2303,17 @@ function riftBurst(B, x, y, pl, speed = 15, life = 8) {
   for (let i = 0; i < 4; i++) B.parts.push({ x: x + (i - 1.5) * 24 + rnd(-6, 6), y, slab: 1, shatter: 9, w: rnd(40, 60), h: rnd(55, 90), tilt: (i - 1.5) * 0.28 + rnd(-0.1, 0.1), life: 40, max: 40, seed: Math.random() * 1e4 | 0 });
   for (let i = 0; i < 10; i++) B.parts.push({ x: x + rnd(-30, 30), y: y - 10, vx: rnd(-9, 9), vy: rnd(-20, -10), life: 50, max: 50, rock: 1, size: rnd(10, 20), g: 0.65, col: i % 2 ? '#3a2c28' : '#5e4b45', rot: rnd(0, TAU) });
 }
-function bloodHitFx(B, x, y, dmg, A, T) {
-  const r0 = rnd(-1.0, -0.4);
-  B.parts.push({ x, y, slash: 1, rot: r0, len: 110 + dmg * 8, life: 12, max: 12, col: '#ff1028' });
-  B.parts.push({ x, y, slash: 1, rot: r0, len: 80 + dmg * 6, life: 9, max: 9, col: '#fff0e0' });
-  if (dmg >= 7) B.parts.push({ x, y, slash: 1, rot: r0 + 1.3, len: 90 + dmg * 6, life: 11, max: 11, col: '#ff5030' });
-  for (let i = 0; i < 8 + dmg; i++) { const a = rnd(0, TAU), sp = rnd(5, 14 + dmg * 0.4); B.parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 2, life: rnd(16, 30) | 0, max: 30, col: i % 3 ? '#ffb060' : '#ff2a2a', size: rnd(2, 4), g: 0.3, spark: 1 }); }
-  B.parts.push({ x, y, shock: 1, r: 10, vr: 10 + dmg * 0.5, life: 14, max: 14, col: '#ff2a3a', w: 8 });
-  if (dmg >= 10) B.parts.push({ x, y, flare: 1, r: 70 + dmg * 5, life: 14, max: 14, col: '#a0000e', rot: rnd(0, TAU), n: 7 });
-  if (dmg >= 12) { B.flashScr = Math.max(B.flashScr || 0, 4); B.flashRGB = '120,0,8'; }
-  B.shake = Math.max(B.shake, Math.min(18, 3 + dmg * 0.7));
+function bloodHitFx(B, x, y, dmg, A, T) {   // 重い一撃：太い斬り口が一本、鈍い衝撃の輪、ずしんと揺れる
+  const r0 = rnd(-0.9, -0.5);
+  B.parts.push({ x, y, slash: 1, rot: r0, len: 100 + dmg * 7, life: 12, max: 12, col: '#b0101c' });
+  B.parts.push({ x, y, shock: 1, r: 12, vr: 8 + dmg * 0.4, life: 16, max: 16, col: '#6a0a12', w: 10 + dmg * 0.4 });
+  for (let i = 0; i < 4; i++) { const a = r0 + Math.PI + rnd(-0.6, 0.6), sp = rnd(4, 9); B.parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 1, life: 16, max: 16, col: '#ffb27a', size: rnd(1.5, 2.5), g: 0.4, spark: 1 }); }
+  if (dmg >= 12) { B.flashScr = Math.max(B.flashScr || 0, 3); B.flashRGB = '60,0,6'; if (T && T.ground) B.dust(T.x, T.y, 8); }
+  B.shake = Math.max(B.shake, Math.min(20, 4 + dmg * 0.8));
 }
 {
   const S0 = {};
-  const heavy = (F, x, y) => { if (BT) { BT.shake = Math.max(BT.shake, 10); BT.parts.push({ x: F.x + F.dir * x, y: F.y + y, flare: 1, r: 90, life: 14, max: 14, col: '#c0001a', rot: rnd(0, TAU), n: 7 }); } };
+  const heavy = (F, x, y) => { if (BT) { BT.shake = Math.max(BT.shake, 12); if (F.ground) BT.dust(F.x + F.dir * x, F.y, 8); } };
   const multi = (every, until) => (F, f) => { if (f % every === 0 && f < until) F.hitIds.clear(); };
   Object.assign(BHMOVES, {
     // 弱：柄頭で突いてから、剣先でつつく
@@ -5358,28 +5355,20 @@ function drawDoodle(F, P, J, C, t) {
   const u = k / BH.img;
   ctx.drawImage(BHEN_BODY, -BH.root[0] * k, -BH.root[1] * k, BHEN_BODY.width * u, BHEN_BODY.height * u);
   ctx.restore();
-  if (F._swt.length > 1) {   // 剣の軌跡：外側の赤い光 → 内側の燃える帯 → 剣先の白く光る筋 → 飛び散る火花
+  if (F._swt.length > 1) {   // 剣の軌跡：光らせず、重い刃が空気を押しのけた暗い赤の残像（ふちだけうっすら明るい）
     const T = F._swt, n = T.length;
-    const band = (ax, ay, bx, by, i, col, al) => { ctx.globalAlpha = al; ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(T[i - 1][ax], T[i - 1][ay]); ctx.lineTo(T[i - 1][bx], T[i - 1][by]); ctx.lineTo(T[i][bx], T[i][by]); ctx.lineTo(T[i][ax], T[i][ay]); ctx.closePath(); ctx.fill(); };
-    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    for (let i = 1; i < n; i++) { const k2 = i / n; band('mx', 'my', 'tx', 'ty', i, '#e0102a', k2 * 0.75); band('ix', 'iy', 'tx', 'ty', i, '#ff7a3a', k2 * k2 * 0.95); }
-    for (let i = 1; i < n; i += 2) { ctx.globalAlpha = 0.5 * i / n; ctx.drawImage(glowSprite('rgba(255,40,40,.9)'), T[i].tx - 40, T[i].ty - 40, 80, 80); }
-    for (const [w, col, al] of [[26, '#ff1030', 0.5], [11, '#ffb070', 0.85], [4, '#fffaf0', 1]]) {
-      ctx.strokeStyle = col; ctx.lineWidth = w;
-      for (let i = 1; i < n; i++) { ctx.globalAlpha = al * (i / n); ctx.beginPath(); ctx.moveTo(T[i - 1].tx, T[i - 1].ty); ctx.lineTo(T[i].tx, T[i].ty); ctx.stroke(); }
-    }
-    const e = T[n - 1]; ctx.globalAlpha = 0.9; ctx.drawImage(glowSprite('rgba(255,120,60,.95)'), e.tx - 34, e.ty - 34, 68, 68);
-    for (let i = Math.max(1, n - 5); i < n; i++) {   // 剣先から散る火花
-      const R = srand((F.mf || 0) * 131 + i * 17 + 7); R(); R();
-      for (let j = 0; j < 3; j++) { const a = R() * TAU, d = 6 + R() * 26, x = T[i].tx + Math.cos(a) * d, y = T[i].ty + Math.sin(a) * d; ctx.globalAlpha = 0.9 * (i / n); ctx.strokeStyle = j % 2 ? '#ffd890' : '#ff4040'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * 8, y + Math.sin(a) * 8); ctx.stroke(); }
-    }
+    const band = (ax, ay, bx, by, i, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(T[i - 1][ax], T[i - 1][ay]); ctx.lineTo(T[i - 1][bx], T[i - 1][by]); ctx.lineTo(T[i][bx], T[i][by]); ctx.lineTo(T[i][ax], T[i][ay]); ctx.closePath(); ctx.fill(); };
+    ctx.save();
+    for (let i = 1; i < n; i++) { const k2 = i / n; ctx.globalAlpha = k2 * 0.62; band('mx', 'my', 'tx', 'ty', i, '#5a0610'); ctx.globalAlpha = k2 * k2 * 0.65; band('ix', 'iy', 'tx', 'ty', i, '#a3121e'); }
+    ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(255,215,200,1)'; ctx.lineWidth = 2;
+    for (let i = Math.max(1, n - 4); i < n; i++) { ctx.globalAlpha = 0.45 * (i / n); ctx.beginPath(); ctx.moveTo(T[i - 1].tx, T[i - 1].ty); ctx.lineTo(T[i].tx, T[i].ty); ctx.stroke(); }
     ctx.restore();
   }
   const tossed = F.state === 'move' && F.moveName === 'ub' && F.mf > 6 && F.mf < 30;
   if (tossed) {   // 真上に投げた大剣：回りながら上がって落ちてくる
     const q = (F.mf - 6) / 24, h = fa[2];
     drawBigSword({ x: h.x, y: h.y - Math.sin(q * Math.PI) * 70 - 20 }, Math.PI + F.mf * 0.9, swS, 0.5);
-  } else drawBigSword(fa[2], sa, swS, F.state === 'super' ? 0.8 : swinging ? 0.7 : F.hasFS ? 0.35 + 0.2 * Math.sin(t * 0.2) : 0);
+  } else drawBigSword(fa[2], sa, swS, F.state === 'super' ? 0.8 : F.hasFS ? 0.35 + 0.2 * Math.sin(t * 0.2) : 0);
   bhStick(fa);
 }
 
@@ -6721,6 +6710,7 @@ SC_.battle = (o) => {
   };
   B.fxHit = (A, T, x, y, dmg, kb) => {
     const col = A.ch.bloody ? '#b0001a' : A.ch.psychic ? '#c9b8ff' : A.ch.berserk ? '#ff2a2a' : A.ch.tentacle ? '#9cff3a' : A.col.light, big = kb > 16, huge = kb > 24, ch = A.ch;
+    if (A.ch.bloody) { bloodHitFx(B, x, y, dmg, A, T); if (kb > 16) B.zoomP = Math.max(B.zoomP, kb > 24 ? 0.1 : 0.06); return; }   // ヘンリー（大剣）は光らせず重く
     B.parts.push({ x, y, flare: 1, r: 34 + dmg * 4 + kb * 1.5, life: big ? 18 : 12, max: big ? 18 : 12, col, rot: rnd(0, TAU), n: big ? 8 : 6 });
     const wcol = ch.bloody ? '#ff5060' : '#ffffff';   // ヘンリー（大剣）は白い光を血の色に
     B.parts.push({ x, y, shock: 1, r: 12, vr: 9 + kb * 0.5, life: 16, max: 16, col: wcol, w: big ? 10 : 6 });
@@ -6800,9 +6790,10 @@ SC_.battle = (o) => {
     if (A.ch.bloody) hl = Math.floor(hl * 1.35);   // 肉に食いこむ重い手ごたえ
     T.hitlag = hl; if (!isProj) A.hitlag = hl;
     T.flash = 10; T.pctShake = 14;
-    B.burst(hx, hy, A.ch.bloody ? '#9a0010' : A.ch.tentacle ? '#b45be0' : '#fff6a0', 14 + (dmg * 1.5 | 0)); B.burst(hx, hy, A.ch.tentacle ? '#9cff3a' : A.col.light, 12);
-    B.parts.push({ x: hx, y: hy, ring: 1, r: 10, life: 14, max: 14, col: '#fff' });
-    B.parts.push({ x: hx, y: hy, imp: 1, r: 22 + dmg * 2.4, life: 11, max: 11, col: A.ch.psychic ? '#c9b8ff' : A.ch.tentacle ? '#9cff3a' : A.col.light, rot: Math.random() * TAU });
+    if (A.ch.bloody) B.burst(hx, hy, '#5a0610', 6);   // ヘンリー（大剣）：光の粒や白い輪は出さない
+    else { B.burst(hx, hy, A.ch.tentacle ? '#b45be0' : '#fff6a0', 14 + (dmg * 1.5 | 0)); B.burst(hx, hy, A.ch.tentacle ? '#9cff3a' : A.col.light, 12);
+    B.parts.push({ x: hx, y: hy, ring: 1, r: 10, life: 14, max: 14, col: '#fff' }); }
+    if (!A.ch.bloody) B.parts.push({ x: hx, y: hy, imp: 1, r: 22 + dmg * 2.4, life: 11, max: 11, col: A.ch.psychic ? '#c9b8ff' : A.ch.tentacle ? '#9cff3a' : A.col.light, rot: Math.random() * TAU });
     // キャラごとのヒット演出
     if (A.ch.psychic) B.parts.push({ x: hx, y: hy, psy: 1, r: 34 + dmg * 2.2, life: 16, max: 16 });
     else if (A.ch.swords) {
