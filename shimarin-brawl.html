@@ -3125,8 +3125,13 @@ const STAGES = [
     plats: [{ x1: -530, x2: 530, y: 0, h: 90 }, { x1: -140, x2: 140, y: -165, soft: 1, mv: { ax: 380, per: 480 } }],
     blast: { l: -1450, r: 1450, t: -980, b: 700 }, spawns: [-300, 300], respawnY: -360 },
 ];
-function cloneStage(s) {
-  const c = { ...s, plats: s.plats.map(p => ({ ...p })) };
+// 人数が多いほどステージを横に広げる（2人：そのまま、3〜4人：1.2倍、5〜6人：1.4倍、7〜8人：1.6倍）
+const stageScale = n => n <= 2 ? 1 : n <= 4 ? 1.2 : n <= 6 ? 1.4 : 1.6;
+function cloneStage(s, nP = 2) {
+  const k = stageScale(nP);
+  const c = { ...s, k, blast: { ...s.blast, l: s.blast.l * k, r: s.blast.r * k }, spawns: s.spawns.map(x => x * k),
+    plats: s.plats.map(p => ({ ...p, x1: p.x1 * k, x2: p.x2 * k, mv: p.mv ? { ...p.mv, ax: p.mv.ax * k } : undefined })) };
+  for (const p of c.plats) if (!p.mv) delete p.mv;
   for (const p of c.plats) if (p.mv) { p.cx = (p.x1 + p.x2) / 2; p.hw = (p.x2 - p.x1) / 2; p.t = 0; }
   return c;
 }
@@ -5430,6 +5435,27 @@ function drawBackBtn(a, f) {
 //   ・通信待ちで遅れたら、そのあと数フレームまとめて進めて追いつく
 // =====================================================================
 const NET_START = 8, NET_WIN = 40, NET_MAX = 8, CODE_LEN = 5, CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+// 招待リンク：…/shimarin-brawl.html?room=ABCDE を開くと、そのルームに入る
+const codeFromText = str => {
+  const t = String(str || '').toUpperCase(), m = /ROOM=([A-Z0-9]{5})/.exec(t);
+  const c = m ? m[1] : (t.match(/[A-Z0-9]+/g) || []).find(w => w.length === CODE_LEN);
+  return c && [...c].every(x => CODE_CHARS.includes(x)) ? c : null;
+};
+let inviteCode = (() => { try { return /[?&]room=/i.test(location.search) ? codeFromText(location.search) : null; } catch (e) { return null; } })();
+const inviteURL = code => { try { return location.origin + location.pathname + '?room=' + code; } catch (e) { return '?room=' + code; } };
+// 貼り付け（Ctrl+V）：コード入力画面でリンクやコードを受けとる
+let pasteBuf = null;
+document.addEventListener('paste', e => { try { pasteBuf = (e.clipboardData || window.clipboardData).getData('text'); } catch (er) {} });
+// 招待リンクをコピー（スマホでは共有メニュー）。できなかったらリンクを表示する
+function shareInvite(code, done) {
+  const url = inviteURL(code);
+  const fallback = () => { try { window.prompt('このリンクを友だちに送ってね', url); } catch (e) {} done && done('リンク：' + url); };
+  try {
+    if (navigator.share && window.matchMedia && matchMedia('(pointer: coarse)').matches) { navigator.share({ title: '大乱交しまりんブラザーズ', text: 'ルーム ' + code + ' で対戦しよう！', url }).then(() => done && done('共有しました'), () => {}); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(url).then(() => done && done('招待リンクをコピーしました！'), fallback); return; }
+  } catch (e) {}
+  fallback();
+}
 const PEER_PREFIX = 'shimarin-brawl-v3-';
 const PEERJS_URL = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
 // ▼ 「それ、言いそう！」と同じ STUN / 中継サーバー（TURN）の設定
@@ -5940,7 +5966,7 @@ SC_.sss = () => {
 
 // ----- バトル -----
 SC_.battle = (o) => {
-  const st = cloneStage(STAGES[o.stage]);
+  const st = cloneStage(STAGES[o.stage], o.online ? o.chars.length : o.roster.length);
   const ON = o.online ? o : null, myIdx = ON ? Math.max(0, ON.slots.indexOf(NET.mySlot)) : 0;
   const nP = ON ? ON.chars.length : o.roster.length;
   // 出現位置：2人のときはステージの決まった位置、3人以上はメインの足場に等間隔
@@ -5948,13 +5974,13 @@ SC_.battle = (o) => {
   const fs = ON ? ON.chars.map((c, i) => {
     const x = spawnX(i), col = NCOL[ON.slots[i]];
     const F = new Fighter({ id: i, col: { ...col, tag: i === myIdx ? 'YOU' : col.tag }, cpu: false, stocks: ON.stocks, x, dir: x < 0 ? 1 : -1, ch: CHARS[c] });
-    if (nP > 2) F.rx = lerp(-330, 330, i / (nP - 1));
+    if (nP > 2) F.rx = lerp(-330, 330, i / (nP - 1)) * st.k;
     return F;
   }) : o.roster.map((r, i) => {
     const x = spawnX(i);
     const F = new Fighter({ id: i, col: r.col, cpu: r.cpu, level: r.lv, stocks: SET.stocks, x, dir: x < 0 ? 1 : -1, ch: CHARS[r.ch] });
     F.team = r.team;
-    if (nP > 2) F.rx = lerp(-330, 330, i / (nP - 1));
+    if (nP > 2) F.rx = lerp(-330, 330, i / (nP - 1)) * st.k;
     return F;
   });
   for (const F of fs) { F.ground = st.plats[0]; F.state = 'idle'; }
@@ -8469,6 +8495,11 @@ SC_.battle = (o) => {
 SC_.online = (o) => {
   let t = 0, mode = o && o.lobby && netOpen() ? 'lobby' : 'top', code = '', started = false;
   if (mode === 'top') { netClose(); NET.status = ''; NET.err = ''; }
+  if (o && o.join) { code = o.join; netJoin(code); mode = 'connecting'; }   // 招待リンクから
+  let shareMsg = '', shareT = 0;
+  const share = () => { Snd.ok(); shareInvite(NET.code, m => { shareMsg = m; shareT = 240; }); };
+  const SHARE_BTN = { x: VW / 2 + 290, y: 76, w: 250, h: 52 }, PASTE_BTN = { x: VW / 2 - 150, y: 470, w: 300, h: 50 };
+  const hit = b => mouse.click && mouse.x >= b.x && mouse.x <= b.x + b.w && mouse.y >= b.y && mouse.y <= b.y + b.h;
   if (NET.myCh === undefined) NET.myCh = SET.p1;
   NET.myReady = false; NET.startMsg = null;
   const sendPick = () => { if (NET.isHost) netLobbySync(); else netSend({ t: 'pick', ch: NET.myCh, ready: NET.myReady }); };
@@ -8514,6 +8545,9 @@ SC_.online = (o) => {
           }
           if (anyP('Backspace')) { if (code) { code = code.slice(0, -1); Snd.back(); } else { mode = 'top'; Snd.back(); } }
           if (anyP('Escape')) { mode = 'top'; Snd.back(); }
+          // リンクやコードの貼り付け（Ctrl+V、または「貼り付け」ボタン）
+          if (hit(PASTE_BTN) && navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(tx => { pasteBuf = tx; }, () => {});
+          if (pasteBuf !== null) { const c = codeFromText(pasteBuf); pasteBuf = null; if (c) { code = c; Snd.ok(); netJoin(code); mode = 'connecting'; break; } else Snd.back(); }
           if (anyP('Enter') && code.length === CODE_LEN) { Snd.ok(); netJoin(code); mode = 'connecting'; }
           break;
         }
@@ -8522,6 +8556,8 @@ SC_.online = (o) => {
           break;
         case 'lobby': {
           if (!netOpen()) { mode = 'lost'; break; }
+          if (shareT > 0) shareT--;
+          if (hit(SHARE_BTN) || anyP('KeyC')) share();   // 招待リンクをコピー
           if (!NET.myReady) {
             if (MI.left() || MI.right()) { NET.myCh = (NET.myCh + (MI.left() ? -1 : 1) + CHARS.length) % CHARS.length; sendPick(); Snd.move(); }
             if (NET.isHost && (MI.up() || MI.down())) { NET.stage = (NET.stage + (MI.up() ? -1 : 1) + STAGES.length) % STAGES.length; netLobbySync(); Snd.move(); }
@@ -8574,7 +8610,8 @@ SC_.online = (o) => {
         text('ルームコードを入力', VW / 2, 161, 26, '#fff', 'center', '900');
         for (let i = 0; i < CODE_LEN; i++) codeBox(VW / 2 - (CODE_LEN * 110) / 2 + i * 110 + 10, code[i], i === code.length && (t >> 4) % 2);
         text(code.length === CODE_LEN ? 'Enter で接続！' : 'キーボードで入力（Backspace で消す）', VW / 2, 440, 22, code.length === CODE_LEN ? UIC.red : UIC.ink, 'center', '900');
-        uiFooter('友だちから聞いた5文字のコードを入れてね', 'Esc：もどる');
+        { const b = PASTE_BTN; ctx.fillStyle = UIC.ink; uiPara(b.x, b.y, b.w, b.h, 14); ctx.fill(); text('📋 リンク・コードを貼り付け', b.x + b.w / 2, b.y + 26, 19, '#fff', 'center', '900'); }
+        uiFooter('友だちから聞いた5文字のコード、または招待リンクを貼り付け（Ctrl+V）', 'Esc：もどる');
       } else if (mode === 'connecting') {
         box(VW / 2 - 360, 200, 720, 260);
         text('ルーム ' + NET.code + ' に接続中' + dots, VW / 2, 310, 32, UIC.ink, 'center', '900');
@@ -8584,6 +8621,9 @@ SC_.online = (o) => {
         ctx.fillStyle = UIC.ink; uiPara(VW / 2 - 270, 76, 540, 52, 18); ctx.fill();
         text('ルームコード', VW / 2 - 140, 102, 20, '#ff9a9a', 'center', '900');
         text(NET.code, VW / 2 + 70, 102, 34, '#fff', 'center', '900');
+        { const b = SHARE_BTN, hov = mouse.x >= b.x && mouse.x <= b.x + b.w && mouse.y >= b.y && mouse.y <= b.y + b.h;
+          ctx.fillStyle = hov ? UIC.ink : UIC.red; uiPara(b.x, b.y, b.w, b.h, 16); ctx.fill();
+          text('🔗 招待リンクをコピー（C）', b.x + b.w / 2, b.y + 27, 18, '#fff', 'center', '900'); }
         // 8人ぶんの枠（4×2）
         const ps = players(), PW = 282, PH = 196, GX = 16, GY = 14, X0 = (VW - (4 * PW + 3 * GX)) / 2, Y0 = 142;
         for (let s = 0; s < NET_MAX; s++) {
@@ -8622,8 +8662,9 @@ SC_.online = (o) => {
         else if (NET.myReady) msg = cnt < 2 ? '友だちが入るのを待っています' + dots + '（Esc：取り消し）'
           : readyN === cnt ? 'まもなく開始！' : 'みんなの準備を待っています（' + readyN + '/' + cnt + '）' + dots + '（Esc：取り消し）';
         else msg = '←→：キャラ選択　Enter：準備OK　Esc：ルームを出る';
-        text(msg, VW / 2, 630, 21, UIC.ink, 'center', '900');
-        uiFooter(cnt + '/' + NET_MAX + '人　全員が準備OKで開始（2人以上）', NET.isHost ? 'あなたがホストです' : '');
+        if (shareT > 0) msg = shareMsg;   // 招待リンクをコピーしたときのお知らせ
+        text(msg, VW / 2, 630, shareT > 0 && msg.length > 40 ? 16 : 21, shareT > 0 ? UIC.red : UIC.ink, 'center', '900');
+        uiFooter(cnt + '/' + NET_MAX + '人　全員が準備OKで開始（2人以上）　人数が多いほどステージが広くなります', NET.isHost ? 'あなたがホストです' : '');
         if (NET.notice && performance.now() < NET.noticeUntil) {
           ctx.fillStyle = UIC.red; uiPara(VW - 320, 76, 300, 44, 14); ctx.fill();
           text(NET.notice, VW - 175, 98, 18, '#fff', 'center', '900');
@@ -9097,7 +9138,15 @@ class TitleScene extends Phaser.Scene {
     this.add.text(VW - 28, 671, 'Esc：ゲーム選択にもどる', TXT(16, '#9a9a9a', { fontStyle: 'bold' })).setOrigin(1, 0.5);
     this.input.on('pointerdown', () => this.start());
   }
-  start() { if (nextScene) return; Snd.init(); Snd.ok(); go('menu'); }
+  start() {
+    if (nextScene) return; Snd.init(); Snd.ok();
+    if (inviteCode) {   // 招待リンクで開いた：そのルームに入る（1回だけ）
+      const c = inviteCode; inviteCode = null;
+      try { history.replaceState(null, '', location.pathname); } catch (e) {}
+      go('online', { join: c }); return;
+    }
+    go('menu');
+  }
   update() {
     if (press('Escape')) { location.href = 'index.html'; return; }
     if (press('Enter', 'Space', 'KeyZ', 'KeyJ')) this.start();
