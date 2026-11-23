@@ -5557,11 +5557,13 @@ function netHostRecv(c, d) {
     netNotice(NCOL[slot].tag + ' が入りました'); netLobbySync(); Snd.move();
     return;
   }
-  if (d.t === 'g') {   // 対戦用の通信路のあいさつ（だれの通信路かを合言葉で確かめる）
+  // 対戦用の通信路（取りこぼしあり）：あいさつ（g）でも、合言葉つきの入力（in）でも、だれの通信路かを登録する。
+  // 以前はあいさつ1回だけだったので、それが届かないと、その人の入力がずっと無視されて対戦が止まっていた
+  if ((d.t === 'g' || d.t === 'in') && c._slot === undefined && typeof d.tok === 'string') {
     const slot = NET.toks[d.tok];
-    if (c._slot !== undefined || slot === undefined || !NET.conns.has(slot)) return;
-    c._slot = slot; c._game = true; NET.gconns.set(slot, c); return;
+    if (slot !== undefined && NET.conns.has(slot)) { c._slot = slot; c._game = true; NET.gconns.set(slot, c); }
   }
+  if (d.t === 'g') return;
   const slot = c._slot;
   if (slot === undefined || (NET.conns.get(slot) !== c && NET.gconns.get(slot) !== c)) return;
   switch (d.t) {
@@ -5703,10 +5705,12 @@ function netClientSendInputs() {
   const from = Math.max(NET.ackMine + 1, NET_START), to = Math.min(NET.sentTo, from + NET_WIN - 1);
   const a = []; for (let f = from; f <= to; f++) a.push(NET.local[f]);
   const g = NET.gameConn && NET.gameConn.open ? NET.gameConn : NET.hostConn;
-  connSend(g, { t: 'in', g: NET.gid, f: from, a, k: NET.recvTo });
+  connSend(g, { t: 'in', g: NET.gid, f: from, a, k: NET.recvTo, tok: NET.tok });
+  // しばらくホストに届いていないようなら、確実に届く通信路でも送る
+  if (g !== NET.hostConn && NET.sentTo - NET.ackMine > 20 && (NET.sentTo & 7) === 0) connSend(NET.hostConn, { t: 'in', g: NET.gid, f: from, a, k: NET.recvTo });
 }
 function netResetFrames(n, gid) {
-  NET.gid = gid; NET.frame = 0; NET.local = {}; NET.frames = {}; NET.inbuf = {}; NET.dropped = new Set(); NET.nextOut = NET_START;
+  NET.gid = gid; NET.frame = 0; NET.pumpUntil = 0; NET.local = {}; NET.frames = {}; NET.inbuf = {}; NET.dropped = new Set(); NET.nextOut = NET_START;
   NET.hAck = new Array(n).fill(NET_START - 1); NET.cAck = {};
   NET.sentTo = NET.recvTo = NET.ackMine = NET_START - 1;
   NET.delay = clamp(netTargetDelay() - 16 + 2, 2, 12); NET.delayT = 0;   // ロールバックなので、ふだんは2フレーム
@@ -5717,6 +5721,11 @@ function netResetFrames(n, gid) {
   for (let f = 0; f < NET_START; f++) { NET.local[f] = 0; NET.frames[f] = new Array(n).fill(0); for (let i = 0; i < n; i++) NET.kin[i][f] = 0; }
 }
 // 同期ズレ検出用：全員の状態を数値でまとめて、ホストの値と比べる
+// 対戦が終わって画面を出たあとも20秒間は、入力・確定フレームを送りつづける（まだ対戦中の人を待たせない）
+function netPump() {
+  if (!NET.pumpUntil || performance.now() > NET.pumpUntil || !NET.kin || !netOpen()) return;
+  if (NET.isHost) { netHostFlush(); netHostSendFrames(); netHostSendPartials(); } else netClientSendInputs();
+}
 // わかった入力を記録する（kin[だれ][フレーム]）。もう進めたフレームの入力なら、そこからやり直しが必要
 function netKnow(i, f, v) {
   const k = NET.kin && NET.kin[i];
@@ -8220,7 +8229,6 @@ SC_.battle = (o) => {
       B.endT++;
       if (B.endT === 80) Snd.go();
       if (B.endT > 230) {
-        if (ON && !B.confirmedStep) return;   // 予測中のフレームでは試合を終わらせない
         go(B.winner ? 'victory' : 'result', { winner: B.winner ? B.winner.id : -1, team: B.winner ? B.winner.team : undefined, stats: fs.map(f => ({ ...f.stats, stocks: Math.max(0, f.stocks), tag: f.col.tag, col: f.col, level: f.level, cpu: f.cpu, ch: f.ch, team: f.team })), time: B.time, online: !!ON });
         return;
       }
@@ -8309,6 +8317,7 @@ SC_.battle = (o) => {
     return h;
   }
   function netTick() {
+    NET.pumpUntil = performance.now() + 20000;
     // 1) 自分の入力を記録して送る
     //    遅らせ幅はふだん RB_DELAY。通信がとても遅くて「やり直せる幅」を超えそうなときだけ、少しずつ増やす
     if (++NET.delayT >= 20) {
@@ -8350,6 +8359,7 @@ SC_.battle = (o) => {
   }
   B.__snap = snapState; B.__restore = restoreState; B.__step = (ins) => { B.netIn = ins; B.__useNet = true; B.confirmedStep = true; stepSim(); };
   return {
+    isBattle: true,
     // オンライン：確定フレームがたまっている（自分だけ遅れている）ときは、まとめて進めて追いつく
     extra() {
       if (!ON || B.netLost || !netOpen()) return 0;
@@ -9045,6 +9055,7 @@ class LegacyScene extends Phaser.Scene {
     while (this.acc >= 1 / 60) {
       this.acc -= 1 / 60; gT++;
       if (!nextScene) this.legacy.update();
+      if (!this.legacy.isBattle) netPump();
       clearInput();
       // オンライン：遅れているときは数フレームまとめて進めて追いつく
       if (!nextScene && this.legacy.extra) { let n = this.legacy.extra(); while (n-- > 0 && !nextScene) this.legacy.update(); }
