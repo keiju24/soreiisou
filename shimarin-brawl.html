@@ -2137,6 +2137,69 @@ makeGrabs(CMOVES, { reach: 1, hv: [52, -8],
   for (const k of ['fsmash', 'usmash', 'dsmash', 'bair', 'dair', 'nb', 'sb']) AMOVES[k].arrow = true;   // 矢のワザ（リロード中は出せない）
 }
 
+// ---- バーサーカーの通常必殺：剛拳（ためパンチ）----
+//  K でためはじめ、もう一度 K で放つ。ためきると拳にストックされ、次の K ですぐ最大のパンチ。
+//  ため中にガード・ジャンプで中断すると、ため具合を残したまま構えを解く。
+const BP_FULL = 100;   // 最大までためるフレーム数
+Object.assign(BMOVES, {
+  nbc: { len: 99999, noCancel: true, armor: false, keys: [[0, {}],
+      [10, { by: 24, lean: -0.15, hd: 0.25, fa: { s: -1.4, e: 1.9 }, ba: { s: 0.9, e: 1.8 }, fl: { h: 1.1, k: -0.9 }, bl: { h: -1.1, k: -0.3 } }]],
+    hb: [],
+    upd(F, f, c, B) {
+      const k = Math.min(1, (F.bpStore || 0) + Math.max(0, f - 6) / BP_FULL);
+      F.bpCh = k; F.auraBoost = 0.3 + k * 1.4;
+      if (!F.ground) F.vy = Math.min(F.vy, 1.5);
+      F.vx *= 0.7;
+      if (f === 6) Snd.berserkCharge(Math.round(BP_FULL * (1 - (F.bpStore || 0))) + 10);
+      if (f > 6 && f % 3 === 0) { const a = rnd(0, TAU), r = rnd(70, 150); B.parts.push({ x: F.x - F.dir * 30 + Math.cos(a) * r, y: F.y - 100 + Math.sin(a) * r, vx: -Math.cos(a) * r / 9, vy: -Math.sin(a) * r / 9, life: 9, max: 9, spark: 1, size: rnd(2, 5), g: 0, col: k >= 1 ? '#ffffff' : '#ff3a2a' }); }
+      if (f > 6 && f % 20 === 0) { B.dust(F.x, F.y, 4); B.shake = Math.max(B.shake, 2 + k * 4); }
+      if (f > 4 && c.p.special) { F.bpStore = 0; F.startMove('nbp'); F.bpK = k; return; }   // 放つ
+      if (f > 4 && (c.p.shield || c.p.jump || (c.h.shield && f > 8))) {   // 中断してストック
+        F.bpStore = k; F.move = null; F.setState(F.ground ? 'idle' : 'air'); F.auraBoost = 0;
+        Snd.ledge(); B.parts.push({ x: F.x, y: F.y - 90, flare: 1, r: 40, life: 8, max: 8, col: '#ff5a3c', rot: 0, n: 4 });
+        return;
+      }
+      if (k >= 1) {   // ためきった：拳にストックして構えを解く
+        F.bpStore = 1; F.move = null; F.setState(F.ground ? 'idle' : 'air'); F.auraBoost = 0;
+        B.parts.push({ x: F.x, y: F.y - 100, shock: 1, r: 20, vr: 16, life: 16, max: 16, col: '#ffffff', w: 10 });
+        B.parts.push({ x: F.x, y: F.y - 100, flare: 1, r: 120, life: 14, max: 14, col: '#ff3a2a', rot: 0, n: 8 });
+        B.flashScr = 6; B.flashRGB = '255,60,40'; B.shake = Math.max(B.shake, 10);
+        Snd.heavy(() => { Snd.doom(0.5); Snd.osc('sine', 40, 0.8, 0.4, 25); });
+        return;
+      }
+    } },
+  nbp: { len: 50, armor: true, keys: [[0, { by: 24, lean: -0.15, hd: 0.25, fa: { s: -1.4, e: 1.9 }, ba: { s: 0.9, e: 1.8 }, fl: { h: 1.1, k: -0.9 }, bl: { h: -1.1, k: -0.3 } }],
+      [6, { by: 28, lean: -0.3, hd: 0.3, fa: { s: -1.8, e: 1.6 }, ba: { s: 1.0, e: 1.8 }, fl: { h: 1.2, k: -1.0 }, bl: { h: -1.2, k: -0.3 } }],
+      [10, { by: 14, lean: 0.75, hd: 0.1, fa: { s: 1.62, e: 0 }, ba: { s: -0.9, e: 0.8 }, fl: { h: 1.45, k: -0.5 }, bl: { h: -1.4, k: 0 } }],
+      [24, { by: 14, lean: 0.75, hd: 0.1, fa: { s: 1.62, e: 0 }, ba: { s: -0.9, e: 0.8 }, fl: { h: 1.45, k: -0.5 }, bl: { h: -1.4, k: 0 } }], [50, {}]],
+    hb: [],
+    upd(F, f, c, B) {
+      const k = F.bpK || 0, sc = F.ch.scale;
+      if (f < 8) { F.vx *= 0.6; if (!F.ground) F.vy = Math.min(F.vy, 0.5); }
+      if (f === 8) { F.vx = F.dir * (7 + 11 * k); Snd.swingC(F.ch, 10 + k * 10); if (k >= 1) Snd.roar(); }
+      if (f >= 8 && f <= 13) {   // 拳の当たり判定（ためるほど大きく、強い）
+        const px = F.x + F.dir * (70 + 30 * k) * sc, py = F.y - 92 * sc, r = 44 + 22 * k;
+        if (f % 2 === 0) B.parts.push({ x: px, y: py, cut: 1, ang: F.dir > 0 ? 0 : Math.PI, len: 140 + 160 * k, w: 10 + 10 * k, life: 8, max: 8, col: k >= 1 ? '#ffffff' : '#ff4a2a' });
+        for (const T of B.fs) {
+          if (T === F || !T.alive || !isFoe(F, T) || F.hitIds.has(T.id)) continue;
+          const hr = T.hurt(), qx = clamp(px, hr.x, hr.x + hr.w), qy = clamp(py, hr.y, hr.y + hr.h);
+          if ((qx - px) ** 2 + (qy - py) ** 2 > r * r) continue;
+          F.hitIds.add(T.id);
+          const hit = B.applyHit(F, T, { dmg: 8 + 20 * k, ang: 38, base: 5 + 13 * k, gr: 0.55 + 0.85 * k }, 1, F.dir, false, px, py);
+          if (hit && T.state !== 'shield') {   // 当たった：重低音と色反転
+            B.invertT = Math.max(B.invertT || 0, Math.round(3 + k * 7));
+            Snd.heavy(() => Snd.doom(0.6 + 0.9 * k)); Snd.subDrop(0.5 + 0.7 * k);
+            B.shake = Math.max(B.shake, 14 + 26 * k); B.zoomP = Math.max(B.zoomP, 0.05 + 0.08 * k);
+            for (let j = 0; j < 3; j++) B.parts.push({ x: px, y: py, ring: 1, r: 16 + j * 22, life: 16 + j * 4, max: 16 + j * 4, col: j % 2 ? '#ffffff' : '#ff3a2a' });
+            if (k >= 1) { B.slow = Math.max(B.slow || 0, 14); B.parts.push({ x: px, y: py, shock: 1, r: 30, vr: 30, life: 22, max: 22, col: '#ffffff', w: 18 }); }
+          }
+        }
+      }
+      if (f > 13) F.vx *= 0.82;
+    } },
+});
+for (const k of ['nbc', 'nbp']) BMOVES[k].K = BMOVES[k].keys.map(([f, o]) => [f, mk(o)]);
+
 const CHARS = [
   { key: 'shimarin', name: 'しまりん', kana: 'PSYCHIC', img: FACE, ar: FACE_AR, eyes: true, scale: 1, run: 7.0, airs: 5.8, jv: -14.6, shv: -10, djv: -13.4, airJumps: 2,
     kbTake: 0.95, swords: false, arms4: true, psychic: true, hand: '#c9c3f2', moves: SMOVES,
@@ -2152,7 +2215,7 @@ const CHARS = [
   { key: 'berserker', name: 'バーサーカー', kana: 'BERSERKER', img: BERS, ar: BERS_AR, eyes: false, swords: false, muscle: true, berserk: true,
     fsName: '覇王無双撃', fsDesc: '突進してつかまえ、拳の連打から最後の一撃でぶっ飛ばす',
     scale: 1.38, run: 5.6, airs: 4.6, jv: -13.6, shv: -9.4, djv: -12.4, kbTake: 0.7, lightArmor: 7, hand: '#e6b08f', moves: BMOVES,
-    specials: [['バーサク咆哮', '必殺', '周りをふっとばして激怒状態に'], ['ジャイアントタックル', '横＋必殺', 'ひるまない突進'],
+    specials: [['剛拳', '必殺', 'K でためて、もう一度 K で放つ。ためきると拳にストック。ガード・ジャンプでため途中のまま中断できる'], ['ジャイアントタックル', '横＋必殺', 'ひるまない突進'],
       ['ブレイクアッパー', '上＋必殺', '飛び上がるアッパー（復帰用）'], ['大地割り', '下＋必殺', '急降下して大きな衝撃波']] },
   { key: 'archer', name: '恵授', kana: 'ARCHER', img: SHAD, ar: SHAD_AR, eyes: false, scale: 0.97, run: 7.0, airs: 5.8, jv: -14.8, shv: -10.2, djv: -13.8,
     kbTake: 1.05, swords: false, bow: true, hood: true, hand: '#e9c6ad', moves: AMOVES,
@@ -2421,6 +2484,10 @@ class Fighter {
       if (!this.ground && this.usedSideB) return;
       this.dir = hx; if (!this.ground) this.usedSideB = true;
       return this.startMove(this.ch.key === 'ichigo' && !(this.dimT > 0) ? 'sb0' : 'sb');
+    }
+    if (this.ch.key === 'berserker') {   // 剛拳：ストック満タンなら即座に最大パンチ
+      if ((this.bpStore || 0) >= 1) { this.bpStore = 0; this.startMove('nbp'); this.bpK = 1; } else this.startMove('nbc');
+      return;
     }
     this.startMove(this.ch.key === 'ichigo' && !(this.dimT > 0) ? 'nb0' : 'nb');
   }
@@ -4966,6 +5033,19 @@ function drawFighterExtras(F, t) {
     }
     ctx.restore();
   }
+  // バーサーカーの剛拳ストック
+  if (F.ch.key === 'berserker' && F.alive && !F._nomark && (F.bpStore > 0 || (F.state === 'move' && F.moveName === 'nbc'))) {
+    const k = F.state === 'move' && F.moveName === 'nbc' ? (F.bpCh || 0) : F.bpStore, full = k >= 1;
+    const x = F.x + F.dir * 34 * F.ch.scale, y = F.y - 92 * F.ch.scale, r = (24 + 46 * k) * (full ? 1 + 0.15 * Math.sin(t * 0.5) : 1);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = 0.45 + 0.4 * k; ctx.drawImage(glowSprite(full ? 'rgba(255,240,230,.95)' : 'rgba(255,50,30,.9)'), x - r, y - r, r * 2, r * 2);
+    if (full) { ctx.globalAlpha = 0.6; ctx.drawImage(glowSprite('rgba(255,40,30,.9)'), x - r * 1.6, y - r * 1.6, r * 3.2, r * 3.2); }
+    ctx.restore();
+    // ため具合のゲージ（頭の上）
+    const gx = F.x, gy = F.y - 232 * F.ch.scale, W = 70;
+    ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(gx - W / 2 - 2, gy - 4, W + 4, 8);
+    ctx.fillStyle = full ? ((t >> 2) % 2 ? '#ffffff' : '#ff3a2a') : '#ff3a2a'; ctx.fillRect(gx - W / 2, gy - 2, W * k, 4); ctx.restore();
+  }
   // 恵授のリロード：頭の上に小さな輪（たまっていく）。出せなかったときは赤く点滅
   if (F.ch.bow && F.alive && !F._nomark && (F.reloadT > 0 || F.reloadNo > 0)) {
     if (F.reloadNo > 0) F.reloadNo--;
@@ -6217,7 +6297,7 @@ SC_.battle = (o) => {
     B.hudShake[F.id] = 36;
     B.lostStock = { id: F.id, idx: F.stocks - 1, life: 70, ch: F.ch };
     Snd.ko(); Snd.koBoom();
-    F.stocks--; F.stats.falls++; F.hasFS = false; F.dimT = 0; F.dimG = (F.dimG || 0) * 0.5;
+    F.stocks--; F.stats.falls++; F.hasFS = false; F.bpStore = 0; F.dimT = 0; F.dimG = (F.dimG || 0) * 0.5;
     if (F.lastHitBy && F.lastHitBy !== F) { F.lastHitBy.stats.ko++; B.scorePop = { id: F.lastHitBy.id, life: 80 }; } else F.stats.sd++;
     F.ground = null; F.move = null;
     if (F.stocks > 0) { F.state = 'dead'; F.deadT = 75; } else { F.state = 'out'; F.stats.outT = B.time; }
@@ -7845,6 +7925,7 @@ SC_.battle = (o) => {
       ctx.restore();
     }
     if (B.flashScr > 0) { ctx.fillStyle = `rgba(${B.flashRGB},${Math.min(0.85, B.flashScr / 12)})`; ctx.fillRect(0, 0, VW, VH); }
+    if (B.invertT > 0) { ctx.save(); ctx.globalCompositeOperation = 'difference'; ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, VW, VH); ctx.restore(); }   // 剛拳が当たった瞬間の色反転
   }
 
   // ---- 決定打カットイン（集中線＋暗転＋色フラッシュ） ----
@@ -7977,6 +8058,7 @@ SC_.battle = (o) => {
       if (B.shake > 0) B.shake = Math.max(0, B.shake - 1);
       B.zoomP *= 0.86;
       if (B.flashScr > 0) B.flashScr--;
+      if (B.invertT > 0) B.invertT--;
       for (let i = 0; i < B.hudShake.length; i++) if (B.hudShake[i] > 0) B.hudShake[i]--;
       if (B.lostStock && --B.lostStock.life <= 0) B.lostStock = null;
       if (B.scorePop && --B.scorePop.life <= 0) B.scorePop = null;
