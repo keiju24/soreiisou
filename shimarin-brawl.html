@@ -452,9 +452,10 @@ const Snd = {
         this.nz(0.18, 0.035, 'bandpass', 2200, 6, 0, 6500);
         break;
       case 'ichigo': this.katanaSwing(k); break;   // 刀が空気を裂く「ヒュンッ」
-      case 'bhenry':     // 大剣が重く空気を裂く「ブォンッ」
-        if (!this.smp('swish', 0.55 + k * 0.35, 0.62 + Math.random() * 0.1)) this.nz(0.22, 0.14, 'bandpass', 700, 1.5, 0, 220);
-        this.osc('sine', this.vary(110), 0.18 + k * 0.1, 0.06 + k * 0.04, 50);
+      case 'bhenry':     // 大剣が重い空気をかき分ける低い「ゴォォッ」（刃の鳴りは小さく）
+        if (!this.smp('swish', 0.7 + k * 0.3, 0.42 + Math.random() * 0.06)) this.nz(0.35, 0.16, 'bandpass', 380, 1.4, 0, 140);
+        this.nz(0.32 + k * 0.12, 0.13 + k * 0.08, 'lowpass', 420, 1.1, 0, 110);
+        this.osc('sine', this.vary(72), 0.28 + k * 0.12, 0.1 + k * 0.06, 38);
         break;
       case 'berserker':  // 重い腕が空気を押しのける低い「ブォン」
         this.nz(0.22 + k * 0.12, 0.15 + k * 0.08, 'lowpass', 600, 1.2, 0, 160);
@@ -499,11 +500,12 @@ const Snd = {
         if (big) this.osc('sine', 110, 0.45, v * 0.45, 45);
         break;
       case 'ichigo': this.katanaHit(v, d); break;   // 斬った「ズバッ」
-      case 'bhenry':     // 肉を断つ「ズバァッ」＋血しぶきの湿った音＋重い底鳴り
-        if (!this.smp('blade', Math.min(1, v * 2.2), 0.78 + Math.random() * 0.1)) this.katanaHit(v, d);
-        this.smp('flesh', Math.min(1, v * 2.6), 0.8 + Math.random() * 0.15, 0.02);
-        this.nz(0.16 + d * 0.008, v * 0.7, 'lowpass', 1400, 6, 0.01, 160);
-        this.osc('sine', this.vary(90), 0.22 + d * 0.01, v * 0.8, 38);
+      case 'bhenry':     // 重い刃がめりこむ「ドガッ」：低く鳴らした斬撃と打撃＋腹に響く底鳴り
+        if (!this.smp('blade', Math.min(1, v * 2.2), 0.58 + Math.random() * 0.06)) this.katanaHit(v, d);
+        this.smp('punch', Math.min(1, v * 2.4), 0.55 + Math.random() * 0.08, 0.01);
+        this.osc('sine', this.vary(62), 0.32 + d * 0.012, v * 1.0, 30);
+        this.nz(0.22 + d * 0.01, v * 0.9, 'lowpass', 700, 1, 0, 120, 10);
+        if (big) this.heavy(() => this.doom(0.45));
         break;
       case 'berserker':  // 重い打撃：録音のパンチ（低く再生）＋歪んだ低音の「ドゴッ」
         this.smp('punch', Math.min(1, v * 2.4), 0.72 + Math.random() * 0.1);
@@ -603,6 +605,9 @@ const Snd = {
     else if (ch && ch.key === 'hammer') { this.osc('sine', 58, 0.12, 0.12, 34); this.nz(0.06, 0.06, 'lowpass', 200); this.osc('triangle', 2100, 0.05, 0.012, 1900, 0.01); }
   },
   // ---------- ヘンリー（寝たら朝は来ない）----------
+  // 大剣を地面にたたきつけた「ズドォン」＋岩がくずれる音
+  groundSlam(k = 1) { this.smp('boom', 0.8 * k, 0.6); this.osc('sine', 48, 0.7, 0.5 * k, 26); this.nz(0.6, 0.35 * k, 'lowpass', 260, 1, 0, 60, 8); this.nz(0.5, 0.16 * k, 'bandpass', 900, 1.2, 0.08, 400); this.smp('blade', 0.35 * k, 0.45, 0.02); },
+  scrape() { this.nz(0.35, 0.12, 'bandpass', 2600, 2, 0, 1500); this.smp('blade', 0.3, 0.9); },
   nemu() { this.voice(this.vary(150), 0.55, 0.12, 'o', 110); this.voice(this.vary(190), 0.4, 0.08, 'a', 140, 0.18); this.osc('sine', 300, 0.3, 0.04, 200, 0.1); },
   gslash() { this.smp('blade', 1, 0.5); this.smp('swish', 0.9, 0.55); this.nz(0.5, 0.25, 'lowpass', 700, 1, 0.02, 120, 8); this.osc('sine', 75, 0.45, 0.4, 32); },
   guillotine() { this.smp('blade', 1, 0.55); this.smp('flesh', 1, 0.7, 0.03); this.osc('sine', 60, 0.6, 0.4, 28); this.nz(0.4, 0.25, 'lowpass', 500, 1, 0, 80, 8); },
@@ -2295,6 +2300,14 @@ function bloodSpray(B, x, y, n, dir = 0, pow = 1, fy) {
   for (let i = 0; i < 2 + (n / 8 | 0); i++) { const a = dir ? (dir > 0 ? -0.5 : Math.PI + 0.5) + rnd(-0.5, 0.5) : rnd(-Math.PI, 0); B.parts.push({ x, y, vx: Math.cos(a) * rnd(8, 15) * pow, vy: Math.sin(a) * rnd(8, 15) * pow, g: 0.5, life: 22, max: 22, blood: 1, jet: 1, size: rnd(2, 3.5), fy, seed: Math.random() * 1e4 | 0 }); }
 }
 // 大地の割れ目を左右に走らせる（pl：足場。足場の端で止まる）
+// 小さな地割れ（通常ワザでたたきつけたとき）
+function slamCrack(B, x, y, pl, k = 1) {
+  B.parts.push({ x, y, crack: 1, len: 40 + 30 * k, life: 90, max: 90, seed: (x * 11 | 0) & 0xffff, big: 1 });
+  for (const d of [-1, 1]) B.parts.push({ x: x + d * 14, y, runner: 1, vx: d * 9 * k, x1: pl.x1, x2: pl.x2, life: 5, max: 5 });
+  for (let i = 0; i < 2 + (k * 2 | 0); i++) B.parts.push({ x: x + rnd(-24, 24), y, slab: 1, shatter: 7, w: rnd(24, 38) * k, h: rnd(30, 50) * k, tilt: rnd(-0.5, 0.5), life: 36, max: 36, seed: Math.random() * 1e4 | 0 });
+  for (let i = 0; i < 6 + (k * 4 | 0); i++) B.parts.push({ x: x + rnd(-24, 24), y: y - 8, vx: rnd(-6, 6), vy: rnd(-15, -7), life: 42, max: 42, rock: 1, size: rnd(5, 12) * k, g: 0.65, col: i % 2 ? '#3a2c28' : '#5e4b45', rot: rnd(0, TAU) });
+  B.dust(x, y, 10); B.shake = Math.max(B.shake, 12 + k * 8);
+}
 function riftBurst(B, x, y, pl, speed = 15, life = 8) {
   B.parts.push({ x, y, crack: 1, len: 60, life: 110, max: 110, seed: (x * 13 | 0) & 0xffff, big: 1 });
   for (let i = 0; i < 3; i++) B.parts.push({ x: x + rnd(-20, 20), y, shaft: 1, w: rnd(14, 26), h: rnd(160, 260), life: 20, max: 20 });
@@ -2316,57 +2329,71 @@ function bloodHitFx(B, x, y, dmg, A, T) {   // 重い一撃：太い斬り口が
   const heavy = (F, x, y) => { if (BT) { BT.shake = Math.max(BT.shake, 12); if (F.ground) BT.dust(F.x + F.dir * x, F.y, 8); } };
   const multi = (every, until) => (F, f) => { if (f % every === 0 && f < until) F.hitIds.clear(); };
   Object.assign(BHMOVES, {
-    // 弱：柄頭で突いてから、剣先でつつく
-    jab: { len: 22, sfx: 3, keys: [[0, S0], [3, { lean: 0.15, fa: A_(1.0, 0.5) }], [5, { lean: 0.3, fa: A_(1.55, 0) }], [11, { lean: 0.3, fa: A_(1.55, 0) }], [22, S0]],
-      hb: [HB(4, 7, 115, -88, 32, 4, 40, 4, 0.3)] },
-    // 横強：大きく横になぎはらう
-    ftilt: { len: 30, sfx: 9, keys: [[0, S0], [7, { lean: -0.25, hd: -0.1, fa: A_(2.7, 0.5), ba: A_(-0.6, 0.6) }], [10, { lean: 0.4, fa: A_(1.3, 0.15), ba: A_(1.0, 0.6), fl: G_(0.7, -0.4), bl: G_(-0.6, 0) }],
-        [18, { lean: 0.4, fa: A_(1.3, 0.15), ba: A_(1.0, 0.6), fl: G_(0.7, -0.4), bl: G_(-0.6, 0) }], [30, S0]],
-      hb: [HB(9, 12, 110, -78, 46, 11, 35, 6, 0.85), HB(8, 10, 60, -150, 34, 9, 50, 6, 0.8)] },
-    // 上強：頭の上を前から後ろへ大きくふり回す
-    utilt: { len: 28, sfx: 7, keys: [[0, S0], [5, { fa: A_(1.0, 0.4), lean: 0.15 }], [9, { lean: -0.2, hd: -0.25, fa: A_(3.05, 0.1) }], [16, { lean: -0.2, hd: -0.25, fa: A_(3.05, 0.1) }], [28, S0]],
-      hb: [HB(7, 13, 30, -175, 54, 9, 88, 6, 0.75)] },
-    // 下強：しゃがんで足元をなぎ払う
-    dtilt: { len: 24, sfx: 5, keys: [[0, S0], [4, { by: 16, lean: 0.4, fl: G_(1.2, -2.1), bl: G_(0.3, -1.9), fa: A_(0.4, 0.3) }],
-        [7, { by: 18, lean: 0.5, fl: G_(1.2, -2.1), bl: G_(0.3, -1.9), fa: A_(1.35, 0.05) }], [14, { by: 18, lean: 0.5, fl: G_(1.2, -2.1), bl: G_(0.3, -1.9), fa: A_(1.35, 0.05) }], [24, S0]],
-      hb: [HB(6, 10, 112, -24, 36, 8, 22, 5, 0.6)] },
-    // ダッシュ攻撃：剣を突き出して突っこむ
-    dash: { len: 36, slide: true, sfx: 5, keys: [[0, { lean: 0.4 }], [5, { lean: 0.6, fa: A_(1.62, 0), ba: A_(1.4, 0.3), fl: G_(1.1, -0.4), bl: G_(-0.8, -0.2) }],
-        [18, { lean: 0.6, fa: A_(1.62, 0), ba: A_(1.4, 0.3), fl: G_(1.1, -0.4), bl: G_(-0.8, -0.2) }], [36, S0]],
-      hb: [HB(5, 16, 125, -76, 38, 10, 40, 6, 0.7)], upd(F, f) { if (f >= 18) F.vx *= 0.85; else F.vx *= 0.99; } },
-    // 横スマッシュ：大剣を頭上からたたきつける（血がふき上がる）
-    fsmash: { len: 58, charge: 9, sfx: 14, keys: [[0, S0], [9, { lean: -0.45, hd: -0.2, fa: A_(3.3, 0.4), ba: A_(3.0, 0.6), fl: G_(0.5, -0.4), bl: G_(-0.5, -0.2) }],
-        [15, { lean: 0.75, by: 12, fa: A_(1.05, 0.1), ba: A_(0.95, 0.4), fl: G_(1.0, -0.5), bl: G_(-0.85, 0) }], [34, { lean: 0.75, by: 12, fa: A_(1.05, 0.1), ba: A_(0.95, 0.4), fl: G_(1.0, -0.5), bl: G_(-0.85, 0) }], [58, S0]],
-      hb: [HB(14, 18, 125, -52, 52, 20, 40, 8, 1.15), HB(13, 15, 70, -160, 44, 16, 50, 8, 1.0)],
-      upd(F, f) { if (f === 13) F.vx = 4 * F.dir; if (f === 15) { heavy(F, 150, -6); BT.dust(F.x + F.dir * 150, F.y, 10); BT.parts.push({ x: F.x + F.dir * 150, y: F.y, shock: 1, r: 14, vr: 12, life: 16, max: 16, col: '#ff1a2a', w: 10 }); } } },
-    // 上スマッシュ：真上へ大きく切り上げる
-    usmash: { len: 50, charge: 8, sfx: 12, keys: [[0, S0], [8, { by: 16, lean: 0.25, fa: A_(0.3, 0.3), ba: A_(0.2, 0.4), fl: G_(0.6, -1.2), bl: G_(-0.3, -1.0) }],
-        [13, { by: -6, lean: -0.2, hd: -0.3, fa: A_(3.1, 0), ba: A_(2.9, 0.2) }], [26, { by: -6, lean: -0.2, hd: -0.3, fa: A_(3.1, 0), ba: A_(2.9, 0.2) }], [50, S0]],
-      hb: [HB(11, 13, 100, -100, 42, 12, 80, 6, 0.9), HB(12, 18, 20, -190, 56, 17, 88, 8, 1.1)] },
-    // 下スマッシュ：低くかまえて前、後ろの順に切りはらう
-    dsmash: { len: 52, charge: 8, sfx: 11, keys: [[0, S0], [8, { by: 18, lean: 0.3, fa: A_(0.4, 0.4), fl: G_(0.7, -1.3), bl: G_(-0.4, -1.0) }],
-        [11, { by: 22, lean: 0.3, fa: A_(1.45, 0), ba: A_(-0.6, 0.5), fl: G_(1.3, -0.4), bl: G_(-1.1, -0.2) }], [16, { by: 22, lean: -0.2, fa: A_(-1.45, 0), ba: A_(0.6, 0.5), fl: G_(1.3, -0.4), bl: G_(-1.1, -0.2) }],
-        [28, { by: 22, lean: -0.2, fa: A_(-1.45, 0), ba: A_(0.6, 0.5), fl: G_(1.3, -0.4), bl: G_(-1.1, -0.2) }], [52, S0]],
-      hb: [HB(11, 13, 115, -26, 40, 15, 25, 7, 1.05, { auto: 1 }), HB(16, 18, -115, -26, 40, 15, 25, 7, 1.05, { auto: 1 })] },
-    // 空中N：大剣ごと一回転
-    nair: { len: 34, air: true, drift: true, landLag: 10, sfx: 4, keys: [[0, S0], [4, { rot: 0, fa: A_(1.6, 0), ba: A_(-1.4, 0.3), fl: G_(0.8, -0.8), bl: G_(-0.4, -0.6) }],
-        [20, { rot: -TAU, fa: A_(1.6, 0), ba: A_(-1.4, 0.3), fl: G_(0.8, -0.8), bl: G_(-0.4, -0.6) }], [34, { rot: -TAU }]],
-      hb: [HB(4, 20, 0, -78, 98, 4, 45, 4, 0.3, { auto: 1 }), HB(18, 21, 0, -78, 100, 5, 45, 6, 0.7, { auto: 1 })], upd: multi(8, 17) },
-    // 空中前：頭上から前へふり下ろす
-    fair: { len: 38, air: true, drift: true, landLag: 13, sfx: 9, keys: [[0, S0], [7, { lean: -0.25, fa: A_(3.2, 0.3), ba: A_(2.9, 0.4), fl: G_(0.6, -1.2), bl: G_(0.1, -1.0) }],
-        [11, { lean: 0.45, fa: A_(0.85, 0.15), ba: A_(0.9, 0.3), fl: G_(0.4, -0.6), bl: G_(-0.3, -0.6) }], [20, { lean: 0.45, fa: A_(0.85, 0.15), ba: A_(0.9, 0.3), fl: G_(0.4, -0.6), bl: G_(-0.3, -0.6) }], [38, S0]],
-      hb: [HB(9, 13, 100, -64, 50, 12, 40, 6, 0.9), HB(8, 10, 60, -160, 40, 10, 60, 6, 0.8)] },
-    // 空中後ろ：振り向かずに後ろへ突き刺す
-    bair: { len: 32, air: true, drift: true, landLag: 11, sfx: 7, keys: [[0, S0], [6, { lean: 0.3, fa: A_(0.6, 1.2) }], [9, { lean: 0.5, fa: A_(-1.55, 0), fl: G_(0.6, -1.0), bl: G_(-0.4, -0.8) }],
-        [17, { lean: 0.5, fa: A_(-1.55, 0), fl: G_(0.6, -1.0), bl: G_(-0.4, -0.8) }], [32, S0]],
-      hb: [HB(9, 13, -125, -80, 40, 13, 140, 7, 0.95)] },
+    // 弱：両手で大剣を引いて、体ごと突き出す
+    jab: { len: 28, sfx: 6, keys: [[0, S0], [5, { lean: -0.15, fa: A_(0.6, 1.0), fl: G_(0.3, -0.3), bl: G_(-0.4, -0.2) }], [8, { lean: 0.4, fa: A_(1.52, 0.05), fl: G_(0.7, -0.3), bl: G_(-0.6, 0) }],
+        [14, { lean: 0.4, fa: A_(1.52, 0.05), fl: G_(0.7, -0.3), bl: G_(-0.6, 0) }], [28, S0]],
+      hb: [HB(7, 10, 125, -80, 36, 6, 40, 5, 0.45)], upd(F, f) { if (f === 7) F.vx = 3 * F.dir; } },
+    // 横強：大きく後ろへ引いて、横一文字になぎはらう
+    ftilt: { len: 44, sfx: 12, keys: [[0, S0], [11, { lean: -0.35, hd: -0.1, fa: A_(-0.9, -0.6), fl: G_(0.5, -0.5), bl: G_(-0.6, -0.2) }],
+        [14, { lean: 0.45, fa: A_(1.45, 0.1), fl: G_(0.9, -0.4), bl: G_(-0.8, 0) }], [18, { lean: 0.55, fa: A_(2.0, 0.3), fl: G_(0.9, -0.4), bl: G_(-0.8, 0) }],
+        [30, { lean: 0.55, fa: A_(2.0, 0.3), fl: G_(0.9, -0.4), bl: G_(-0.8, 0) }], [44, S0]],
+      hb: [HB(13, 16, 118, -78, 52, 13, 35, 7, 0.9)], upd(F, f) { if (f === 13) F.vx = 4 * F.dir; } },
+    // 上強：しずみこんでから、頭上へ大きく切り上げる
+    utilt: { len: 42, sfx: 12, keys: [[0, S0], [10, { by: 18, lean: 0.35, fa: A_(-0.3, -0.3), fl: G_(0.9, -1.2), bl: G_(-0.3, -1.0) }],
+        [14, { by: -4, lean: -0.25, hd: -0.3, fa: A_(2.6, 0.1) }], [18, { by: -4, lean: -0.3, hd: -0.3, fa: A_(3.3, 0.2) }], [30, { by: -4, lean: -0.3, hd: -0.3, fa: A_(3.3, 0.2) }], [42, S0]],
+      hb: [HB(13, 18, 40, -170, 58, 12, 88, 7, 0.85)] },
+    // 下強：低くかまえて、地面をけずりながらなぎはらう
+    dtilt: { len: 34, sfx: 10, keys: [[0, S0], [8, { by: 20, lean: 0.3, fa: A_(-0.5, -0.4), fl: G_(1.2, -2.0), bl: G_(0.3, -1.8) }],
+        [11, { by: 22, lean: 0.55, fa: A_(1.2, 0.1), fl: G_(1.3, -1.6), bl: G_(-0.4, -1.5) }], [22, { by: 22, lean: 0.55, fa: A_(1.2, 0.1), fl: G_(1.3, -1.6), bl: G_(-0.4, -1.5) }], [34, S0]],
+      hb: [HB(10, 13, 118, -20, 42, 10, 20, 6, 0.65)],
+      upd(F, f) { if (f >= 9 && f <= 12 && F.ground) { BT.dust(F.x + F.dir * (60 + (f - 9) * 25), F.y, 2); for (let i = 0; i < 3; i++) BT.parts.push({ x: F.x + F.dir * (60 + (f - 9) * 25), y: F.y - 2, vx: -F.dir * rnd(2, 6), vy: rnd(-5, -1), life: 14, max: 14, col: '#ffb27a', size: rnd(1.5, 2.5), g: 0.3, spark: 1 }); if (f === 10) Snd.scrape(); } } },
+    // ダッシュ攻撃：両手で大剣を突き出して体当たり
+    dash: { len: 44, slide: true, sfx: 6, keys: [[0, { lean: 0.4 }], [6, { lean: 0.65, fa: A_(1.55, 0.05), fl: G_(1.2, -0.4), bl: G_(-0.9, -0.2) }],
+        [22, { lean: 0.65, fa: A_(1.55, 0.05), fl: G_(1.2, -0.4), bl: G_(-0.9, -0.2) }], [44, S0]],
+      hb: [HB(6, 18, 130, -74, 42, 12, 40, 7, 0.75)], upd(F, f) { if (f >= 22) F.vx *= 0.8; else F.vx *= 0.975; } },
+    // 横スマッシュ：頭上まで振りかぶって、大地ごとたたき割る
+    fsmash: { len: 72, charge: 12, sfx: 16, keys: [[0, S0], [14, { lean: -0.5, hd: -0.25, by: -4, fa: A_(3.5, 0.5), fl: G_(0.5, -0.4), bl: G_(-0.6, -0.2) }],
+        [18, { lean: 0.85, by: 22, fa: A_(1.05, 0.0), fl: G_(1.15, -0.8), bl: G_(-0.95, 0) }], [42, { lean: 0.85, by: 22, fa: A_(1.05, 0.0), fl: G_(1.15, -0.8), bl: G_(-0.95, 0) }], [72, S0]],
+      hb: [HB(16, 18, 70, -160, 48, 18, 55, 8, 1.0), HB(17, 21, 135, -40, 58, 24, 40, 9, 1.2)],
+      upd(F, f) {
+        if (f === 6 && F.ground) BT.dust(F.x, F.y, 6);
+        if (f === 16) F.vx = 5 * F.dir;
+        if (f === 18) { const sc = F.ch.scale; if (F.ground) slamCrack(BT, F.x + F.dir * 150 * sc, F.y, F.ground, 1.2); BT.zoomP = Math.max(BT.zoomP || 0, 0.06); Snd.groundSlam(1); }
+      } },
+    // 上スマッシュ：深くしずみ、全身で真上へ斬り上げる
+    usmash: { len: 60, charge: 11, sfx: 15, keys: [[0, S0], [12, { by: 26, lean: 0.4, fa: A_(-0.4, -0.3), fl: G_(1.0, -1.6), bl: G_(-0.4, -1.3) }],
+        [16, { by: -8, lean: -0.25, hd: -0.35, fa: A_(2.8, 0.1) }], [20, { by: -8, lean: -0.3, hd: -0.35, fa: A_(3.35, 0.2) }], [36, { by: -8, lean: -0.3, hd: -0.35, fa: A_(3.35, 0.2) }], [60, S0]],
+      hb: [HB(14, 16, 100, -90, 46, 14, 80, 7, 0.9), HB(15, 20, 30, -185, 64, 20, 88, 9, 1.15)],
+      upd(F, f) { if (f === 12 && F.ground) { BT.dust(F.x, F.y, 10); BT.shake = Math.max(BT.shake, 6); } } },
+    // 下スマッシュ：真上から足もとへたたきつけ、前後へ地割れを走らせる
+    dsmash: { len: 62, charge: 11, sfx: 15, keys: [[0, S0], [12, { by: 10, lean: -0.25, hd: -0.2, fa: A_(3.3, 0.4), fl: G_(0.6, -0.6), bl: G_(-0.5, -0.3) }],
+        [16, { by: 26, lean: 0.7, fa: A_(0.6, 0.0), fl: G_(1.2, -1.0), bl: G_(-1.0, 0) }], [36, { by: 26, lean: 0.7, fa: A_(0.6, 0.0), fl: G_(1.2, -1.0), bl: G_(-1.0, 0) }], [62, S0]],
+      hb: [HB(16, 20, 90, -24, 56, 18, 50, 8, 1.05, { auto: 1 }), HB(17, 21, -85, -24, 50, 16, 50, 8, 1.0, { auto: 1 })],
+      upd(F, f) { if (f === 16) { const sc = F.ch.scale; if (F.ground) riftBurst(BT, F.x + F.dir * 60 * sc, F.y, F.ground); BT.shake = Math.max(BT.shake, 18); Snd.groundSlam(1.1); } } },
+    // 空中N：大剣の重さにまかせて一回転
+    nair: { len: 42, air: true, drift: true, landLag: 13, sfx: 6, keys: [[0, S0], [6, { rot: 0, fa: A_(1.6, 0), fl: G_(0.8, -0.8), bl: G_(-0.4, -0.6) }],
+        [24, { rot: -TAU, fa: A_(1.6, 0), fl: G_(0.8, -0.8), bl: G_(-0.4, -0.6) }], [42, { rot: -TAU }]],
+      hb: [HB(7, 22, 0, -78, 98, 10, 45, 6, 0.75, { auto: 1 })] },
+    // 空中前：頭上から前へ、たたき落とすように振り下ろす
+    fair: { len: 46, air: true, drift: true, landLag: 18, sfx: 11, keys: [[0, S0], [10, { lean: -0.3, fa: A_(3.4, 0.4), fl: G_(0.6, -1.2), bl: G_(0.1, -1.0) }],
+        [14, { lean: 0.55, fa: A_(0.9, 0.1), fl: G_(0.4, -0.6), bl: G_(-0.3, -0.6) }], [26, { lean: 0.55, fa: A_(0.9, 0.1), fl: G_(0.4, -0.6), bl: G_(-0.3, -0.6) }], [46, S0]],
+      hb: [HB(11, 13, 60, -160, 42, 12, 60, 6, 0.8), HB(12, 16, 100, -60, 56, 15, 35, 7, 0.95)] },
+    // 空中後ろ：体をひねって後ろへ大きく振り抜く
+    bair: { len: 40, air: true, drift: true, landLag: 14, sfx: 11, keys: [[0, S0], [8, { lean: 0.25, fa: A_(1.5, 0.6) }], [12, { lean: -0.15, fa: A_(-1.5, -0.1), fl: G_(0.6, -1.0), bl: G_(-0.4, -0.8) }],
+        [22, { lean: -0.15, fa: A_(-1.5, -0.1), fl: G_(0.6, -1.0), bl: G_(-0.4, -0.8) }], [40, S0]],
+      hb: [HB(11, 15, -125, -80, 48, 15, 145, 8, 1.0)] },
     // 空中上：頭上を大きく切りはらう
-    uair: { len: 32, air: true, drift: true, landLag: 9, sfx: 5, keys: [[0, S0], [4, { fa: A_(1.1, 0.3), lean: 0.1 }], [12, { fa: A_(3.6, 0), lean: -0.2, hd: -0.3 }], [20, { fa: A_(3.6, 0), lean: -0.2, hd: -0.3 }], [32, S0]],
-      hb: [HB(6, 12, 15, -180, 54, 10, 85, 6, 0.8)] },
-    // 空中下：真下へ突き刺す（メテオ）
-    dair: { len: 42, air: true, drift: true, landLag: 17, sfx: 12, keys: [[0, S0], [10, { fa: A_(2.3, 0.6), ba: A_(2.1, 0.6), fl: G_(0.8, -1.8), bl: G_(0.6, -1.6) }],
-        [13, { fa: A_(0.04, 0), ba: A_(0.2, 0.3), fl: G_(0.4, -1.2), bl: G_(0.3, -1.1) }], [24, { fa: A_(0.04, 0), ba: A_(0.2, 0.3), fl: G_(0.4, -1.2), bl: G_(0.3, -1.1) }], [42, S0]],
-      hb: [HB(13, 18, 4, 30, 36, 14, -80, 6, 0.8)] },
+    uair: { len: 40, air: true, drift: true, landLag: 12, sfx: 10, keys: [[0, S0], [7, { fa: A_(0.8, 0.4), lean: 0.1 }], [12, { fa: A_(3.5, 0), lean: -0.2, hd: -0.3 }], [22, { fa: A_(3.5, 0), lean: -0.2, hd: -0.3 }], [40, S0]],
+      hb: [HB(10, 15, 15, -180, 58, 13, 85, 7, 0.85)] },
+    // 空中下：空中で一瞬止まり、大剣を真下へ突き立てて落ちる（着地で地面が割れる）
+    dair: { len: 50, air: true, landLag: 22, sfx: 14, keys: [[0, S0], [12, { fa: A_(3.2, 0.3), fl: G_(0.8, -1.8), bl: G_(0.6, -1.6) }],
+        [15, { fa: A_(0.04, 0), fl: G_(0.4, -1.2), bl: G_(0.3, -1.1) }], [32, { fa: A_(0.04, 0), fl: G_(0.4, -1.2), bl: G_(0.3, -1.1) }], [50, S0]],
+      hb: [HB(15, 28, 4, 32, 40, 16, -80, 7, 0.85)],
+      upd(F, f) { if (f < 13) { F.vy = Math.min(F.vy, 0.5); F.vx *= 0.9; return false; } if (f >= 15 && f < 32) { F.vy = Math.max(F.vy, 15); return false; } },
+      onLand(F) {
+        if (F.mf >= 15 && F.mf <= 32) { slamCrack(BT, F.x, F.y, F.ground, 1); Snd.groundSlam(0.9); }
+        F.move = null; F.landLag = 20; F.setState('land');
+      } },
 
     // ---- 必殺ワザ ----
     // 必殺：地裂斬（大剣を大きくふりかぶってたたきつけ、重い斬撃を飛ばす。地上では大地を割りながら突き進む）
@@ -2507,6 +2534,7 @@ makeGrabs(BHMOVES, { reach: 1.05, hv: [52, -8],
   dthrow: { len: 50, rel: 32, vic: [[0, 52, -8], [10, 56, 4]], keys: [[0, H], [10, { lean: 0.3, fa: A_(3.2, 0.3) }], [16, { lean: 0.7, by: 14, fa: A_(0.4, 0.1) }], [24, { lean: 0.5, by: 10, fa: A_(3.0, 0.3) }], [30, { lean: 0.7, by: 14, fa: A_(0.4, 0.1) }], [50, {}]],
     fx: (F, f, T) => { if ((f === 16 || f === 30) && T) { blood(T, 12); T.pctShake = 8; Snd.hitC(F.ch, 6); } } },
 }); }
+for (const k of ['grab', 'ghold', 'gpum', 'fthrow', 'bthrow', 'uthrow', 'dthrow']) BHMOVES[k].oneHand = true;
 
 const CHARS = [
   { key: 'shimarin', name: 'しまりん', kana: 'PSYCHIC', img: FACE, ar: FACE_AR, eyes: true, scale: 1, run: 7.0, airs: 5.8, jv: -14.6, shv: -10, djv: -13.4, airJumps: 2,
@@ -5349,7 +5377,15 @@ function drawDoodle(F, P, J, C, t) {
     F._swt.push({ tx: h.x + Math.sin(sa) * L, ty: h.y + Math.cos(sa) * L, mx: h.x + Math.sin(sa) * L * 0.3, my: h.y + Math.cos(sa) * L * 0.3, ix: h.x + Math.sin(sa) * L * 0.62, iy: h.y + Math.cos(sa) * L * 0.62 });
     if (F._swt.length > 10) F._swt.shift();
   } else F._swt.length = 0;
-  bhStick(bl); bhStick(fl); bhStick(ba);
+  // 両手持ち：奥の手も大剣の柄（手前の手のすぐ下）をにぎる。つかみ・投げ・剣を投げている間は片手
+  const tossedNow = F.state === 'move' && F.moveName === 'ub' && F.mf > 6 && F.mf < 30;
+  let ba2 = ba;
+  if (!(F.state === 'move' && F.move.oneHand) && !tossedNow && F.state !== 'helpless' && F.state !== 'hitstun') {
+    const g = { x: fa[2].x - Math.sin(sa) * 7, y: fa[2].y - Math.cos(sa) * 7 }, o = at([46, 112]);   // 肩は胴体の裏（見えない）から出す
+    const dx = g.x - o.x, dy = g.y - o.y, d = Math.hypot(dx, dy) || 1, slack = Math.max(0, 30 - d) * 0.5;
+    ba2 = [o, { x: (o.x + g.x) / 2 - dy / d * (6 + slack), y: (o.y + g.y) / 2 + dx / d * (6 + slack) }, g];
+  }
+  bhStick(bl); bhStick(fl); bhStick(ba2);
   // 顔と胴体（手描きの絵そのまま）＋返り血
   ctx.save(); ctx.translate(J.hip.x, J.hip.y); ctx.rotate(rot);
   const u = k / BH.img;
