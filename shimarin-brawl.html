@@ -291,6 +291,16 @@ const Snd = {
     this.nz(0.12, 0.3 * Math.min(1, k), 'bandpass', 900, 0.8, 0, 200, 20);
   },
   // 最後の一撃：空気の壁を突き破る「ドォンッ……」（ソニックブーム）＋地の底まで響く超低音
+  // 超低音の「ズゥゥン」：低い正弦波がさらに沈んでいく＋地鳴り（重い出口で低音をさらに持ち上げる）
+  subDrop(k = 1) {
+    this.heavy(() => {
+      this.osc('sine', 62, 3.2 * k + 0.6, 0.75, 18);
+      this.osc('sine', 41, 3.8 * k + 0.6, 0.6, 16, 0.02);
+      this.osc('triangle', 82, 1.6 * k + 0.3, 0.32, 24, 0.01);
+      this.nz(2.8 * k + 0.5, 0.45, 'lowpass', 180, 1.4, 0.02, 30, 18);
+      this.smp('boom', 0.9, 0.4, 0, 0);
+    });
+  },
   sonicBoom() {
     this.smp('boom', 1, 0.5, 0, 0); this.smp('boom', 0.9, 0.62, 0, 1); this.smp('punch', 1, 0.45, 0, 2); this.smp('punch', 0.8, 0.4, 0.11, 0);
     // 二重の破裂音（ソニックブームは「ドドンッ」と2回鳴る）
@@ -6105,20 +6115,27 @@ SC_.battle = (o) => {
       // ---- 一矢・天穿：引きしぼる → 音の壁を破る一矢 → 着弾 → 遅れてソニックブーム ----
       if (S.done) return u >= S.done + 24;
       if (!S.movie) {
-        if (u === 1 && T) { F.dir = sgn(T.x - F.x) || F.dir; S.dir = F.dir; }
-        if (u === 4) {
-          if (canCatch(T) && Math.abs(T.y - F.y) < 520 && Math.abs(T.x - F.x) < 2200) { catchT(S); S.movie = true; S.mt = 0; S.tx = T.x; S.ty = T.y; }
-          else { S.miss = u; fireArrow(F, 0, 34, 20, 1, { r: 26, big: true, glow: 1, life: 40, g: 0, hb: { dmg: 20, ang: 25, base: 20, gr: 1.4 } }); Snd.bow(1); Snd.heavy(() => Snd.sonicBoom()); }
+        if (S.miss) return u >= S.miss + 30;
+        // 狙える相手（場外・復活中以外ならだれでも。回避・無敵中でも狙いはつく）
+        const ok = o => o.alive && o.state !== 'respawn' && o.state !== 'dead' && o.state !== 'out' && o.state !== 'caught' && o.state !== 'held';
+        if (!T || !ok(T)) S.T = nearestFoe(F, fs, ok);
+        const TT = S.T;
+        if (TT) { F.dir = sgn(TT.x - F.x) || F.dir; S.dir = F.dir; }
+        if (u >= 3 && TT && ok(TT)) {
+          TT.inv = 0; catchT(S); S.movie = true; S.mt = 0; S.tx = TT.x; S.ty = TT.y;
+          if (S.tx === undefined) S.tx = TT.x;
+        } else if (u >= 40) {   // だれもいない：巨大な矢をまっすぐ撃つだけ
+          S.miss = u; fireArrow(F, 0, 34, 20, 1, { r: 26, big: true, glow: 1, life: 40, g: 0, hb: { dmg: 20, ang: 25, base: 20, gr: 1.4 } }); Snd.bow(1); Snd.heavy(() => Snd.sonicBoom()); Snd.subDrop(1);
         }
-        return S.miss ? u >= S.miss + 30 : false;
+        return false;
       }
       const mt = ++S.mt;
       T.x = S.tx; T.y = S.ty;
       if (mt === 2) Snd.bowDraw();
-      if (mt === 20) Snd.berserkCharge(36);
-      if (mt === 62) { Snd.bow(1); Snd.heavy(() => Snd.sonicBoom()); B.shake = 40; }
-      if (mt === 74) { supHit(S, 30); Snd.smp('pierce', 1, 0.5); Snd.heavy(() => Snd.doom(1.2)); B.shake = 46; }
-      if (mt === 98) { Snd.koBoom(); Snd.heavy(() => Snd.doom(0.9)); B.shake = 34; }   // 遅れて届く衝撃波
+      if (mt === 20) { Snd.berserkCharge(36); Snd.heavy(() => Snd.osc('sine', 38, 0.9, 0.45, 55)); }
+      if (mt === 62) { Snd.bow(1); Snd.heavy(() => Snd.sonicBoom()); Snd.subDrop(1.2); B.shake = 40; }
+      if (mt === 74) { supHit(S, 30); Snd.smp('pierce', 1, 0.5); Snd.heavy(() => Snd.doom(1.6)); Snd.subDrop(0.8); B.shake = 46; }
+      if (mt === 98) { Snd.koBoom(); Snd.heavy(() => { Snd.doom(1.3); Snd.sonicBoom(); }); Snd.subDrop(1); B.shake = 34; }   // 遅れて届く衝撃波
       if (mt === 132) {   // バトルにもどって撃ち抜く（ほぼ一撃でふっとぶ強さ）
         S.movie = false; S.done = u; F.dir = S.dir;
         supLaunch(S, { dmg: 6, ang: 20, base: 34, gr: 2.0 }, S.dir);
