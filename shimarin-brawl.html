@@ -2240,7 +2240,7 @@ const CHARS = [
   { key: 'imai', name: '今井', kana: 'TENTACLE', img: IMAI, ar: IMAI_AR, eyes: false, scale: 1.04, run: 6.4, airs: 5.6, jv: -14, shv: -9.8, djv: -13,
     kbTake: 0.95, swords: false, tentacle: true, hand: '#e8c0a0', moves: TMOVES,
     outfit: { main: '#2d1b3d', dark: '#140a1e', light: '#5a3d73', pants: '#1a1424', shoe: '#0e0a14' },
-    fsName: '深淵の抱擁', fsDesc: '足元から巨大な触手を呼び、しめ上げて投げ飛ばす',
+    fsName: '深淵の抱擁', fsDesc: '毒の沼から巨大な触手を呼び、しめ上げて毒ごとたたきつける',
     specials: [['インク弾', '必殺', '当たると動きが鈍くなる墨を吐く'], ['触手グラブ', '横＋必殺', '遠くの相手を触手でつかんでしめる'],
       ['触手ロープ', '上＋必殺', '崖をつかめる距離がとても長い（復帰用）'], ['オーク召喚', '下＋必殺', 'オークを呼び出して戦わせる（1体まで）']] },
   { key: 'henry', name: 'ヘンリー', kana: 'SPEEDSTER', img: HENRY, ar: HENRY_AR, eyes: false, scale: 0.98, run: 10.5, airs: 7.2, jv: -15.2, shv: -10.6, djv: -14.2,
@@ -2257,6 +2257,70 @@ const CHARS = [
     specials: [['ボイスキャノン', '必殺', 'ためるほど大きな声の衝撃波（押しっぱなし）'], ['エコーノーツ', '横＋必殺', 'はずむ音符を３つ飛ばす'],
       ['ジェットシャウト', '上＋必殺', '真下へ叫んだ反動で上昇（復帰用）'], ['ハウリング', '下＋必殺', '周りを連続攻撃し、最後にくらくらにする']] },
 ];
+// ---- 今井：触手の通常ワザ・スマッシュ・空中ワザ（当たり判定ひとつにつき1本の触手が伸びる）----
+{
+  const T0 = { lean: 0.1 }, TOX = (F, x, y, n = 3) => { if (!BT) return; for (let i = 0; i < n; i++) BT.parts.push({ x: F.x + F.dir * x + rnd(-14, 14), y: F.y + y + rnd(-14, 14), vx: rnd(-1, 1), vy: rnd(-2, -0.5), life: 30, max: 30, bubble: 1, size: rnd(3, 7), g: -0.02, col: i % 2 ? '#a8ff3c' : '#d27aff' }); };
+  const multi = (every, until) => (F, f) => { if (f % every === 0 && f < until) F.hitIds.clear(); };
+  const AIRL = { fl: G_(0.8, -1.2), bl: G_(0.2, -1.0) };
+  Object.assign(TMOVES, {
+    // 弱：触手の二連ムチ
+    jab: { len: 20, sfx: 2, keys: [[0, {}], [3, { lean: 0.3, hd: 0.1, fa: A_(1.1, 0.7) }], [12, { lean: 0.3, fa: A_(1.1, 0.7) }], [20, {}]],
+      hb: [HB(3, 5, 135, -82, 30, 2.5, 80, 3.5, 0.06), HB(8, 10, 150, -68, 34, 4, 40, 5, 0.45)], upd(F, f) { if (f === 7) Snd.tentWhip(); } },
+    // 横強：しなる触手ムチ（とても長い）
+    ftilt: { len: 28, sfx: 6, keys: [[0, {}], [6, { lean: -0.25, hd: -0.1, fa: A_(-0.4, 0.8) }], [9, { lean: 0.4, fa: A_(1.5, 0.2), fl: G_(0.6, -0.3), bl: G_(-0.5, 0) }], [18, { lean: 0.4, fa: A_(1.5, 0.2), fl: G_(0.6, -0.3), bl: G_(-0.5, 0) }], [28, {}]],
+      hb: [HB(8, 11, 195, -72, 42, 8, 35, 6, 0.75)], upd(F, f) { if (f === 10) TOX(F, 195, -72); } },
+    // 上強：二本の触手が頭上をなぎはらう
+    utilt: { len: 28, sfx: 5, keys: [[0, {}], [5, { lean: 0.3, fa: A_(0.4, 0.4) }], [9, { lean: -0.25, hd: -0.4, fa: A_(2.8, 0.3), ba: A_(2.5, 0.3) }], [18, { lean: -0.25, hd: -0.4, fa: A_(2.8, 0.3), ba: A_(2.5, 0.3) }], [28, {}]],
+      hb: [HB(7, 12, 95, -190, 46, 6, 85, 6, 0.48, { auto: 1 }), HB(7, 12, -55, -205, 44, 6, 95, 6, 0.48, { auto: 1 })] },
+    // 下強：地をはう触手で足をすくう
+    dtilt: { len: 24, sfx: 4, keys: [[0, {}], [4, { by: 16, lean: 0.45 }], [7, { by: 22, lean: 0.6, hd: 0.2, fa: A_(0.9, 0.1), fl: G_(0.9, -1.6), bl: G_(-0.3, -1.2) }], [14, { by: 22, lean: 0.6, fa: A_(0.9, 0.1), fl: G_(0.9, -1.6), bl: G_(-0.3, -1.2) }], [24, {}]],
+      hb: [HB(6, 9, 180, -18, 34, 6, 78, 5, 0.35)], upd(F, f) { if (f === 7) TOX(F, 180, -18, 4); } },
+    // ダッシュ攻撃：触手の槍を突き出して突進
+    dash: { len: 34, slide: true, sfx: 4, keys: [[0, { lean: 0.4 }], [5, { lean: 0.5, fa: A_(1.6, 0), ba: A_(1.4, 0.2), fl: G_(0.9, -0.4), bl: G_(-0.6, -0.4) }], [16, { lean: 0.5, fa: A_(1.6, 0), ba: A_(1.4, 0.2), fl: G_(0.9, -0.4), bl: G_(-0.6, -0.4) }], [34, {}]],
+      hb: [HB(5, 14, 155, -80, 40, 7, 45, 6, 0.6)], upd(F, f) { if (f >= 16) F.vx *= 0.85; } },
+    // 横スマッシュ：三本の毒触手が槍のように突き刺さる
+    fsmash: { ...TMOVES.fsmash, keys: [[0, {}], [8, { lean: -0.45, hd: -0.3, fa: A_(2.4, 0.6), ba: A_(-2.4, 0.6), fl: G_(0.5, -0.3), bl: G_(-0.4, -0.1) }],
+        [14, { lean: 0.5, fa: A_(1.6, 0), ba: A_(1.4, 0), fl: G_(0.9, -0.2), bl: G_(-0.8, 0) }], [30, { lean: 0.5, fa: A_(1.6, 0), ba: A_(1.4, 0), fl: G_(0.9, -0.2), bl: G_(-0.8, 0) }], [52, {}]],
+      hb: [HB(14, 18, 235, -82, 46, 16, 38, 8, 1.1), HB(14, 18, 205, -140, 36, 14, 45, 8, 1.0), HB(14, 18, 205, -26, 36, 14, 30, 8, 1.0)],
+      upd(F, f) { if (f === 15) { TOX(F, 230, -82, 6); if (BT) BT.parts.push({ x: F.x + F.dir * 230, y: F.y - 82, shock: 1, r: 14, vr: 12, life: 14, max: 14, col: '#9cff3a', w: 8 }); } } },
+    // 上スマッシュ：足元から触手の柱がつき上がる
+    usmash: { ...TMOVES.usmash, hb: [HB(13, 18, 75, -150, 50, 15, 88, 8, 1.05, { fromGround: 1, auto: 1 }), HB(13, 18, -75, -150, 50, 15, 92, 8, 1.05, { fromGround: 1, auto: 1 }), HB(13, 18, 0, -230, 46, 15, 90, 8, 1.05, { auto: 1 })],
+      upd(F, f) { if (f === 13 && BT) { BT.dust(F.x + 75 * F.dir, F.y, 6); BT.dust(F.x - 75 * F.dir, F.y, 6); BT.shake = Math.max(BT.shake, 6); TOX(F, 0, -40, 6); } } },
+    // 下スマッシュ：両側の地面から触手が噴き出す
+    dsmash: { ...TMOVES.dsmash, hb: [HB(11, 15, 165, -55, 48, 14, 30, 8, 1.0, { fromGround: 1, auto: 1 }), HB(11, 15, -165, -55, 48, 14, 30, 8, 1.0, { fromGround: 1, auto: 1 })],
+      upd(F, f) { if (f === 11 && BT) { BT.dust(F.x + 165, F.y, 6); BT.dust(F.x - 165, F.y, 6); BT.shake = Math.max(BT.shake, 5); TOX(F, 165, -20, 4); TOX(F, -165, -20, 4); } } },
+    // 空中N：触手の渦（連続ヒット → 最後にはじき飛ばす）
+    nair: { len: 32, air: true, drift: true, landLag: 8, sfx: 3, keys: [[0, {}], [4, { by: -2, hd: -0.2, fa: A_(2.2, 0.3), ba: A_(-2.2, 0.3), ...AIRL }], [20, { by: -2, fa: A_(2.2, 0.3), ba: A_(-2.2, 0.3), ...AIRL }], [32, {}]],
+      hb: [HB(4, 15, 115, -80, 40, 2, 60, 3, 0.05, { auto: 1 }), HB(4, 15, -115, -80, 40, 2, 60, 3, 0.05, { auto: 1 }), HB(4, 15, 0, -185, 40, 2, 90, 3, 0.05, { auto: 1 }), HB(17, 19, 0, -80, 115, 5, 50, 6, 0.6, { auto: 1 })],
+      upd: multi(4, 16) },
+    // 空中前：触手を振りおろす
+    fair: { len: 30, air: true, drift: true, landLag: 9, sfx: 6, keys: [[0, {}], [7, { lean: -0.2, fa: A_(2.6, 0.4), ...AIRL }], [10, { lean: 0.4, fa: A_(1.5, 0), ba: A_(1.2, 0.2), ...AIRL }], [19, { lean: 0.4, fa: A_(1.5, 0), ...AIRL }], [30, {}]],
+      hb: [HB(9, 13, 165, -55, 46, 10, 45, 6, 0.85)] },
+    // 空中後：うしろへ強い触手ムチ
+    bair: { len: 30, air: true, drift: true, landLag: 10, sfx: 6, keys: [[0, {}], [6, { lean: 0.3 }], [8, { lean: -0.3, hd: 0.3, fa: A_(-1.8, 0.2), ba: A_(-1.4, 0.2), ...AIRL }], [16, { lean: -0.3, fa: A_(-1.8, 0.2), ...AIRL }], [30, {}]],
+      hb: [HB(8, 11, -185, -80, 44, 12, 140, 7, 1.0)] },
+    // 空中上：触手のドリルが上へ（連続ヒット → 打ち上げ）
+    uair: { len: 30, air: true, drift: true, landLag: 8, sfx: 4, keys: [[0, {}], [5, { fa: A_(1.2, 0.2), ...AIRL }], [8, { lean: -0.35, hd: -0.5, fa: A_(3.0, 0.1), ba: A_(2.8, 0.1), ...AIRL }], [18, { lean: -0.35, fa: A_(3.0, 0.1), ...AIRL }], [30, {}]],
+      hb: [HB(6, 14, 10, -205, 46, 2, 90, 3, 0.05, { auto: 1 }), HB(15, 17, 10, -215, 50, 6, 85, 7, 0.8, { auto: 1 })], upd: multi(3, 14) },
+    // 空中下：真下へ毒針の触手（地面に向かってたたき落とす）
+    dair: { len: 38, air: true, drift: true, landLag: 14, sfx: 9, keys: [[0, {}], [10, { lean: 0.2, fa: A_(1.8, 0.4), ba: A_(1.6, 0.4), fl: G_(0.8, -1.6), bl: G_(0.6, -1.4) }], [13, { lean: 0.3, hd: 0.4, fa: A_(0.3, 0), ba: A_(0.1, 0), fl: G_(0.4, -1), bl: G_(0.2, -0.8) }], [22, { lean: 0.3, fa: A_(0.3, 0) }], [38, {}]],
+      hb: [HB(10, 14, 15, 95, 42, 11, -80, 6, 0.8)], upd(F, f) { if (f === 12) TOX(F, 15, 95, 4); } },
+  });
+  for (const k of ['jab', 'ftilt', 'utilt', 'dtilt', 'dash', 'fsmash', 'usmash', 'dsmash', 'nair', 'fair', 'bair', 'uair', 'dair']) TMOVES[k].K = TMOVES[k].keys.map(([f, o]) => [f, mk(o)]);
+  // 横必殺（触手グラブ）・上必殺（触手ロープ）：動きはそのままで、毒の演出を足す
+  const sbU = TMOVES.sb.upd, sbtU = TMOVES.sbt.upd, ubU = TMOVES.ub.upd;
+  TMOVES.sb.upd = (F, f, c, B) => { if (f === 9) TOX(F, 120, -80, 4); return sbU(F, f, c, B); };
+  TMOVES.sbt.upd = (F, f, c, B) => {
+    const T = BT && BT.fs.find(o => o.heldBy === F && o.state === 'held');
+    if (T && (f === 14 || f === 22 || f === 30)) toxicHitFx(BT, T.x, T.y - 75 * T.ch.scale, 4);
+    if (T && f === 35) { toxicHitFx(BT, T.x, T.y - 75 * T.ch.scale, 12); BT.shake = Math.max(BT.shake, 10); }
+    if (T && f % 3 === 0) TOX({ x: T.x, dir: 1, y: T.y }, 0, -75, 1);
+    return sbtU(F, f, c, B);
+  };
+  TMOVES.ub.upd = (F, f, c, B) => { if (f === 6) TOX(F, 30, -180, 5); return ubU(F, f, c, B); };
+  TMOVES.sb.hb = TMOVES.sb.hb.map(h => ({ ...h, r: h.r * 1.1 }));
+}
+
 for (const ch of CHARS) markShared(ch);   // キャラとワザ表は保存のとき写さない
 // 復帰を強く：空中ジャンプを1回ふやし、高さも少し上げる
 for (const ch of CHARS) { ch.airJumps = (ch.airJumps || 1) + 1; ch.djv *= 1.12; }
@@ -3533,7 +3597,7 @@ function drawBow(J, P, F) {
   }
 }
 // ---- 触手（点の列に沿って、根元が太く先が細い） ----
-function drawTentChain(pts, w0, w1, col = '#7a3a8a', light = '#c27ad8', sucker = '#f0c0e4') {
+function drawTentChain(pts, w0, w1, col = '#4a1858', light = '#9a3aaa', sucker = '#a8ff3c') {
   const n = pts.length; if (n < 2) return;
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   for (let pass = 0; pass < 3; pass++) {
@@ -3546,12 +3610,16 @@ function drawTentChain(pts, w0, w1, col = '#7a3a8a', light = '#c27ad8', sucker =
       if (pass === 2) ctx.globalAlpha /= 0.7;
     }
   }
-  // 吸盤
-  ctx.fillStyle = sucker;
+  // 吸盤（毒の緑にぼんやり光る）
   for (let i = 2; i < n - 1; i += 2) {
     const a = pts[i - 1], b = pts[i + 1], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, w = lerp(w0, w1, i / (n - 1));
-    ctx.beginPath(); ctx.arc(pts[i].x + dy / d * w * 0.3, pts[i].y - dx / d * w * 0.3, Math.max(1.2, w * 0.2), 0, TAU); ctx.fill();
+    const sx = pts[i].x + dy / d * w * 0.3, sy = pts[i].y - dx / d * w * 0.3, r = Math.max(1.2, w * 0.22);
+    ctx.fillStyle = '#14121f'; ctx.beginPath(); ctx.arc(sx, sy, r + 1, 0, TAU); ctx.fill();
+    ctx.fillStyle = sucker; ctx.beginPath(); ctx.arc(sx, sy, r, 0, TAU); ctx.fill();
   }
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= 0.35;
+  for (let i = 2; i < n - 1; i += 2) { const w = lerp(w0, w1, i / (n - 1)) * 1.4; ctx.drawImage(glowSprite('rgba(150,255,60,.8)'), pts[i].x - w, pts[i].y - w, w * 2, w * 2); }
+  ctx.restore();
 }
 // うねる触手の点列（根元 bx,by から ang の向きへ）
 function tentPts(bx, by, ang, n, seg, t, ph, amp = 0.32, curl = 0.05) {
@@ -4413,6 +4481,13 @@ function drawFxDark(p) {
   }
 }
 // 一瑚の攻撃が当たったときの漢字＋斬撃（見た目だけ）
+// 今井の触手が当たったとき：紫と緑の毒のしぶき・のぼる毒の泡・毒霧
+function toxicHitFx(B, x, y, dmg) {
+  for (let i = 0; i < 8 + dmg; i++) B.parts.push({ x, y, vx: rnd(-7, 7), vy: rnd(-9, -1), life: 32, max: 32, drop: 1, size: rnd(3, 7), g: 0.45, col: i % 3 ? '#b45be0' : '#9cff3a' });
+  for (let i = 0; i < 4 + (dmg / 3 | 0); i++) B.parts.push({ x: x + rnd(-30, 30), y: y + rnd(-20, 20), vx: rnd(-1, 1), vy: rnd(-2.5, -0.8), life: rnd(30, 55) | 0, max: 55, bubble: 1, size: rnd(4, 10), g: -0.02, col: i % 2 ? '#a8ff3c' : '#d27aff' });
+  for (let i = 0; i < 3; i++) B.parts.push({ x: x + rnd(-24, 24), y: y + rnd(-16, 16), vx: rnd(-1.5, 1.5), vy: rnd(-1.4, -0.3), life: 40, max: 40, col: i % 2 ? 'rgba(110,200,40,.55)' : 'rgba(120,30,150,.6)', size: 22 + dmg, g: 0, smoke: 1 });
+  B.parts.push({ x, y, shock: 1, r: 10, vr: 7 + dmg * 0.4, life: 14, max: 14, col: '#9cff3a', w: 6 });
+}
 // 恵授の矢が当たったとき：紅い閃光・黒い破片・赤い筋・漢字
 function archerHitFx(B, hx, hy, dmg) {
   const R = Math.random;
@@ -4479,6 +4554,15 @@ function drawFx(p) {
     return;
   }
   if (p.note) { ctx.globalAlpha = Math.min(1, k * 2); drawNoteShape(p.x, p.y, p.size, p.col); return; }
+  if (p.bubble) {   // 毒の泡：ふくらみながらのぼって、最後にはじける
+    const r = p.size * (1 + (1 - k) * 0.6), pop = k < 0.12;
+    ctx.globalAlpha = Math.min(1, k * 2) * 0.9; ctx.strokeStyle = p.col; ctx.lineWidth = 2;
+    if (pop) { for (let i = 0; i < 6; i++) { const a = i * TAU / 6; line(p.x + Math.cos(a) * r, p.y + Math.sin(a) * r, p.x + Math.cos(a) * r * 1.6, p.y + Math.sin(a) * r * 1.6); } return; }
+    ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, TAU); ctx.stroke();
+    ctx.globalAlpha *= 0.3; ctx.fillStyle = p.col; ctx.fill();
+    ctx.globalAlpha = Math.min(1, k * 2); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(p.x - r * 0.35, p.y - r * 0.35, r * 0.22, 0, TAU); ctx.fill();
+    return;
+  }
   if (p.spark) {   // 光る火花
     ctx.globalAlpha = k; ctx.strokeStyle = p.col; ctx.lineWidth = p.size;
     line(p.x, p.y, p.x - p.vx * 1.6, p.y - p.vy * 1.6);
@@ -4828,7 +4912,17 @@ function drawFighter(F, t) {
       if (F.mf < h.f0 - 3 || F.mf > h.f1 + 4) return;
       const k = F.mf < h.f0 ? clamp((F.mf - h.f0 + 4) / 4, 0.15, 1) : F.mf > h.f1 ? clamp(1 - (F.mf - h.f1) / 5, 0.1, 1) : 1;
       const a = h.fromGround ? { x: h.ox * 0.85, y: 4 } : { x: J.sh.x - 4, y: J.sh.y + 8 };
-      drawTentChain(tentReach(a, { x: h.ox, y: h.oy - (h.fromGround ? 20 : 0) }, k, t, i), h.fromGround ? 13 : 11, 3);
+      const pts = tentReach(a, { x: h.ox, y: h.oy - (h.fromGround ? 20 : 0) }, k, t, i), w = (h.fromGround ? 14 : 10) + h.r * 0.12;
+      drawTentChain(pts, w, Math.max(3, w * 0.3));
+      const tip = pts[pts.length - 1];
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.75 * k;
+      ctx.drawImage(glowSprite('rgba(140,255,50,.85)'), tip.x - 26, tip.y - 26, 52, 52);
+      ctx.drawImage(glowSprite('rgba(190,60,255,.8)'), tip.x - 16, tip.y - 16, 32, 32);
+      ctx.restore();
+      if (h.fromGround && k > 0.5) {   // 地面から生えるときは、毒の沼が広がる
+        ctx.save(); const g = ctx.createRadialGradient(h.ox * 0.85, 4, 4, h.ox * 0.85, 4, 70); g.addColorStop(0, 'rgba(120,255,40,.55)'); g.addColorStop(0.6, 'rgba(110,30,140,.45)'); g.addColorStop(1, 'rgba(60,0,80,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(h.ox * 0.85, 4, 70 * k, 16 * k, 0, 0, TAU); ctx.fill(); ctx.restore();
+      }
     });
   }
   if (CH.hammer && !F.hammerOut) {
@@ -5866,7 +5960,7 @@ SC_.battle = (o) => {
     for (let i = 0; i < n; i++) B.parts.push({ x: x + rnd(-10, 10), y: y - 4, vx: rnd(-4, 4), vy: rnd(-2.5, -0.5), life: 26, max: 26, col: 'rgba(230,230,240,.8)', size: rnd(6, 12), g: 0, smoke: 1 });
   };
   B.fxHit = (A, T, x, y, dmg, kb) => {
-    const col = A.ch.psychic ? '#c9b8ff' : A.ch.berserk ? '#ff2a2a' : A.col.light, big = kb > 16, huge = kb > 24, ch = A.ch;
+    const col = A.ch.psychic ? '#c9b8ff' : A.ch.berserk ? '#ff2a2a' : A.ch.tentacle ? '#9cff3a' : A.col.light, big = kb > 16, huge = kb > 24, ch = A.ch;
     B.parts.push({ x, y, flare: 1, r: 34 + dmg * 4 + kb * 1.5, life: big ? 18 : 12, max: big ? 18 : 12, col, rot: rnd(0, TAU), n: big ? 8 : 6 });
     B.parts.push({ x, y, shock: 1, r: 12, vr: 9 + kb * 0.5, life: 16, max: 16, col: '#ffffff', w: big ? 10 : 6 });
     if (big) B.parts.push({ x, y, shock: 1, r: 6, vr: 15 + kb * 0.6, life: 20, max: 20, col, w: 14 });
@@ -5885,7 +5979,7 @@ SC_.battle = (o) => {
     else if (ch.voice) {
       for (let i = 0; i < 3; i++) B.parts.push({ x, y, vx: rnd(-3, 3), vy: rnd(-5, -2), life: 40, max: 40, note: 1, size: rnd(0.6, 1), col: i % 2 ? '#7fe8ff' : '#ff7ad9', g: -0.02 });
       B.parts.push({ x, y, sonic: 1, r: 40 + dmg * 3, life: 14, max: 14 });
-    } else if (ch.tentacle) for (let i = 0; i < 8 + dmg; i++) B.parts.push({ x, y, vx: rnd(-6, 6), vy: rnd(-8, -1), life: 30, max: 30, drop: 1, size: rnd(3, 7), g: 0.45, col: '#b45be0' });
+    } else if (ch.tentacle) toxicHitFx(B, x, y, dmg);
     else if (ch.bow) archerHitFx(B, x, y, dmg);
     else if (ch.swords) for (let i = 0; i < 6; i++) B.parts.push({ x, y, vx: rnd(-4, 4), vy: rnd(-5, 1), life: 50, max: 50, petal: 1, rot: rnd(0, TAU), size: rnd(4, 7), g: 0.08, col: '#ffb7cc' });
     else if (ch.psychic) for (let i = 0; i < 6; i++) B.parts.push({ x, y, vx: rnd(-7, 7), vy: rnd(-7, 7), life: 24, max: 24, shard: 1, rot: rnd(0, TAU), size: rnd(5, 10), g: 0, col: '#b89cff' });
@@ -5943,9 +6037,9 @@ SC_.battle = (o) => {
     let hl = Math.floor(4 + dmg * 0.4); if (kb > 20) hl = Math.floor(hl * 1.6);
     T.hitlag = hl; if (!isProj) A.hitlag = hl;
     T.flash = 10; T.pctShake = 14;
-    B.burst(hx, hy, '#fff6a0', 14 + (dmg * 1.5 | 0)); B.burst(hx, hy, A.col.light, 12);
+    B.burst(hx, hy, A.ch.tentacle ? '#b45be0' : '#fff6a0', 14 + (dmg * 1.5 | 0)); B.burst(hx, hy, A.ch.tentacle ? '#9cff3a' : A.col.light, 12);
     B.parts.push({ x: hx, y: hy, ring: 1, r: 10, life: 14, max: 14, col: '#fff' });
-    B.parts.push({ x: hx, y: hy, imp: 1, r: 22 + dmg * 2.4, life: 11, max: 11, col: A.ch.psychic ? '#c9b8ff' : A.col.light, rot: Math.random() * TAU });
+    B.parts.push({ x: hx, y: hy, imp: 1, r: 22 + dmg * 2.4, life: 11, max: 11, col: A.ch.psychic ? '#c9b8ff' : A.ch.tentacle ? '#9cff3a' : A.col.light, rot: Math.random() * TAU });
     // キャラごとのヒット演出
     if (A.ch.psychic) B.parts.push({ x: hx, y: hy, psy: 1, r: 34 + dmg * 2.2, life: 16, max: 16 });
     else if (A.ch.swords) {
@@ -6127,7 +6221,9 @@ SC_.battle = (o) => {
         if (T && T.alive && u < 18) S.tx = lerp(S.tx, T.x, 0.2);
         S.tx = clamp(S.tx, m.x1 + 30, m.x2 - 30);
         S.rise = Math.min(1, u / 20);
-        if (u % 3 === 0) B.parts.push({ x: S.tx + rnd(-60, 60), y: m.y - 4, vx: rnd(-4, 4), vy: rnd(-10, -4), life: 30, max: 30, rock: 1, size: rnd(4, 9), g: 0.5, col: '#5a3d73', rot: rnd(0, TAU) });
+        if (u % 3 === 0) B.parts.push({ x: S.tx + rnd(-60, 60), y: m.y - 4, vx: rnd(-4, 4), vy: rnd(-10, -4), life: 30, max: 30, rock: 1, size: rnd(4, 9), g: 0.5, col: '#3a1848', rot: rnd(0, TAU) });
+        for (let i = 0; i < 3; i++) B.parts.push({ x: S.tx + rnd(-200, 200), y: m.y - rnd(0, 20), vx: rnd(-0.6, 0.6), vy: rnd(-3, -1), life: 50, max: 50, bubble: 1, size: rnd(4, 12), g: -0.02, col: i % 2 ? '#a8ff3c' : '#d27aff' });
+        if (u % 2 === 0) B.parts.push({ x: S.tx + rnd(-180, 180), y: m.y - rnd(10, 60), vx: rnd(-1, 1), vy: rnd(-2.5, -1), life: 60, max: 60, col: u % 4 ? 'rgba(100,220,40,.45)' : 'rgba(120,30,160,.55)', size: rnd(30, 60), g: 0, smoke: 1 });
         if (u % 6 === 0) B.shake = Math.max(B.shake, 4);
         if (u === 20) {
           if (canCatch(T) && Math.abs(T.x - S.tx) < 260 && T.y > m.y - 520 && T.y < m.y + 200) { catchT(S); S.cu = u; Snd.squelch(); B.shake = 14; }
@@ -6142,9 +6238,21 @@ SC_.battle = (o) => {
       if (k > 0 && k <= 60 && k % 10 === 0) {
         supHit(S, 3); Snd.squelch(); Snd.hitC(F.ch, 6); B.shake = Math.max(B.shake, 10);
         B.parts.push({ x: T.x, y: T.y - 75 * T.ch.scale, ring: 1, r: 30, life: 14, max: 14, col: '#c27ad8' });
+        toxicHitFx(B, T.x, T.y - 75 * T.ch.scale, 10); B.flashScr = 4; B.flashRGB = k % 20 ? '120,230,60' : '160,60,220';
+      }
+      if (k < 72 && k % 2 === 0) {   // しめ上げている間：毒霧と泡が立ちのぼる
+        B.parts.push({ x: T.x + rnd(-60, 60), y: T.y - rnd(20, 140), vx: rnd(-1, 1), vy: rnd(-2, -0.6), life: 40, max: 40, bubble: 1, size: rnd(4, 10), g: -0.02, col: k % 4 ? '#a8ff3c' : '#d27aff' });
+        B.parts.push({ x: S.tx + rnd(-220, 220), y: m.y - rnd(0, 40), vx: rnd(-0.8, 0.8), vy: rnd(-2, -0.8), life: 60, max: 60, col: k % 4 ? 'rgba(100,220,40,.4)' : 'rgba(120,30,160,.5)', size: rnd(34, 64), g: 0, smoke: 1 });
       }
       if (k === 78) {
-        B.flashScr = 10; B.flashRGB = '170,90,220'; B.shake = 30; B.zoomP = 0.1; Snd.koBoom(); Snd.squelch();
+        // たたきつけ：毒が大爆発
+        const ex = T.x, ey = m.y - 20;
+        for (let j = 0; j < 5; j++) B.parts.push({ x: ex, y: ey, ring: 1, r: 20 + j * 34, life: 24 + j * 4, max: 24 + j * 4, col: j % 2 ? '#9cff3a' : '#b45be0' });
+        B.parts.push({ x: ex, y: ey - 40, flare: 1, r: 220, life: 18, max: 18, col: '#9cff3a', rot: 0, n: 12 });
+        for (let i = 0; i < 50; i++) B.parts.push({ x: ex, y: ey, vx: rnd(-16, 16), vy: rnd(-22, -4), life: 50, max: 50, drop: 1, size: rnd(4, 10), g: 0.5, col: i % 3 ? '#9cff3a' : '#b45be0' });
+        for (let i = 0; i < 24; i++) B.parts.push({ x: ex + rnd(-200, 200), y: ey - rnd(0, 160), vx: rnd(-2, 2), vy: rnd(-3, -1), life: 80, max: 80, col: i % 2 ? 'rgba(100,220,40,.5)' : 'rgba(120,30,160,.6)', size: rnd(50, 90), g: 0, smoke: 1 });
+        for (let i = 0; i < 20; i++) B.parts.push({ x: ex + rnd(-120, 120), y: ey - rnd(0, 120), vx: rnd(-2, 2), vy: rnd(-4, -1.5), life: 60, max: 60, bubble: 1, size: rnd(6, 16), g: -0.03, col: i % 2 ? '#a8ff3c' : '#d27aff' });
+        B.flashScr = 12; B.flashRGB = '140,255,60'; B.shake = 34; B.zoomP = 0.12; Snd.koBoom(); Snd.squelch(); Snd.heavy(() => Snd.doom(0.8));
         supLaunch(S, { dmg: 16, ang: 80, base: 16, gr: 1.4 }, sgn(T.x - F.x) || S.dir);
       }
       if (k > 78) S.rise = Math.max(0, S.rise - 0.05);
@@ -7064,15 +7172,32 @@ SC_.battle = (o) => {
       // 足元から生える巨大な触手
       ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
       const m = st.plats[0], T = S.T, cyT = S.caught && T ? T.y - 75 * T.ch.scale : m.y - 260;
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.6 * S.rise;
-      ctx.drawImage(glowSprite('rgba(120,40,160,.8)'), S.tx - 220, m.y - 120, 440, 200); ctx.restore();
-      [-150, -80, 0, 80, 150].forEach((ox, i) => {
-        const base = { x: S.tx + ox, y: m.y + 60 }, len = S.rise * (330 + (i % 3) * 50);
+      // 毒の沼（地面に広がり、ぼこぼこ泡立つ）
+      ctx.save();
+      const sw = 300 * S.rise, sg = ctx.createRadialGradient(S.tx, m.y, 10, S.tx, m.y, sw);
+      sg.addColorStop(0, 'rgba(150,255,60,.8)'); sg.addColorStop(0.45, 'rgba(90,20,120,.85)'); sg.addColorStop(1, 'rgba(30,0,40,0)');
+      ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(S.tx, m.y + 2, sw, 34 * S.rise, 0, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 7; i++) { const bx = S.tx + Math.sin(B.t * 0.07 + i * 2.3) * sw * 0.7, r = 10 + (B.t * 0.6 + i * 9) % 18; ctx.globalAlpha = 0.6 * S.rise; ctx.strokeStyle = i % 2 ? '#a8ff3c' : '#d27aff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(bx, m.y, r, r * 0.35, 0, 0, TAU); ctx.stroke(); }
+      ctx.globalAlpha = 0.7 * S.rise; ctx.drawImage(glowSprite('rgba(120,255,50,.7)'), S.tx - 260, m.y - 160, 520, 240);
+      ctx.drawImage(glowSprite('rgba(150,40,200,.8)'), S.tx - 200, m.y - 300, 400, 360);
+      ctx.restore();
+      // 巨大な触手（9本。つかまえたら相手に巻きつく）
+      [-210, -150, -95, -45, 0, 45, 95, 150, 210].forEach((ox, i) => {
+        const base = { x: S.tx + ox, y: m.y + 60 }, len = S.rise * (300 + (i % 4) * 60);
         let pts;
-        if (S.caught && T) pts = tentReach(base, { x: T.x + ox * 0.25, y: cyT + (i - 2) * 12 }, S.rise, B.t, i);
+        if (S.caught && T) pts = tentReach(base, { x: T.x + ox * 0.22, y: cyT + (i - 4) * 10 }, S.rise, B.t, i);
         else pts = tentPts(base.x, base.y, -Math.PI / 2 + ox * 0.002, 14, len / 14, B.t, i * 1.4, 0.45, 0);
-        drawTentChain(pts, 30, 8, '#5a1f6e', '#b05ccc', '#f0c0e4');
+        const w = i % 2 ? 22 : 32;
+        drawTentChain(pts, w, 7, '#3a0e48', '#9a3aaa', '#a8ff3c');
+        const tip = pts[pts.length - 1];
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.7 * S.rise; ctx.drawImage(glowSprite('rgba(140,255,50,.85)'), tip.x - 30, tip.y - 30, 60, 60); ctx.restore();
       });
+      // 画面のふちに広がる毒気（見えている画面の外側をぐるっとおおう）
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+      const vg = ctx.createRadialGradient(VW / 2, VH / 2, VH * 0.35, VW / 2, VH / 2, VW * 0.75);
+      vg.addColorStop(0, 'rgba(40,0,60,0)'); vg.addColorStop(0.7, `rgba(60,10,90,${0.35 * S.rise})`); vg.addColorStop(1, `rgba(80,200,40,${0.4 * S.rise})`);
+      ctx.fillStyle = vg; ctx.globalCompositeOperation = 'source-over'; ctx.fillRect(0, 0, VW, VH); ctx.restore();
       // 地面の割れ目
       ctx.strokeStyle = '#14121f'; ctx.lineWidth = 4;
       for (let i = -3; i <= 3; i++) line(S.tx + i * 30, m.y + 2, S.tx + i * 42, m.y + 2 + Math.abs(i) * 4);
@@ -7886,7 +8011,7 @@ SC_.battle = (o) => {
     for (const p of B.parts) {
       if (p.smoke || p.rock || p.petal || p.stuck || p.splat) continue;
       if (p.kanji || p.rift || p.dzone) { ctx.save(); ctx.globalCompositeOperation = 'source-over'; drawFxDark(p); ctx.restore(); continue; }
-      if (p.flare || p.shock || p.bolt || p.note || p.drop || p.feather || p.shard || p.spark || p.cut) { drawFx(p); continue; }
+      if (p.flare || p.shock || p.bolt || p.note || p.drop || p.feather || p.shard || p.spark || p.cut || p.bubble) { drawFx(p); continue; }
       if (p.sonic) {   // 音の波（水色とピンクの同心円）
         const k2 = p.life / p.max, r = p.r * (0.4 + (1 - k2) * 0.9);
         for (let j = 0; j < 3; j++) {
