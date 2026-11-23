@@ -18,6 +18,11 @@
 | bowdraw1 | 弓を引く（bow-draw1） |
 | release1 | 矢を放つ（arrow-release1） |
 | pierce1 | 矢が刺さる（arrow-pierce1） |
+| tent1〜4 | 触手（tentacle1 の一部を切り出し） |
+| slime1 | スライム（slime1） |
+| whip1〜3 | ムチで打つ（whip-attack-1〜3） |
+| tswing1〜2 | ムチを振る（whip-gesture2, 1） |
+| bubble1 | 水がぶくぶく（water-bukubuku1 の一部） |
 
 ## OpenGameArt.org（CC0：パブリックドメイン）
 
