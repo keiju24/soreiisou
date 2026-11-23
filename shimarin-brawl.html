@@ -2287,9 +2287,11 @@ for (const k in MOVES) BHMOVES[k] = { ...MOVES[k], hb: MOVES[k].hb.map(h => ({ .
 function bloodSpray(B, x, y, n, dir = 0, pow = 1, fy) {
   for (let i = 0; i < n; i++) {
     const a = dir ? (dir > 0 ? 0 : Math.PI) + rnd(-0.9, 0.5) * (dir > 0 ? 1 : -1) : rnd(0, TAU), s = rnd(3, 11) * pow;
-    B.parts.push({ x: x + rnd(-6, 6), y: y + rnd(-6, 6), vx: Math.cos(a) * s, vy: Math.sin(a) * s - rnd(2, 6) * pow, g: 0.42, life: rnd(40, 70) | 0, max: 70, blood: 1, size: rnd(2.5, 6), fy });
+    B.parts.push({ x: x + rnd(-6, 6), y: y + rnd(-6, 6), vx: Math.cos(a) * s, vy: Math.sin(a) * s - rnd(2, 6) * pow, g: 0.42, life: rnd(40, 70) | 0, max: 70, blood: 1, size: rnd(2, 6.5), fy, seed: Math.random() * 1e4 | 0 });
   }
-  for (let i = 0; i < 3; i++) B.parts.push({ x: x + rnd(-10, 10), y: y + rnd(-10, 10), vx: rnd(-1.5, 1.5) + dir * 1.5, vy: rnd(-1.5, 0.5), life: 30, max: 30, col: 'rgba(120,0,10,.55)', size: rnd(12, 22), g: 0, smoke: 1 });
+  for (let i = 0; i < 4; i++) B.parts.push({ x: x + rnd(-10, 10), y: y + rnd(-10, 10), vx: rnd(-1.5, 1.5) + dir * 2, vy: rnd(-1.5, 0.5), life: 34, max: 34, col: 'rgba(90,0,6,.5)', size: rnd(12, 24), g: 0.02, smoke: 1 });
+  // 細い血の筋（勢いよく噴き出す）
+  for (let i = 0; i < 2 + (n / 8 | 0); i++) { const a = dir ? (dir > 0 ? -0.5 : Math.PI + 0.5) + rnd(-0.5, 0.5) : rnd(-Math.PI, 0); B.parts.push({ x, y, vx: Math.cos(a) * rnd(8, 15) * pow, vy: Math.sin(a) * rnd(8, 15) * pow, g: 0.5, life: 22, max: 22, blood: 1, jet: 1, size: rnd(2, 3.5), fy, seed: Math.random() * 1e4 | 0 }); }
 }
 function bloodHitFx(B, x, y, dmg, A, T) {
   const fy = T && T.ground ? T.y : undefined;
@@ -2297,6 +2299,8 @@ function bloodHitFx(B, x, y, dmg, A, T) {
   B.parts.push({ x, y, slash: 1, rot: rnd(-1.0, -0.4), len: 90 + dmg * 6, life: 11, max: 11, col: '#ff1028' });
   if (dmg >= 10) B.parts.push({ x, y, flare: 1, r: 70 + dmg * 5, life: 14, max: 14, col: '#a0000e', rot: rnd(0, TAU), n: 7 });
   A.gore = Math.min(16, (A.gore || 0) + (dmg >= 10 ? 2 : 1));   // 返り血がたまっていく
+  if (T) T.bleedT = Math.min(300, Math.max(T.bleedT || 0, 80 + dmg * 10));   // 斬られた相手はしばらく血を流す
+  if (dmg >= 12) { B.flashScr = Math.max(B.flashScr || 0, 4); B.flashRGB = '120,0,8'; }
   B.shake = Math.max(B.shake, Math.min(18, 3 + dmg * 0.7));
 }
 {
@@ -2371,11 +2375,13 @@ function bloodHitFx(B, x, y, dmg, A, T) {
     // 横必殺：ブラッディラッシュ（剣を突き出して一直線に突進）
     sb: { len: 48, slide: true, sfx: 8, keys: [[0, { lean: -0.3, fa: A_(2.6, 0.6) }], [8, { lean: 0.7, hd: 0.1, fa: A_(1.6, 0), ba: A_(1.3, 0.4), fl: G_(-0.4, -0.3), bl: G_(-1.0, 0) }],
         [28, { lean: 0.7, hd: 0.1, fa: A_(1.6, 0), ba: A_(1.3, 0.4), fl: G_(-0.4, -0.3), bl: G_(-1.0, 0) }], [48, S0]],
-      hb: [HB(8, 28, 120, -80, 42, 12, 40, 7, 0.85)],
+      hb: [HB(8, 25, 120, -80, 44, 2, 20, 4, 0, { hs: 12 }), HB(26, 29, 125, -80, 48, 8, 38, 8, 0.85)],
       upd(F, f) {
         if (f < 8) { F.vx *= 0.8; if (!F.ground) F.vy *= 0.5; }
         else if (f < 28) {
-          F.vx = 14 * F.dir;
+          F.vx = (f < 26 ? 12 : 4) * F.dir;
+          if (f % 4 === 0 && f < 25) { F.hitIds.clear(); if (f > 8) Snd.swingC(F.ch, 6); }
+          if (f === 26) F.hitIds.clear();
           if (f % 2 === 0) BT.parts.push({ x: F.x - F.dir * 20, y: F.y - 80, vx: -F.dir * 2, vy: rnd(-1, 1), life: 16, max: 16, col: 'rgba(140,0,12,.6)', size: rnd(14, 22), g: 0, smoke: 1 });
           if (!F.ground) { F.vy = 0.5; return false; }
         } else F.vx *= 0.86;
@@ -2403,6 +2409,9 @@ function bloodHitFx(B, x, y, dmg, A, T) {
       upd(F, f) { if (f === 1) for (const s of [-1, 1]) BT.parts.push({ x: F.x + s * 40, y: F.y, shock: 1, r: 10, vr: 11, life: 18, max: 18, col: '#c0001a', w: 10 }); } },
   });
 }
+// 手足を元の絵の長さにちぢめたので、当たり判定の位置を体に合わせる
+for (const k in BHMOVES) BHMOVES[k].hb = BHMOVES[k].hb.map(h => ({ ...h, ox: Math.abs(h.ox) > 40 ? Math.sign(h.ox) * (Math.abs(h.ox) * 1.08 - 8) / 1.15 : h.ox * 1.08 / 1.15,
+  oy: h.oy < -40 ? (h.oy * 1.08 + 26) / 1.15 : h.oy * 1.08 / 1.15, r: h.r * 1.08 / 1.15 }));
 for (const k in BHMOVES) BHMOVES[k].K = BHMOVES[k].keys.map(([f, o]) => [f, mk(o)]);
 // つかみ：左手で胸ぐらをつかみ、大剣で斬る
 { const H = { lean: 0.2, fa: A_(0.7, 0.5), ba: A_(1.5, 0.3), fl: G_(0.4, -0.4), bl: G_(-0.4, -0.3) };
@@ -2470,7 +2479,7 @@ const CHARS = [
     fsName: '絶唱・ソニックブーム', fsDesc: 'ステージをライブ会場に変え、全力の歌声で吹き飛ばす',
     specials: [['ボイスキャノン', '必殺', 'ためるほど大きな声の衝撃波（押しっぱなし）'], ['エコーノーツ', '横＋必殺', 'はずむ音符を３つ飛ばす'],
       ['ジェットシャウト', '上＋必殺', '真下へ叫んだ反動で上昇（復帰用）'], ['ハウリング', '下＋必殺', '周りを連続攻撃し、最後にくらくらにする']] },
-  { key: 'bhenry', name: 'ヘンリー（寝たら朝は来ない）', kana: 'BLOODY', img: BHEN_FACE, ar: BHEN_FACE_AR, eyes: false, scale: 1.08, run: 6.4, airs: 5.2, jv: -14.2, shv: -9.8, djv: -13.2,
+  { key: 'bhenry', name: 'ヘンリー（寝たら朝は来ない）', kana: 'BLOODY', img: BHEN_FACE, ar: BHEN_FACE_AR, eyes: false, scale: 1.15, run: 6.4, airs: 5.2, jv: -14.2, shv: -9.8, djv: -13.2,
     kbTake: 0.92, swords: false, doodle: true, bloody: true, hand: '#ffffff', moves: BHMOVES,
     fsName: '寝たら朝は来ない', fsDesc: '目の前でなぐり続け、返り血をあびたまま大剣でたたき切る',
     specials: [['寝たら朝は来ない', '必殺', 'ふきだしを飛ばす。当たると相手がくらくらになる'], ['ブラッディラッシュ', '横＋必殺', '大剣を突き出して一直線に突っこむ'],
@@ -4171,7 +4180,7 @@ const BUILD = {
   hammer: { torso: 40, sh: 33, arm1: 23, arm2: 22, leg1: 25, leg2: 23, head: 33, shW: 24, waW: 22, hiW: 21, aw: 1.4, lw: 1.4, look: 'overalls', shoe: 'work' },
   imai: { torso: 50, sh: 43, arm1: 28, arm2: 27, leg1: 36, leg2: 35, head: 37, shW: 15, waW: 11, hiW: 12.5, aw: 0.78, lw: 0.78, look: 'coat', shoe: 'pointed' },
   henry: { torso: 43, sh: 36, arm1: 25, arm2: 24, leg1: 34, leg2: 33, head: 34, shW: 18, waW: 10.5, hiW: 13, aw: 0.95, lw: 1, look: 'track', shoe: 'wing' },
-  bhenry: { torso: 44, sh: 39, arm1: 24, arm2: 24, leg1: 27, leg2: 26, head: 34, shW: 18, waW: 12, hiW: 12, aw: 1, lw: 1 },
+  bhenry: { torso: 44, sh: 39, arm1: 17, arm2: 17, leg1: 13, leg2: 12, head: 34, shW: 18, waW: 12, hiW: 12, aw: 1, lw: 1 },
   chinta: { torso: 44, sh: 37, arm1: 25, arm2: 23, leg1: 31, leg2: 30, head: 34, shW: 20, waW: 13, hiW: 15, aw: 1.05, lw: 1.05, look: 'leather', shoe: 'boot' },
 };
 const BD_CACHE = new Map();
@@ -5189,28 +5198,64 @@ function drawFighter(F, t) {
 // ---- ヘンリー（寝たら朝は来ない）：手描きの顔と胴体＋ゲーム側で描く棒の手足＋赤い大剣 ----
 // 絵の座標（元の絵 1 マス = 1）。BHEN_BODY は 3 倍の大きさで入っている
 const BH = { k: 0.75, img: 3, root: [47, 163], sL: [19, 112], sR: [79, 110], hL: [37, 163], hR: [58, 163], grip: [103.5, 390], swS: 0.25 };
+// 血のしみ：いびつな形＋ふちの暗い色＋飛び散った細かいしずく＋たれる筋＋ぬれたつや
+// r：大きさ、seed：形を決める数、dir：飛んできた向き（null ならまわり全部）、drip：たれる長さ
+function drawBloodSplat(x, y, r, seed, dir = null, drip = 0, al = 1) {
+  const R = srand(seed * 7919 + 17);
+  ctx.save(); ctx.globalAlpha *= al;
+  const n = 18, rad = []; for (let i = 0; i < n; i++) rad.push(0.68 + R() * 0.6);
+  const path = (k, ox = 0, oy = 0) => {
+    ctx.beginPath();
+    for (let i = 0; i <= n; i++) {
+      const a = i / n * TAU, rr = r * k * (rad[i % n] * 0.7 + rad[(i + 1) % n] * 0.3);
+      const px = x + ox + Math.cos(a) * rr, py = y + oy + Math.sin(a) * rr * 0.9;
+      i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+    }
+    ctx.closePath();
+  };
+  // 飛び散ったしずく（飛んできた向きに細長く）
+  const m = 6 + (R() * 9 | 0);
+  for (let i = 0; i < m; i++) {
+    const a = dir === null ? R() * TAU : dir + (R() - 0.5) * 1.3, d = r * (1.15 + R() * 2.4), s = r * (0.06 + R() * 0.16);
+    const px = x + Math.cos(a) * d, py = y + Math.sin(a) * d;
+    if (R() < 0.55) { ctx.strokeStyle = '#5a0007'; ctx.lineCap = 'round'; ctx.lineWidth = Math.max(0.6, s * 0.7); ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * r * 0.8, y + Math.sin(a) * r * 0.8); ctx.lineTo(px, py); ctx.stroke(); }
+    ctx.save(); ctx.translate(px, py); ctx.rotate(a); ctx.fillStyle = R() < 0.5 ? '#6a0009' : '#86000f';
+    ctx.beginPath(); ctx.ellipse(0, 0, s * (1.4 + R() * 1.8), s, 0, 0, TAU); ctx.fill(); ctx.restore();
+  }
+  ctx.fillStyle = '#330003'; path(1.1); ctx.fill();          // かわきかけた暗いふち
+  ctx.fillStyle = '#6e0009'; path(1); ctx.fill();
+  ctx.fillStyle = '#8f0412'; path(0.72, -r * 0.06, -r * 0.05); ctx.fill();
+  ctx.fillStyle = 'rgba(40,0,4,.35)'; path(0.4, r * 0.15, r * 0.12); ctx.fill();   // たまって黒っぽいところ
+  // たれる筋（先がふくらむ）
+  if (drip > 0) {
+    const w = r * (0.22 + R() * 0.18), dx = (R() - 0.5) * r * 0.5, ex = x + dx;
+    ctx.fillStyle = '#6e0009';
+    ctx.beginPath(); ctx.moveTo(x - w, y);
+    ctx.quadraticCurveTo(x - w * 0.5 + dx * 0.5, y + drip * 0.6, ex - w * 0.42, y + drip);
+    ctx.arc(ex, y + drip, w * 0.6, Math.PI, 0, true);
+    ctx.quadraticCurveTo(x + w * 0.5 + dx * 0.5, y + drip * 0.6, x + w, y); ctx.fill();
+    ctx.fillStyle = 'rgba(255,190,190,.25)'; ctx.beginPath(); ctx.ellipse(ex - w * 0.2, y + drip - w * 0.2, w * 0.18, w * 0.3, 0, 0, TAU); ctx.fill();
+  }
+  // ぬれたつや
+  ctx.fillStyle = 'rgba(255,205,205,.3)'; ctx.beginPath(); ctx.ellipse(x - r * 0.32, y - r * 0.34, r * 0.26, r * 0.1, -0.6, 0, TAU); ctx.fill();
+  ctx.restore();
+}
 // 返り血のつく場所（顔と胴体の上。元の絵の座標）
 const GORE_PTS = (() => {
   const R = srand(4242), o = [];
   for (let i = 0; i < 18; i++) {
     const face = i % 3 !== 2;
-    o.push({ x: face ? 14 + R() * 62 : 24 + R() * 52, y: face ? 44 + R() * 56 : 122 + R() * 36, r: 1.6 + R() * 3.2, n: 3 + (R() * 4 | 0), a: R() * TAU, drip: R() < 0.6 ? 4 + R() * 10 : 0, s: R() * 1000 | 0 });
+    o.push({ x: face ? 16 + R() * 58 : 26 + R() * 48, y: face ? 46 + R() * 54 : 124 + R() * 34, r: 1.4 + R() * 3.4, drip: R() < 0.65 ? 5 + R() * 14 : 0, s: R() * 1000 | 0, d: (R() - 0.5) * 1.2 });
   }
   return o;
 })();
-// 返り血のしみ（g：描く先、u：元の絵 1 マスの大きさ。原点は絵の root）
-function drawGore(n, u, age = 999) {
+// 返り血（u：元の絵 1 マスの大きさ。原点は絵の root）。dir0：血が飛んできた向き
+function drawGore(n, u, age = 999, dir0 = Math.PI) {
   n = Math.min(n | 0, GORE_PTS.length);
+  const dk = Math.min(1, age / 50);
   for (let i = 0; i < n; i++) {
-    const p = GORE_PTS[i], x = (p.x - BH.root[0]) * u, y = (p.y - BH.root[1]) * u, r = p.r * u, R = srand(p.s + 1);
-    const dk = Math.min(1, age / 40);
-    ctx.fillStyle = '#5c0008';
-    ctx.beginPath(); ctx.arc(x, y, r * 1.12, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#a3000f';
-    ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
-    for (let j = 0; j < p.n; j++) { const a = p.a + j * 2.1 + R(), d = r * (1.3 + R() * 1.4); ctx.beginPath(); ctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, r * (0.18 + R() * 0.3), 0, TAU); ctx.fill(); }
-    if (p.drip) { const L = p.drip * u * (0.3 + 0.7 * dk); ctx.fillRect(x - r * 0.22, y, r * 0.44, L); ctx.beginPath(); ctx.arc(x, y + L, r * 0.34, 0, TAU); ctx.fill(); }
-    ctx.fillStyle = 'rgba(255,190,190,.45)'; ctx.beginPath(); ctx.arc(x - r * 0.35, y - r * 0.35, r * 0.28, 0, TAU); ctx.fill();
+    const p = GORE_PTS[i];
+    drawBloodSplat((p.x - BH.root[0]) * u, (p.y - BH.root[1]) * u, p.r * u, p.s, dir0 === null ? null : dir0 + p.d, p.drip * u * (i === n - 1 ? 0.25 + 0.75 * dk : 1));
   }
 }
 function bhStick(L, w = 4) {
@@ -5267,136 +5312,142 @@ function drawDoodle(F, P, J, C, t) {
 
 // =====================================================================
 //  ヘンリーの最後の切り札「寝たら朝は来ない」：やられる側の目線のムービー
-//  正面のヘンリーに殴られ続け、顔に返り血がとび、最後に大剣でたたき切られる
+//  つき飛ばされてしりもち → 見上げるとヘンリーが一歩ずつ迫りながら殴ってくる
+//  → 返り血まみれのまま大剣をかかげ、たたき切る
 // =====================================================================
-const HM = { H0: 40, N: 10, GAP: 14, GRAB: 184, RAISE: 200, SWING: 224, CHOP: 232, END: 300 };
+const HM = { SHOVE: 14, LAND: 26, H0: 64, N: 8, GAP: 16, GRAB: 190, RAISE: 202, SWING: 228, CHOP: 236, END: 304 };
 const HMV = { cut: null, cutS: null };
-function hmHitAt(n) { return HM.H0 + n * HM.GAP; }
-// ヘンリーを正面から大きく描く（cx, top：髪のてっぺんの位置、u：元の絵 1 マスの大きさ）
-function hmDrawHenry(cx, top, u, mt, arms, gore, goreAge) {
-  const ox = cx - BH.root[0] * u, oy = top;   // 絵の左上
-  const P = v => ({ x: ox + v[0] * u, y: oy + v[1] * u });
-  const sL = P(BH.sL), sR = P(BH.sR);
-  // 奥の腕から
-  const arm = (s, e, h, w0, w1) => {
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    for (const [ex, col] of [[10, 'rgba(255,255,255,.55)'], [0, '#111']]) {
-      ctx.strokeStyle = col;
-      ctx.lineWidth = w0 + ex; ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(e.x, e.y); ctx.stroke();
-      ctx.lineWidth = (w0 + w1) / 2 + ex; ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(h.x, h.y); ctx.stroke();
-    }
-  };
-  const back = arms.filter(a => !a.front), front = arms.filter(a => a.front);
-  for (const a of back) { arm(a.s === 'L' ? sL : sR, a.e, a.h, 4 * u, a.w || 4 * u); if (a.fist) hmFist(a.h, a.fist); }
-  ctx.save(); ctx.translate(ox + BH.root[0] * u, oy + BH.root[1] * u);
-  ctx.drawImage(BHEN_BODY, -BH.root[0] * u, -BH.root[1] * u, BHEN_BODY.width * u / BH.img, BHEN_BODY.height * u / BH.img);
-  if (gore) drawGore(gore, u, goreAge);
+const hmHitAt = n => HM.H0 + n * HM.GAP;
+// 棒の腕（近づくほど太くなる：w0 = 肩の太さ、w1 = 手の太さ）
+function hmLimb(a, b, w0, w1) {
+  const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+  for (const [ex, col] of [[9, 'rgba(255,255,255,.55)'], [0, '#111']]) {
+    const p = w0 / 2 + ex / 2, q = w1 / 2 + ex / 2;
+    ctx.fillStyle = col; ctx.beginPath();
+    ctx.moveTo(a.x + nx * p, a.y + ny * p); ctx.lineTo(b.x + nx * q, b.y + ny * q); ctx.lineTo(b.x - nx * q, b.y - ny * q); ctx.lineTo(a.x - nx * p, a.y - ny * p); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.arc(a.x, a.y, p, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(b.x, b.y, q, 0, TAU); ctx.fill();
+  }
+}
+function hmSword(h, ang, s, glow = 0) {
+  ctx.save(); ctx.translate(h.x, h.y); ctx.rotate(Math.PI - ang);
+  if (glow) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = glow; ctx.drawImage(glowSprite('rgba(255,20,30,.9)'), -160 * s, -BH.grip[1] * s - 60 * s, 320 * s, BH.grip[1] * s + 160 * s); ctx.restore(); }
+  ctx.drawImage(BHEN_SWORD, -BH.grip[0] * s, -BH.grip[1] * s, BHEN_SWORD.width * s, BHEN_SWORD.height * s);
   ctx.restore();
-  for (const a of front) { if (a.sword) a.sword(); arm(a.s === 'L' ? sL : sR, a.e, a.h, 4 * u, a.w || 4 * u); if (a.fist) hmFist(a.h, a.fist); }
-  return { sL, sR, P };
 }
-// こぶし（手描き風の白い丸）
-function hmFist(p, r) {
-  ctx.fillStyle = '#fff'; ctx.strokeStyle = '#111'; ctx.lineWidth = Math.max(3, r * 0.14);
-  ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, TAU); ctx.fill(); ctx.stroke();
-  ctx.lineWidth = Math.max(2, r * 0.08);
-  for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.arc(p.x + i * r * 0.42, p.y - r * 0.15, r * 0.3, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke(); }
-}
-// 画面（目）についた血
+// 目（画面）についた血
 function hmLensBlood(n, mt) {
   const R = srand(909);
   for (let i = 0; i < n; i++) {
-    const x = R() * VW, y = R() * VH * 0.8, r = 18 + R() * 46, born = hmHitAt(Math.min(HM.N - 1, i + 2)), age = Math.max(0, mt - born);
-    ctx.save(); ctx.globalAlpha = 0.78;
-    ctx.fillStyle = '#7a0010'; ctx.beginPath();
-    for (let j = 0; j <= 14; j++) { const a = j / 14 * TAU, rr = r * (0.75 + 0.35 * Math.sin(a * 3 + i)); ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
-    ctx.fill();
-    const L = Math.min(260, age * (2 + (i % 3)));
-    ctx.fillRect(x - r * 0.18, y, r * 0.36, L); ctx.beginPath(); ctx.arc(x, y + L, r * 0.26, 0, TAU); ctx.fill();
-    for (let j = 0; j < 6; j++) { const a = R() * TAU, d = r * (1.2 + R() * 1.5); ctx.beginPath(); ctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, 3 + R() * 7, 0, TAU); ctx.fill(); }
-    ctx.restore();
+    const x = 80 + R() * (VW - 160), y = 40 + R() * VH * 0.65, r = 16 + R() * 40, born = hmHitAt(Math.min(HM.N - 1, i + 1)), age = Math.max(0, mt - born);
+    drawBloodSplat(x, y, r, 300 + i, R() * TAU, Math.min(300, age * (1.6 + (i % 3) * 0.8)), 0.82);
+  }
+}
+// しりもちをついた自分の足（画面の下から前へのびる）
+function hmMyLegs(k) {
+  if (k <= 0) return;
+  const off = (1 - k) * 260;
+  for (const s of [-1, 1]) {
+    const bx = VW / 2 + s * 330, by = VH + 40 + off, fx = VW / 2 + s * 120, fy = VH * 0.8 + off;
+    ctx.fillStyle = '#23232c'; ctx.beginPath(); ctx.moveTo(bx - 120, by); ctx.lineTo(fx - 46 * s - 10, fy); ctx.lineTo(fx + 46 * s + 10, fy + 8); ctx.lineTo(bx + 120, by); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#0d0d10'; ctx.beginPath(); ctx.ellipse(fx, fy - 6, 52, 30, s * 0.25, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.beginPath(); ctx.ellipse(fx - 12 * s, fy - 18, 24, 8, s * 0.25, 0, TAU); ctx.fill();
   }
 }
 // 1 コマぶんの絵（ムービーの時間 mt）
 function hmScene(mt, t) {
-  // ---- 背景：暗い赤 ----
   const hits = Math.max(0, Math.min(HM.N, Math.floor((mt - HM.H0) / HM.GAP) + 1));
-  const bg = ctx.createRadialGradient(VW / 2, VH * 0.35, 40, VW / 2, VH * 0.45, VW * 0.75);
-  bg.addColorStop(0, mt >= HM.RAISE ? '#7a0a14' : '#3a0a12'); bg.addColorStop(0.5, '#160308'); bg.addColorStop(1, '#030001');
+  // ---- 背景 ----
+  const bg = ctx.createRadialGradient(VW / 2, VH * 0.3, 40, VW / 2, VH * 0.4, VW * 0.75);
+  bg.addColorStop(0, mt >= HM.RAISE ? '#6a0812' : '#2e070c'); bg.addColorStop(0.5, '#130206'); bg.addColorStop(1, '#030001');
   ctx.fillStyle = bg; ctx.fillRect(0, 0, VW, VH);
-  ctx.save(); ctx.globalAlpha = 0.25; ctx.strokeStyle = '#5a0010'; ctx.lineWidth = 2;
-  for (let i = 0; i < 16; i++) { const x = (i * 97 + t * 0.5) % VW; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x - 60, VH); ctx.stroke(); }
-  ctx.restore();
-  // ---- カメラ（やられる側の頭のゆれ）----
+  // ---- カメラ：つき飛ばされて後ろへ倒れる → 地面から見上げる ----
+  let camY = 0, camR = 0;
+  if (mt >= HM.SHOVE && mt < HM.LAND) { const q = (mt - HM.SHOVE) / (HM.LAND - HM.SHOVE); camY = -Math.sin(q * Math.PI * 0.5) * 220 * (1 - q) + q * 0; camR = Math.sin(q * Math.PI) * 0.22; }
+  const landK = mt >= HM.LAND ? Math.exp(-(mt - HM.LAND) / 5) : 0;
   let n = -1, f = 0;
   if (mt >= HM.H0 - 8 && mt < HM.GRAB) { n = Math.floor((mt - HM.H0 + 8) / HM.GAP); f = (mt - HM.H0 + 8) % HM.GAP; if (n >= HM.N) n = -1; }   // f = 8 が当たった瞬間
-  const hitK = n >= 0 && f >= 8 ? Math.exp(-(f - 8) / 2.5) : 0;
-  const side = n % 2 ? 1 : -1;
+  const hitK = n >= 0 && f >= 8 ? Math.exp(-(f - 8) / 2.5) : 0, side = n % 2 ? 1 : -1;
   const dizzy = mt >= HM.GRAB ? 1 : hits / HM.N;
   ctx.save();
-  const sway = Math.sin(t * 0.05) * 14 * dizzy, rotZ = Math.sin(t * 0.04) * 0.05 * dizzy + (n >= 0 ? -side * 0.12 * hitK : 0);
-  ctx.translate(VW / 2 + sway + (n >= 0 ? -side * 90 * hitK : 0), VH / 2 + (n >= 0 ? 30 * hitK : 0)); ctx.rotate(rotZ); ctx.scale(1 + 0.1 * hitK, 1 + 0.1 * hitK); ctx.translate(-VW / 2, -VH / 2);
-  // ---- ヘンリーの位置：近づいてくる → 目の前 ----
-  const appear = ease(clamp(mt / 30, 0, 1));
-  let u = lerp(2.2, 4.6, appear), top = lerp(150, 6, appear), cx = VW / 2;
-  if (mt >= HM.GRAB) {   // 剣をかかげる間は少し引いて、頭上の大剣まで見せる → ふり下ろしで一気に寄る
-    const q = ease(clamp((mt - HM.GRAB) / 16, 0, 1)), w = mt >= HM.SWING ? ease(clamp((mt - HM.SWING) / (HM.CHOP - HM.SWING), 0, 1)) : 0;
-    u = lerp(lerp(4.6, 2.4, q), 5.2, w); top = lerp(lerp(6, 375, q), -40, w);
+  const sway = Math.sin(t * 0.05) * 14 * dizzy, rotZ = Math.sin(t * 0.04) * 0.05 * dizzy + camR + (n >= 0 ? -side * 0.14 * hitK : 0);
+  ctx.translate(VW / 2 + sway + (n >= 0 ? -side * 100 * hitK : 0), VH / 2 + camY + landK * 40 + (n >= 0 ? 40 * hitK : 0)); ctx.rotate(rotZ); ctx.scale(1 + 0.12 * hitK, 1 + 0.12 * hitK); ctx.translate(-VW / 2, -VH / 2);
+  // 地面（見上げているので地平線は高め）
+  const standing = mt < HM.LAND;
+  const horizon = standing ? lerp(VH * 0.95, VH * 0.6, clamp((mt - HM.SHOVE) / 12, 0, 1)) : VH * 0.62;
+  ctx.fillStyle = 'rgba(10,0,2,.85)'; ctx.fillRect(-200, horizon, VW + 400, VH);
+  ctx.strokeStyle = 'rgba(160,20,30,.35)'; ctx.lineWidth = 2;
+  for (let i = -10; i <= 10; i++) { ctx.beginPath(); ctx.moveTo(VW / 2 + i * 40, horizon); ctx.lineTo(VW / 2 + i * 260, VH + 300); ctx.stroke(); }
+  // ---- ヘンリーの位置：殴るたびに一歩ずつ迫る ----
+  let near = 0;   // 0 = 遠い、1 = 目の前
+  if (mt >= HM.LAND) {
+    const step = n >= 0 ? (n + ease(clamp(f / 7, 0, 1))) / HM.N : mt < HM.H0 ? 0 : 1;
+    near = mt < HM.H0 - 8 ? ease(clamp((mt - HM.LAND - 6) / 30, 0, 1)) * 0.06 : 0.06 + step * 0.94;
   }
-  if (n >= 0) { cx += side * 26 * (f < 8 ? f / 8 : hitK); top += (f < 8 ? -10 * f / 8 : 0); }
-  const L = { s: 'L' }, Rr = { s: 'R' };
-  const shL = { x: cx + (BH.sL[0] - BH.root[0]) * u, y: top + BH.sL[1] * u }, shR = { x: cx + (BH.sR[0] - BH.root[0]) * u, y: top + BH.sR[1] * u };
-  const arms = [];
-  const goreN = Math.min(GORE_PTS.length, hits * 2 + (mt >= HM.CHOP ? 4 : 0));
-  const lastHit = hits ? hmHitAt(hits - 1) : 0;
-  // ---- 腕のポーズ ----
-  const guard = (sh, s) => ({ s, e: { x: sh.x + (s === 'L' ? -1 : 1) * 26 * u, y: sh.y + 10 * u }, h: { x: sh.x + (s === 'L' ? -1 : 1) * 6 * u, y: sh.y - 26 * u + Math.sin(t * 0.3 + (s === 'L' ? 0 : 2)) * 2 * u }, fist: 10 * u });
-  // 剣：はじめは地面に突き立ててある
-  const swordFloor = () => { const sx = cx + 78 * u, sy = VH + 60; ctx.save(); ctx.translate(sx, sy); ctx.rotate(0.18); const s = 0.75 * u / 4.6 * 1.6; ctx.drawImage(BHEN_SWORD, -BH.grip[0] * s, -BH.grip[1] * s, BHEN_SWORD.width * s, BHEN_SWORD.height * s); ctx.restore(); };
+  // top = 髪のてっぺんの位置。近づくほど大きく、顔が画面の上のほうに来る（見上げている）
+  let u, top, cx = VW / 2;
+  if (standing) {   // 立ったまま正面からつき飛ばされる
+    u = 3.6; top = 40 + (mt >= HM.SHOVE ? (mt - HM.SHOVE) * 26 : 0);
+  } else { u = lerp(2.3, 6.0, near); top = lerp(200, VH * 0.36 - 72 * 6.0, near); }
+  if (mt >= HM.GRAB) {   // 大剣をかかげる間は少し引いて頭上まで見せる → ふり下ろしで一気に寄る
+    const q = ease(clamp((mt - HM.GRAB) / 14, 0, 1)), w = mt >= HM.SWING ? ease(clamp((mt - HM.SWING) / (HM.CHOP - HM.SWING), 0, 1)) : 0;
+    u = lerp(lerp(6.0, 2.4, q), 5.4, w); top = lerp(lerp(VH * 0.36 - 72 * 6.0, 370, q), -40, w);
+  }
+  const feetY = top + (BH.root[1] + 30) * u;
+  const walk = mt >= HM.LAND && mt < HM.GRAB ? Math.sin(mt * 0.4) : 0;
+  if (n >= 0) cx += side * 30 * (f < 8 ? f / 8 : hitK);
+  const P = v => ({ x: cx + (v[0] - BH.root[0]) * u, y: top + v[1] * u });
+  const sL = P(BH.sL), sR = P(BH.sR), hipL = P(BH.hL), hipR = P(BH.hR);
+  // 脚（元の絵と同じくらい短い）
+  hmLimb(hipL, { x: hipL.x - 8 * u + walk * 3 * u, y: hipL.y + 30 * u - Math.max(0, walk) * 4 * u }, 4 * u, 4 * u);
+  hmLimb(hipR, { x: hipR.x + 8 * u - walk * 3 * u, y: hipR.y + 30 * u - Math.max(0, -walk) * 4 * u }, 4 * u, 4 * u);
+  // 剣：はじめは左手で引きずっている
+  const goreN = Math.min(GORE_PTS.length, hits * 2 + (mt >= HM.CHOP ? 4 : 0)), lastHit = hits ? hmHitAt(hits - 1) : 0;
+  const swS = u / 4.6 * 1.6 * 0.62;
+  let front = null;
   if (mt < HM.GRAB) {
-    swordFloor();
-    if (mt < HM.H0 - 8) {   // にやにやしながらこぶしを構える
-      const q = ease(clamp((mt - 14) / 14, 0, 1));
-      arms.push({ ...guard(shL, 'L'), fist: 11 * u * q + 0.01 }, { ...guard(shR, 'R'), fist: 11 * u * q + 0.01 });
-      if (q < 1) { arms[0].h = { x: lerp(shL.x - 20 * u, arms[0].h.x, q), y: lerp(shL.y + 40 * u, arms[0].h.y, q) }; arms[1].h = { x: lerp(shR.x + 20 * u, arms[1].h.x, q), y: lerp(shR.y + 40 * u, arms[1].h.y, q) }; }
-    } else {
-      // 連打：こぶしがカメラへ飛びこんでくる（近づくほど大きく）
-      const punchS = side < 0 ? 'L' : 'R', sh = side < 0 ? shL : shR, other = side < 0 ? shR : shL;
-      arms.push(guard(other, side < 0 ? 'R' : 'L'));
-      let k = f < 3 ? -f / 3 * 0.3 : f < 8 ? -0.3 + ((f - 3) / 5) ** 1.6 * 1.3 : 1 - (f - 8) / 6 * 0.6;
-      k = clamp(k, -0.3, 1);
-      const tgt = { x: VW / 2 + side * 40, y: VH * 0.52 };
-      const base = { x: sh.x + side * 10 * u, y: sh.y - 6 * u };
-      const kk = Math.max(0, k);
-      const hp = { x: lerp(base.x, tgt.x, kk) - (k < 0 ? side * 30 * u * -k : 0), y: lerp(base.y, tgt.y, kk) + (k < 0 ? 10 * u * -k : 0) };
-      const fr = 11 * u * (1 + kk * kk * 14);
-      arms.push({ s: punchS, e: { x: lerp(sh.x + side * 30 * u, (sh.x + hp.x) / 2, kk), y: lerp(sh.y + 26 * u, (sh.y + hp.y) / 2 + 30, kk) }, h: hp, fist: fr, w: 4 * u * (1 + kk * 6), front: true });
-    }
-  } else {
-    // 大剣をつかんで頭上にかかげ、ふり下ろす
+    const hl = { x: sL.x - 16 * u, y: sL.y + 26 * u };
+    hmSword(hl, 0.55, swS);
+    hmLimb(sL, { x: sL.x - 10 * u, y: sL.y + 16 * u }, 4 * u, 4 * u); hmLimb({ x: sL.x - 10 * u, y: sL.y + 16 * u }, hl, 4 * u, 4 * u);
+    // 殴る右腕：まっすぐこちらへ突き出される（近づくほど太くなる）
+    let k = 0;
+    if (mt < HM.SHOVE + 4) k = mt < 6 ? 0 : mt < HM.SHOVE ? ((mt - 6) / (HM.SHOVE - 6)) ** 1.5 : 1 - (mt - HM.SHOVE) / 4 * 0.7;
+    else if (n >= 0) k = f < 3 ? -f / 3 * 0.35 : f < 8 ? -0.35 + ((f - 3) / 5) ** 1.1 * 1.35 : 1 - (f - 8) / 7 * 0.75;
+    k = clamp(k, -0.35, 1);
+    const kk = Math.max(0, k), sh = n >= 0 && side > 0 ? sR : sR;
+    const rest = { x: sh.x + 14 * u, y: sh.y + 20 * u }, back = { x: sh.x + 22 * u, y: sh.y - 6 * u };
+    const tgt = { x: VW / 2 + (n >= 0 ? side * 60 : 0), y: VH * 0.5 };
+    const hp = k < 0 ? { x: lerp(rest.x, back.x, -k / 0.35), y: lerp(rest.y, back.y, -k / 0.35) } : { x: lerp(rest.x, tgt.x, kk), y: lerp(rest.y, tgt.y, kk) };
+    front = () => hmLimb(sR, hp, 4 * u * (1 + kk * 2.2), Math.min(300, 4 * u * (1 + kk * kk * 16)));
+  }
+  // 顔と胴体（手描きの絵そのまま）＋返り血
+  ctx.save(); ctx.translate(cx, top + BH.root[1] * u);
+  ctx.drawImage(BHEN_BODY, -BH.root[0] * u, -BH.root[1] * u, BHEN_BODY.width * u / BH.img, BHEN_BODY.height * u / BH.img);
+  if (goreN) drawGore(goreN, u, mt - lastHit, null);
+  ctx.restore();
+  // しりもちをついた自分の足
+  if (!standing) hmMyLegs(1 - clamp((near - 0.3) / 0.4, 0, 1));
+  if (front) front();
+  if (mt >= HM.GRAB) {
+    // 大剣を両手で頭上へ → ふり下ろす
     const q = clamp((mt - HM.GRAB) / (HM.RAISE - HM.GRAB), 0, 1);
     let ang, hp, ssc = 1;
-    if (mt < HM.RAISE) { hp = { x: lerp(cx + 78 * u, cx + 6 * u, ease(q)), y: lerp(VH + 20, top - 10 * u, ease(q)) }; ang = lerp(Math.PI * 0.95, Math.PI * 1.04, q); }
-    else if (mt < HM.SWING) { const w = (mt - HM.RAISE) / (HM.SWING - HM.RAISE); hp = { x: cx + 6 * u + Math.sin(t * 0.9) * 2, y: top - 10 * u - w * 12 * u }; ang = Math.PI * (1.04 + 0.1 * w); }
-    else { const w = clamp((mt - HM.SWING) / (HM.CHOP - HM.SWING), 0, 1), e = w * w; hp = { x: cx + lerp(6, -4, e) * u, y: lerp(top - 22 * u, VH * 0.75, e) }; ang = Math.PI * (1.14 - 1.1 * e); ssc = 1 + e * 1.8; }
+    if (mt < HM.RAISE) { hp = { x: lerp(sL.x - 16 * u, cx + 6 * u, ease(q)), y: lerp(sL.y + 26 * u, top - 10 * u, ease(q)) }; ang = lerp(0.55, Math.PI * 1.04, ease(q)); }
+    else if (mt < HM.SWING) { const w = (mt - HM.RAISE) / (HM.SWING - HM.RAISE); hp = { x: cx + 6 * u + Math.sin(t * 0.9) * 2, y: top - 10 * u - w * 10 * u }; ang = Math.PI * (1.04 + 0.1 * w); }
+    else { const w = clamp((mt - HM.SWING) / (HM.CHOP - HM.SWING), 0, 1), e = w * w; hp = { x: cx + lerp(6, -4, e) * u, y: lerp(top - 20 * u, VH * 0.75, e) }; ang = Math.PI * (1.14 - 1.1 * e); ssc = 1 + e * 1.8; }
     const glow = mt >= HM.RAISE ? 0.5 + 0.5 * Math.sin(t * 0.4) : 0;
-    const sword = () => {
-      if (mt >= HM.SWING && mt < HM.CHOP + 2) {   // ふり下ろしの残像
-        ctx.save(); ctx.globalAlpha = 0.25; for (let i = 1; i <= 3; i++) { const w = clamp((mt - i * 0.7 - HM.SWING) / (HM.CHOP - HM.SWING), 0, 1), e = w * w; ctx.save(); ctx.translate(cx + lerp(6, -4, e) * u, lerp(top - 22 * u, VH * 0.75, e)); ctx.rotate(Math.PI - Math.PI * (1.14 - 1.1 * e)); const s = 1.6 * u / 4.6 * (1 + e * 1.8); ctx.drawImage(BHEN_SWORD, -BH.grip[0] * s, -BH.grip[1] * s, BHEN_SWORD.width * s, BHEN_SWORD.height * s); ctx.restore(); } ctx.restore();
-      }
-      ctx.save(); ctx.translate(hp.x, hp.y); ctx.rotate(Math.PI - ang);
-      const s = 1.6 * u / 4.6 * ssc;
-      if (glow) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = glow; ctx.drawImage(glowSprite('rgba(255,20,30,.9)'), -160 * s, -BH.grip[1] * s - 60 * s, 320 * s, BH.grip[1] * s + 160 * s); ctx.restore(); }
-      ctx.drawImage(BHEN_SWORD, -BH.grip[0] * s, -BH.grip[1] * s, BHEN_SWORD.width * s, BHEN_SWORD.height * s);
+    if (mt >= HM.SWING && mt < HM.CHOP + 2) {   // ふり下ろしの残像
+      ctx.save(); ctx.globalAlpha = 0.25;
+      for (let i = 1; i <= 3; i++) { const w = clamp((mt - i * 0.7 - HM.SWING) / (HM.CHOP - HM.SWING), 0, 1), e = w * w; hmSword({ x: cx + lerp(6, -4, e) * u, y: lerp(top - 20 * u, VH * 0.75, e) }, Math.PI * (1.14 - 1.1 * e), swS * (1 + e * 1.8)); }
       ctx.restore();
-    };
-    arms.push({ s: 'L', e: { x: shL.x - 14 * u, y: lerp(shL.y + 20 * u, shL.y - 20 * u, ease(q)) }, h: { x: hp.x - 3 * u, y: hp.y + 6 * u }, front: true, sword });
-    arms.push({ s: 'R', e: { x: shR.x + 14 * u, y: lerp(shR.y + 20 * u, shR.y - 20 * u, ease(q)) }, h: hp, front: true });
+    }
+    hmSword(hp, ang, swS * ssc, glow);
+    const el = { x: sL.x - 12 * u, y: lerp(sL.y + 16 * u, sL.y - 18 * u, ease(q)) }, er = { x: sR.x + 12 * u, y: lerp(sR.y + 16 * u, sR.y - 18 * u, ease(q)) };
+    hmLimb(sL, el, 4 * u, 4 * u); hmLimb(el, { x: hp.x - 3 * u, y: hp.y + 5 * u }, 4 * u, 4 * u);
+    hmLimb(sR, er, 4 * u, 4 * u); hmLimb(er, hp, 4 * u, 4 * u);
   }
-  hmDrawHenry(cx, top, u, mt, arms, goreN, mt - lastHit);
   // ふきだし「寝たら朝は来ない」
-  if (mt >= 8 && mt < 70) {
-    const q = clamp((mt - 8) / 6, 0, 1), fade = clamp((70 - mt) / 10, 0, 1);
+  if (mt >= HM.LAND + 4 && mt < HM.H0 + 10) {
+    const q = clamp((mt - HM.LAND - 4) / 6, 0, 1), fade = clamp((HM.H0 + 10 - mt) / 10, 0, 1);
     ctx.save(); ctx.globalAlpha = fade; ctx.translate(cx + 44 * u, top + 18 * u); ctx.scale(q * u / 3.2, q * u / 3.2); ctx.rotate(0.08 + Math.sin(t * 0.3) * 0.03);
     ctx.drawImage(BHEN_BUB, 0, -BHEN_BUB.height / 2); ctx.restore();
   }
@@ -5407,10 +5458,9 @@ function hmScene(mt, t) {
   }
   ctx.restore();
   // ---- 目にうつる血・ひび・暗さ ----
-  hmLensBlood(Math.max(0, hits - 2), mt);
-  if (hitK > 0.05) {   // 当たった瞬間：白く光ってひびが走る
-    ctx.save(); ctx.globalAlpha = hitK * 0.75; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, VW, VH); ctx.restore();
-  }
+  hmLensBlood(Math.max(0, hits - 1), mt);
+  if (hitK > 0.05 || (mt >= HM.SHOVE && mt < HM.SHOVE + 4)) { ctx.save(); ctx.globalAlpha = Math.max(hitK * 0.4, mt >= HM.SHOVE && mt < HM.SHOVE + 4 ? 0.5 : 0); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, VW, VH); ctx.restore(); }
+  if (hitK > 0.05) { ctx.save(); ctx.globalAlpha = hitK * 0.35; ctx.fillStyle = '#c00010'; ctx.fillRect(0, 0, VW, VH); ctx.restore(); }
   if (hits > 0) {
     ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.3)'; ctx.lineWidth = 2;
     for (let h = 0; h < Math.min(hits, 4); h++) {
@@ -5419,13 +5469,13 @@ function hmScene(mt, t) {
     }
     ctx.restore();
   }
-  // まわりがだんだん暗く赤くなる
   const dark = 0.25 + dizzy * 0.55;
   const vg = ctx.createRadialGradient(VW / 2, VH / 2, VH * (0.55 - dizzy * 0.25), VW / 2, VH / 2, VW * 0.72);
   vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(0.6, `rgba(80,0,8,${dark * 0.6})`); vg.addColorStop(1, `rgba(10,0,2,${dark})`);
   ctx.fillStyle = vg; ctx.fillRect(0, 0, VW, VH);
-  // まばたき（当たった直後にまぶたが落ちる）
+  // まばたき（倒れたとき・当たった直後）
   let lid = n >= 0 && f >= 9 && f < 13 ? Math.sin((f - 9) / 4 * Math.PI) * 0.35 : 0;
+  if (mt >= HM.LAND && mt < HM.LAND + 6) lid = Math.max(lid, Math.sin((mt - HM.LAND) / 6 * Math.PI) * 0.5);
   if (mt >= HM.GRAB && mt < HM.RAISE) lid = Math.max(lid, 0.2 + 0.15 * Math.sin(t * 0.25));
   if (lid > 0) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, VH * lid); ctx.fillRect(0, VH * (1 - lid), VW, VH * lid); }
 }
@@ -5437,39 +5487,38 @@ function drawBHenryMovie(S) {
   ctx.save(); ctx.globalAlpha = zin * zout;
   if (mt < HM.CHOP) {
     hmScene(mt, t);
-    if (mt >= HM.SWING) {   // ふり下ろしの赤い閃き
-      const w = (mt - HM.SWING) / (HM.CHOP - HM.SWING);
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = w * 0.6; ctx.fillStyle = '#ff2030'; ctx.fillRect(0, 0, VW, VH); ctx.restore();
-    }
+    if (mt >= HM.SWING) { const w = (mt - HM.SWING) / (HM.CHOP - HM.SWING); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = w * 0.6; ctx.fillStyle = '#ff2030'; ctx.fillRect(0, 0, VW, VH); ctx.restore(); }
   } else {
-    // 斬った瞬間の絵をとっておく
-    if (!HMV.cut || HMV.cutS !== S) {
+    if (!HMV.cut || HMV.cutS !== S) {   // 斬った瞬間の絵をとっておく
       const c = HMV.cut || document.createElement('canvas'); c.width = VW; c.height = VH;
       const save = ctx; ctx = c.getContext('2d');
       try { hmScene(HM.CHOP - 1, 2000 + HM.CHOP - 1); } finally { ctx = save; }
       HMV.cut = c; HMV.cutS = S;
     }
-    const q = mt - HM.CHOP, sep = Math.min(260, q * q * 0.35 + q * 2), a = HM_CUT.a;
-    const nx = Math.cos(a), ny = Math.sin(a);   // 切り口に垂直な向き
+    const q = mt - HM.CHOP, sep = Math.min(260, q * q * 0.35 + q * 2), a = HM_CUT.a, nx = Math.cos(a), ny = Math.sin(a);
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, VH);
-    // 割れ目から血がふき出す
-    ctx.save(); ctx.globalAlpha = Math.max(0, 1 - q / 60); ctx.fillStyle = '#b0000f';
+    // 割れ目からあふれる血
+    ctx.save(); ctx.globalAlpha = Math.max(0, 1 - q / 60); ctx.fillStyle = '#7a0009';
     ctx.translate(VW / 2, VH / 2); ctx.rotate(a - Math.PI / 2); ctx.fillRect(-1200, -sep * 0.9, 2400, sep * 1.8); ctx.restore();
     for (const s of [-1, 1]) {
       ctx.save();
       ctx.translate(nx * sep * s * 0.5, ny * sep * s * 0.5 + (q > 20 ? (q - 20) ** 2 * 0.12 : 0));
-      ctx.beginPath();
-      // 線の片側だけを残す（大きな四角を回転させて切る）
-      ctx.translate(VW / 2, VH / 2); ctx.rotate(a); ctx.rect(s > 0 ? 0 : -2400, -2400, 2400, 4800); ctx.rotate(-a); ctx.translate(-VW / 2, -VH / 2);
-      ctx.clip();
-      ctx.drawImage(HMV.cut, 0, 0);
-      ctx.fillStyle = `rgba(120,0,10,${Math.min(0.6, q / 40)})`; ctx.fillRect(0, 0, VW, VH);
+      ctx.beginPath(); ctx.translate(VW / 2, VH / 2); ctx.rotate(a); ctx.rect(s > 0 ? 0 : -2400, -2400, 2400, 4800); ctx.rotate(-a); ctx.translate(-VW / 2, -VH / 2);
+      ctx.clip(); ctx.drawImage(HMV.cut, 0, 0);
+      ctx.fillStyle = `rgba(90,0,8,${Math.min(0.6, q / 40)})`; ctx.fillRect(0, 0, VW, VH);
       ctx.restore();
     }
-    // 白い切り口の線
-    if (q < 22) {
-      ctx.save(); ctx.translate(VW / 2, VH / 2); ctx.rotate(a - Math.PI / 2);
-      ctx.globalCompositeOperation = 'lighter';
+    // 切り口から画面いっぱいに飛び散る血
+    if (q < 50) {
+      const R = srand(77);
+      for (let i = 0; i < 16; i++) {
+        const along = (R() - 0.5) * 1500, out = (R() < 0.5 ? -1 : 1), d = Math.min(1, q / 10) * (40 + R() * 220);
+        const x = VW / 2 + Math.cos(a - Math.PI / 2) * along + nx * out * d, y = VH / 2 + Math.sin(a - Math.PI / 2) * along + ny * out * d;
+        drawBloodSplat(x, y, 10 + R() * 34, 500 + i, Math.atan2(ny * out, nx * out), Math.max(0, q - 8) * (2 + R() * 3), Math.max(0, 1 - q / 50));
+      }
+    }
+    if (q < 22) {   // 白い切り口の線
+      ctx.save(); ctx.translate(VW / 2, VH / 2); ctx.rotate(a - Math.PI / 2); ctx.globalCompositeOperation = 'lighter';
       for (const [w, col] of [[60, 'rgba(255,30,40,.5)'], [20, 'rgba(255,180,180,.8)'], [6, '#ffffff']]) { ctx.globalAlpha = 1 - q / 22; ctx.fillStyle = col; ctx.fillRect(-1400, -w / 2, 2800, w); }
       ctx.restore();
     }
@@ -6526,13 +6575,14 @@ SC_.battle = (o) => {
     for (let i = 0; i < n; i++) B.parts.push({ x: x + rnd(-10, 10), y: y - 4, vx: rnd(-4, 4), vy: rnd(-2.5, -0.5), life: 26, max: 26, col: 'rgba(230,230,240,.8)', size: rnd(6, 12), g: 0, smoke: 1 });
   };
   B.fxHit = (A, T, x, y, dmg, kb) => {
-    const col = A.ch.psychic ? '#c9b8ff' : A.ch.berserk ? '#ff2a2a' : A.ch.tentacle ? '#9cff3a' : A.col.light, big = kb > 16, huge = kb > 24, ch = A.ch;
+    const col = A.ch.bloody ? '#b0001a' : A.ch.psychic ? '#c9b8ff' : A.ch.berserk ? '#ff2a2a' : A.ch.tentacle ? '#9cff3a' : A.col.light, big = kb > 16, huge = kb > 24, ch = A.ch;
     B.parts.push({ x, y, flare: 1, r: 34 + dmg * 4 + kb * 1.5, life: big ? 18 : 12, max: big ? 18 : 12, col, rot: rnd(0, TAU), n: big ? 8 : 6 });
-    B.parts.push({ x, y, shock: 1, r: 12, vr: 9 + kb * 0.5, life: 16, max: 16, col: '#ffffff', w: big ? 10 : 6 });
+    const wcol = ch.bloody ? '#ff5060' : '#ffffff';   // ヘンリー（大剣）は白い光を血の色に
+    B.parts.push({ x, y, shock: 1, r: 12, vr: 9 + kb * 0.5, life: 16, max: 16, col: wcol, w: big ? 10 : 6 });
     if (big) B.parts.push({ x, y, shock: 1, r: 6, vr: 15 + kb * 0.6, life: 20, max: 20, col, w: 14 });
     for (let i = 0; i < 10 + dmg; i++) {
       const a2 = rnd(0, TAU), s = rnd(4, 12 + kb * 0.4);
-      B.parts.push({ x, y, vx: Math.cos(a2) * s, vy: Math.sin(a2) * s - 2, life: rnd(18, 34) | 0, max: 34, col: i % 2 ? '#ffffff' : col, size: rnd(2, 4.5), g: 0.35, spark: 1 });
+      B.parts.push({ x, y, vx: Math.cos(a2) * s, vy: Math.sin(a2) * s - 2, life: rnd(18, 34) | 0, max: 34, col: i % 2 ? wcol : col, size: rnd(2, 4.5), g: 0.35, spark: 1 });
     }
     // キャラごとのヒット演出
     if (ch.berserk) {
@@ -6551,7 +6601,7 @@ SC_.battle = (o) => {
     else if (ch.swords) for (let i = 0; i < 6; i++) B.parts.push({ x, y, vx: rnd(-4, 4), vy: rnd(-5, 1), life: 50, max: 50, petal: 1, rot: rnd(0, TAU), size: rnd(4, 7), g: 0.08, col: '#ffb7cc' });
     else if (ch.psychic) for (let i = 0; i < 6; i++) B.parts.push({ x, y, vx: rnd(-7, 7), vy: rnd(-7, 7), life: 24, max: 24, shard: 1, rot: rnd(0, TAU), size: rnd(5, 10), g: 0, col: '#b89cff' });
     if (big) { B.speed = { x, y, life: huge ? 16 : 10, max: huge ? 16 : 10, col }; B.zoomP = Math.max(B.zoomP, huge ? 0.13 : 0.08); }
-    if (huge) B.parts.push({ x, y, shock: 1, r: 20, vr: 26, life: 24, max: 24, col: '#ffffff', w: 22 });
+    if (huge) B.parts.push({ x, y, shock: 1, r: 20, vr: 26, life: 24, max: 24, col: wcol, w: 22 });
   };
   B.puff = (x, y, col) => { B.parts.push({ x, y, vx: rnd(-1, 1), vy: rnd(-1, 1), life: 18, max: 18, col, size: rnd(8, 14), g: 0, smoke: 1 }); };
 
@@ -6602,9 +6652,10 @@ SC_.battle = (o) => {
     if (hb.ink) T.inkT = hb.ink;   // 墨：しばらく動きが鈍る
     if (hb.stun && kb < 22) { T.setState('dizzy'); T.dizzyT = hb.stun; T.vx *= 0.3; if (!T.ground) T.vy = Math.min(T.vy, -3); }   // ハウリング：くらくら
     let hl = Math.floor(4 + dmg * 0.4); if (kb > 20) hl = Math.floor(hl * 1.6);
+    if (A.ch.bloody) hl = Math.floor(hl * 1.35);   // 肉に食いこむ重い手ごたえ
     T.hitlag = hl; if (!isProj) A.hitlag = hl;
     T.flash = 10; T.pctShake = 14;
-    B.burst(hx, hy, A.ch.tentacle ? '#b45be0' : '#fff6a0', 14 + (dmg * 1.5 | 0)); B.burst(hx, hy, A.ch.tentacle ? '#9cff3a' : A.col.light, 12);
+    B.burst(hx, hy, A.ch.bloody ? '#9a0010' : A.ch.tentacle ? '#b45be0' : '#fff6a0', 14 + (dmg * 1.5 | 0)); B.burst(hx, hy, A.ch.tentacle ? '#9cff3a' : A.col.light, 12);
     B.parts.push({ x: hx, y: hy, ring: 1, r: 10, life: 14, max: 14, col: '#fff' });
     B.parts.push({ x: hx, y: hy, imp: 1, r: 22 + dmg * 2.4, life: 11, max: 11, col: A.ch.psychic ? '#c9b8ff' : A.ch.tentacle ? '#9cff3a' : A.col.light, rot: Math.random() * TAU });
     // キャラごとのヒット演出
@@ -6976,8 +7027,11 @@ SC_.battle = (o) => {
       }
       const mt = ++S.mt;
       if (T && T.state === 'caught') { T.x = F.x + S.dir * 80; T.y = F.y; }
+      if (mt === HM.SHOVE) { supHit(S, 2); Snd.hmPunch(0); }                             // つき飛ばす
+      if (mt === HM.LAND) { Snd.osc('sine', 70, 0.3, 0.5, 30); Snd.nz(0.2, 0.25, 'lowpass', 400, 1, 0, 80); }   // しりもち
+      if (mt >= HM.LAND + 8 && mt < HM.H0 && (mt - HM.LAND) % 10 === 0) Snd.stepC({ key: 'hammer' });   // 迫ってくる足音
       if (mt >= HM.H0 && mt < HM.H0 + HM.N * HM.GAP && (mt - HM.H0) % HM.GAP === 0) {   // 顔面への連打
-        const n = (mt - HM.H0) / HM.GAP; supHit(S, 2.6); Snd.hmPunch(n / HM.N); F.gore = Math.min(16, (F.gore || 0) + 1);
+        const n = (mt - HM.H0) / HM.GAP; supHit(S, 3); Snd.hmPunch(n / HM.N); F.gore = Math.min(16, (F.gore || 0) + 2);
       }
       if (mt === HM.GRAB + 4) Snd.smp('sheath', 0.8, 0.7);
       if (mt >= HM.RAISE && mt < HM.SWING && (mt - HM.RAISE) % 12 === 0) Snd.heartbeat();
@@ -7050,7 +7104,7 @@ SC_.battle = (o) => {
     B.hudShake[F.id] = 36;
     B.lostStock = { id: F.id, idx: F.stocks - 1, life: 70, ch: F.ch };
     Snd.ko(); Snd.koBoom();
-    F.stocks--; F.stats.falls++; F.hasFS = false; F.gore = 0; F.bpStore = 0; F.dimT = 0; F.dimG = (F.dimG || 0) * 0.5;
+    F.stocks--; F.stats.falls++; F.hasFS = false; F.gore = 0; F.bleedT = 0; F.bpStore = 0; F.dimT = 0; F.dimG = (F.dimG || 0) * 0.5;
     if (F.lastHitBy && F.lastHitBy !== F) { F.lastHitBy.stats.ko++; B.scorePop = { id: F.lastHitBy.id, life: 80 }; } else F.stats.sd++;
     F.ground = null; F.move = null;
     if (F.stocks > 0) { F.state = 'dead'; F.deadT = 75; } else { F.state = 'out'; F.stats.outT = B.time; }
@@ -7463,6 +7517,10 @@ SC_.battle = (o) => {
       }
       if (!F.hist) F.hist = [];
       if (F.state === 'run' && F.ground && F.t % 8 === 0) { B.dust(F.x - F.dir * 12, F.y, 1); if (F.t % 16 === 0) Snd.stepC(F.ch); }
+      if (F.bleedT > 0) {   // 出血：体からしたたり落ちる
+        F.bleedT--;
+        if (F.alive && F.state !== 'respawn' && F.bleedT % 5 === 0) B.parts.push({ x: F.x + rnd(-14, 14) * F.ch.scale, y: F.y - rnd(40, 110) * F.ch.scale, vx: F.vx * 0.4 + rnd(-0.6, 0.6), vy: rnd(0, 1.5), g: 0.4, life: 60, max: 60, blood: 1, size: rnd(2, 4), fy: F.ground ? F.y : undefined, seed: Math.random() * 1e4 | 0 });
+      }
       if (F.alive && F.state !== 'respawn') { F.hist.push({ x: F.x, y: F.y - 84 * F.ch.scale }); if (F.hist.length > 12) F.hist.shift(); }
       else F.hist.length = 0;
     }
@@ -7471,7 +7529,7 @@ SC_.battle = (o) => {
       if (p.shock) { p.r += p.vr; p.vr *= 0.86; continue; }
       if (p.feather || p.shard) p.rot += 0.18;
       if (p.ring) p.r += 6;
-      else if (p.blood && p.fy !== undefined && p.vy > 0 && p.y >= p.fy) { p.blood = 0; p.bstain = 1; p.y = p.fy; p.vx = undefined; p.life = p.max = 160; p.size *= 2.4; }
+      else if (p.blood && p.fy !== undefined && p.vy > 0 && p.y >= p.fy) { p.blood = 0; p.bstain = 1; p.y = p.fy; p.vx = undefined; p.life = p.max = 220; p.size *= p.jet ? 1.6 : 2.6; }
       else if (p.vx !== undefined) { if (p.rock) p.rot += p.vx * 0.05; if (p.petal) { p.rot += 0.1; p.vx += Math.sin(p.life * 0.15) * 0.15; } p.x += p.vx; p.y += p.vy; p.vy += p.g; p.vx *= 0.95; }
     }
     B.parts = B.parts.filter(p => p.life > 0);
@@ -8594,16 +8652,18 @@ SC_.battle = (o) => {
     }
     // 岩のかけら
     for (const p of B.parts) {
-      if (p.blood) {   // 血のしずく（飛ぶ向きにのびる）
-        const sp = Math.hypot(p.vx, p.vy) || 1, a = Math.atan2(p.vy, p.vx);
+      if (p.blood) {   // 血のしずく：先が丸く、後ろへ細く尾を引く
+        const sp = Math.hypot(p.vx, p.vy) || 1, a = Math.atan2(p.vy, p.vx), L = p.size * (1 + Math.min(p.jet ? 6 : 3, sp * (p.jet ? 0.5 : 0.22))), w = p.size * (p.jet ? 0.55 : 0.85);
         ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(a); ctx.globalAlpha = Math.min(1, p.life / p.max * 3);
-        ctx.fillStyle = '#8c000e'; ctx.beginPath(); ctx.ellipse(0, 0, p.size * (1 + Math.min(2, sp * 0.12)), p.size * 0.8, 0, 0, TAU); ctx.fill();
-        ctx.fillStyle = 'rgba(255,120,120,.5)'; ctx.beginPath(); ctx.arc(p.size * 0.3, -p.size * 0.25, p.size * 0.3, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#3e0004'; ctx.beginPath(); ctx.moveTo(-L * 1.6, 0); ctx.quadraticCurveTo(-L * 0.3, -w * 1.15, w * 0.2, -w * 1.1); ctx.arc(0, 0, w * 1.1, -Math.PI / 2, Math.PI / 2); ctx.quadraticCurveTo(-L * 0.3, w * 1.15, -L * 1.6, 0); ctx.fill();
+        ctx.fillStyle = '#7d000c'; ctx.beginPath(); ctx.moveTo(-L * 1.4, 0); ctx.quadraticCurveTo(-L * 0.3, -w * 0.9, w * 0.1, -w * 0.9); ctx.arc(0, 0, w * 0.9, -Math.PI / 2, Math.PI / 2); ctx.quadraticCurveTo(-L * 0.3, w * 0.9, -L * 1.4, 0); ctx.fill();
+        ctx.fillStyle = 'rgba(255,190,190,.4)'; ctx.beginPath(); ctx.arc(w * 0.15, -w * 0.35, w * 0.28, 0, TAU); ctx.fill();
         ctx.restore(); continue;
       }
-      if (p.bstain) {   // 床の血だまり
-        ctx.save(); ctx.globalAlpha = Math.min(0.85, p.life / p.max * 2); ctx.fillStyle = '#5e000a';
-        ctx.beginPath(); ctx.ellipse(p.x, p.y + 1, p.size * 1.6, p.size * 0.35, 0, 0, TAU); ctx.fill(); ctx.restore(); continue;
+      if (p.bstain) {   // 床の血だまり（上から見たいびつな形を床に寝かせる）
+        ctx.save(); ctx.translate(p.x, p.y + 1); ctx.scale(1, 0.26);
+        drawBloodSplat(0, 0, p.size * 1.5, p.seed || 1, null, 0, Math.min(0.92, p.life / p.max * 2.5));
+        ctx.restore(); continue;
       }
       if (p.splat) {   // 床に飛び散った墨
         ctx.save(); ctx.globalAlpha = Math.min(1, p.life / p.max * 2); ctx.fillStyle = '#f6f6f1';
