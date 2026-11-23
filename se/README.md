@@ -22,7 +22,6 @@
 | slime1 | スライム（slime1） |
 | whip1〜3 | ムチで打つ（whip-attack-1〜3） |
 | tswing1〜2 | ムチを振る（whip-gesture2, 1） |
-| bubble1 | 水がぶくぶく（water-bukubuku1 の一部） |
 
 ## OpenGameArt.org（CC0：パブリックドメイン）
 
