@@ -604,6 +604,7 @@ const Snd = {
   },
   // ---------- ヘンリー（寝たら朝は来ない）----------
   nemu() { this.voice(this.vary(150), 0.55, 0.12, 'o', 110); this.voice(this.vary(190), 0.4, 0.08, 'a', 140, 0.18); this.osc('sine', 300, 0.3, 0.04, 200, 0.1); },
+  gslash() { this.smp('blade', 1, 0.5); this.smp('swish', 0.9, 0.55); this.nz(0.5, 0.25, 'lowpass', 700, 1, 0.02, 120, 8); this.osc('sine', 75, 0.45, 0.4, 32); },
   guillotine() { this.smp('blade', 1, 0.55); this.smp('flesh', 1, 0.7, 0.03); this.osc('sine', 60, 0.6, 0.4, 28); this.nz(0.4, 0.25, 'lowpass', 500, 1, 0, 80, 8); },
   hmPunch(k = 0) { this.smp('punch', 0.9, 0.75 + Math.random() * 0.12); this.smp('flesh', 0.8, 0.85 + Math.random() * 0.2, 0.02); this.osc('sine', 85, 0.25, 0.35 + k * 0.2, 34); },
   heartbeat() { this.osc('sine', 52, 0.16, 0.5, 30); this.osc('sine', 48, 0.18, 0.4, 28, 0.22); },
@@ -2294,18 +2295,14 @@ function bloodSpray(B, x, y, n, dir = 0, pow = 1, fy) {
   for (let i = 0; i < 2 + (n / 8 | 0); i++) { const a = dir ? (dir > 0 ? -0.5 : Math.PI + 0.5) + rnd(-0.5, 0.5) : rnd(-Math.PI, 0); B.parts.push({ x, y, vx: Math.cos(a) * rnd(8, 15) * pow, vy: Math.sin(a) * rnd(8, 15) * pow, g: 0.5, life: 22, max: 22, blood: 1, jet: 1, size: rnd(2, 3.5), fy, seed: Math.random() * 1e4 | 0 }); }
 }
 function bloodHitFx(B, x, y, dmg, A, T) {
-  const fy = T && T.ground ? T.y : undefined;
-  bloodSpray(B, x, y, 10 + dmg * 1.4 | 0, A.dir, 0.8 + dmg * 0.04, fy);
   B.parts.push({ x, y, slash: 1, rot: rnd(-1.0, -0.4), len: 90 + dmg * 6, life: 11, max: 11, col: '#ff1028' });
   if (dmg >= 10) B.parts.push({ x, y, flare: 1, r: 70 + dmg * 5, life: 14, max: 14, col: '#a0000e', rot: rnd(0, TAU), n: 7 });
-  A.gore = Math.min(16, (A.gore || 0) + (dmg >= 10 ? 2 : 1));   // 返り血がたまっていく
-  if (T) T.bleedT = Math.min(300, Math.max(T.bleedT || 0, 80 + dmg * 10));   // 斬られた相手はしばらく血を流す
   if (dmg >= 12) { B.flashScr = Math.max(B.flashScr || 0, 4); B.flashRGB = '120,0,8'; }
   B.shake = Math.max(B.shake, Math.min(18, 3 + dmg * 0.7));
 }
 {
   const S0 = {};
-  const heavy = (F, x, y, n = 14) => { if (BT) { bloodSpray(BT, F.x + F.dir * x, F.y + y, n, F.dir, 1.2, F.ground ? F.y : undefined); BT.shake = Math.max(BT.shake, 10); } };
+  const heavy = (F, x, y) => { if (BT) { BT.shake = Math.max(BT.shake, 10); BT.parts.push({ x: F.x + F.dir * x, y: F.y + y, flare: 1, r: 90, life: 14, max: 14, col: '#c0001a', rot: rnd(0, TAU), n: 7 }); } };
   const multi = (every, until) => (F, f) => { if (f % every === 0 && f < until) F.hitIds.clear(); };
   Object.assign(BHMOVES, {
     // 弱：柄頭で突いてから、剣先でつつく
@@ -2330,7 +2327,7 @@ function bloodHitFx(B, x, y, dmg, A, T) {
     fsmash: { len: 58, charge: 9, sfx: 14, keys: [[0, S0], [9, { lean: -0.45, hd: -0.2, fa: A_(3.3, 0.4), ba: A_(3.0, 0.6), fl: G_(0.5, -0.4), bl: G_(-0.5, -0.2) }],
         [15, { lean: 0.75, by: 12, fa: A_(1.05, 0.1), ba: A_(0.95, 0.4), fl: G_(1.0, -0.5), bl: G_(-0.85, 0) }], [34, { lean: 0.75, by: 12, fa: A_(1.05, 0.1), ba: A_(0.95, 0.4), fl: G_(1.0, -0.5), bl: G_(-0.85, 0) }], [58, S0]],
       hb: [HB(14, 18, 125, -52, 52, 20, 40, 8, 1.15), HB(13, 15, 70, -160, 44, 16, 50, 8, 1.0)],
-      upd(F, f) { if (f === 13) F.vx = 4 * F.dir; if (f === 15) { heavy(F, 150, -6, 22); BT.dust(F.x + F.dir * 150, F.y, 10); BT.parts.push({ x: F.x + F.dir * 150, y: F.y, shock: 1, r: 14, vr: 12, life: 16, max: 16, col: '#ff1a2a', w: 10 }); } } },
+      upd(F, f) { if (f === 13) F.vx = 4 * F.dir; if (f === 15) { heavy(F, 150, -6); BT.dust(F.x + F.dir * 150, F.y, 10); BT.parts.push({ x: F.x + F.dir * 150, y: F.y, shock: 1, r: 14, vr: 12, life: 16, max: 16, col: '#ff1a2a', w: 10 }); } } },
     // 上スマッシュ：真上へ大きく切り上げる
     usmash: { len: 50, charge: 8, sfx: 12, keys: [[0, S0], [8, { by: 16, lean: 0.25, fa: A_(0.3, 0.3), ba: A_(0.2, 0.4), fl: G_(0.6, -1.2), bl: G_(-0.3, -1.0) }],
         [13, { by: -6, lean: -0.2, hd: -0.3, fa: A_(3.1, 0), ba: A_(2.9, 0.2) }], [26, { by: -6, lean: -0.2, hd: -0.3, fa: A_(3.1, 0), ba: A_(2.9, 0.2) }], [50, S0]],
@@ -2361,15 +2358,17 @@ function bloodHitFx(B, x, y, dmg, A, T) {
       hb: [HB(13, 18, 4, 30, 36, 14, -80, 6, 0.8)] },
 
     // ---- 必殺ワザ ----
-    // 必殺：寝たら朝は来ない（ふきだしを飛ばす。当たるとくらくら＝眠くなる）
-    nb: { len: 46, keys: [[0, S0], [8, { lean: -0.2, hd: -0.3, fa: A_(0.4, 0.6), ba: A_(-0.5, 0.8) }], [14, { lean: 0.15, hd: 0.15, fa: A_(1.0, 0.3), ba: A_(1.2, 0.2) }], [34, { lean: 0.15, hd: 0.15, fa: A_(1.0, 0.3), ba: A_(1.2, 0.2) }], [46, S0]], hb: [],
+    // 必殺：地裂斬（大剣をたたきつけて斬撃を飛ばす。地上では地面を割りながら勢いよく突き進む）
+    nb: { len: 42, keys: [[0, S0], [8, { lean: -0.4, hd: -0.2, fa: A_(3.25, 0.3), ba: A_(3.0, 0.4), fl: G_(0.4, -0.4), bl: G_(-0.4, -0.2) }],
+        [12, { lean: 0.7, by: 12, fa: A_(0.95, 0.05), ba: A_(0.85, 0.3), fl: G_(1.0, -0.5), bl: G_(-0.8, 0) }], [28, { lean: 0.7, by: 12, fa: A_(0.95, 0.05), ba: A_(0.85, 0.3), fl: G_(1.0, -0.5), bl: G_(-0.8, 0) }], [42, S0]], hb: [],
       upd(F, f) {
-        if (!F.ground) F.vy = Math.min(F.vy, 1.4);
-        if (f === 13) {
-          const sc = F.ch.scale;
-          BT.proj.push({ type: 'nemu', x: F.x + F.dir * 80 * sc, y: F.y - 160 * sc, vx: 6.2 * F.dir, vy: 0, life: 80, max: 80, owner: F, r: 34, dir: F.dir,
-            hb: { dmg: 6, ang: 45, base: 3, gr: 0.25, stun: 80 } });
-          Snd.nemu();
+        if (!F.ground) F.vy = Math.min(F.vy, 1.2);
+        if (f === 12) {
+          const sc = F.ch.scale, g = F.ground && F.y <= F.ground.y + 2 ? F.ground : null;
+          BT.proj.push({ type: 'gslash', x: F.x + F.dir * 70 * sc, y: F.y - 50 * sc, gy: g ? F.y : null, vx: 18 * F.dir, vy: 0, life: 44, max: 44, owner: F, r: 46, dir: F.dir, ground: g, pierce: true,
+            hb: { dmg: 10, ang: 55, base: 6, gr: 0.6 } });
+          BT.shake = Math.max(BT.shake, 12); if (g) { BT.dust(F.x + F.dir * 70, F.y, 10); BT.parts.push({ x: F.x + F.dir * 70, y: F.y, shock: 1, r: 12, vr: 12, life: 16, max: 16, col: '#ff2a3a', w: 9 }); }
+          Snd.gslash();
         }
       } },
     // 横必殺：ブラッディラッシュ（剣を突き出して一直線に突進）
@@ -2386,15 +2385,26 @@ function bloodHitFx(B, x, y, dmg, A, T) {
           if (!F.ground) { F.vy = 0.5; return false; }
         } else F.vx *= 0.86;
       } },
-    // 上必殺：血風車（大剣を回しながら舞い上がる。復帰用）
-    ub: { len: 46, air: true, landLag: 18, after: 'helpless', sfx: 4, keys: [[0, { by: 12, fa: A_(0.4, 1.2) }],
-        [4, { rot: 0, fa: A_(1.6, 0), ba: A_(-1.5, 0.2), fl: G_(0.2, -0.3), bl: G_(-0.2, -0.3) }], [26, { rot: -3 * TAU, fa: A_(1.6, 0), ba: A_(-1.5, 0.2), fl: G_(0.2, -0.3), bl: G_(-0.2, -0.3) }], [46, { rot: -3 * TAU }]],
-      hb: [HB(4, 22, 0, -80, 95, 3, 80, 3, 0.15, { auto: 1 }), HB(22, 26, 0, -90, 100, 6, 80, 7, 0.75, { auto: 1 })],
+    // 上必殺：天墜斬（大剣を真上に投げて追いかけ、空中でつかんで真下へたたき落とす。復帰用）
+    ub: { len: 120, air: true, landLag: 22, after: 'helpless', keys: [[0, { by: 16, lean: 0.2, fa: A_(0.6, 1.0), ba: A_(0.5, 1.0), fl: G_(0.9, -1.6), bl: G_(0.5, -1.4) }],
+        [6, { by: -4, fa: A_(3.05, 0), ba: A_(2.9, 0.1), fl: G_(0.2, -0.4), bl: G_(-0.2, -0.3) }], [26, { by: -4, fa: A_(3.05, 0), ba: A_(2.9, 0.1), fl: G_(0.2, -0.4), bl: G_(-0.2, -0.3) }],
+        [31, { lean: 0.1, fa: A_(3.15, 0), ba: A_(3.0, 0.1), fl: G_(0.9, -1.7), bl: G_(0.7, -1.5) }],
+        [36, { fa: A_(0.04, 0), ba: A_(0.2, 0.3), fl: G_(0.2, -0.3), bl: G_(-0.1, -0.2) }], [120, { fa: A_(0.04, 0), ba: A_(0.2, 0.3), fl: G_(0.2, -0.3), bl: G_(-0.1, -0.2) }]],
+      hb: [HB(7, 27, 0, -175, 64, 2, 88, 4, 0.04, { auto: 1, hs: 12 }), HB(36, 120, 4, 26, 40, 7, -75, 6, 0.65)],
       upd(F, f, c) {
-        if (f === 4) { F.vy = -17; F.ground = null; Snd.jump(); }
-        if (f > 4 && f < 26) { F.vx = c.hx * 3.4; if (f % 5 === 0 && f < 20) { F.hitIds.clear(); Snd.swingC(F.ch, 6); } }
-        if (f === 22) F.hitIds.clear();
+        if (f === 6) { F.vy = -15; F.ground = null; Snd.swingC(F.ch, 12); }
+        if (f > 6 && f < 28) { F.vx = c.hx * 2.4; if (f % 4 === 3) { F.hitIds.clear(); Snd.swingC(F.ch, 3); } }
+        if (f === 28) F.hitIds.clear();
+        if (f >= 28 && f < 36) { F.vx *= 0.8; F.vy = 0; if (f === 30) Snd.smp('sheath', 0.7, 0.8); return false; }   // 空中で大剣をつかむ
+        if (f >= 36) { F.vy = 21; F.vx = c.hx * 1.6; if (f % 2 === 0) BT.parts.push({ x: F.x, y: F.y - 60, vx: 0, vy: -2, life: 14, max: 14, col: 'rgba(200,20,30,.5)', size: 16, g: 0, smoke: 1 }); return false; }
+      },
+      onLand(F) {
+        if (F.mf < 30) { F.move = null; F.landLag = 10; F.setState('land'); return; }
+        F.startMove('ubl'); BT.shake = Math.max(BT.shake, 16); BT.dust(F.x, F.y, 22); Snd.guillotine();
+        for (const d of [-1, 1]) BT.parts.push({ x: F.x + d * 30, y: F.y, shock: 1, r: 12, vr: 13, life: 18, max: 18, col: '#ff2030', w: 10 });
       } },
+    ubl: { len: 26, keys: [[0, { by: 26, lean: 0.45, fa: A_(0.04, 0), ba: A_(0.3, 0.3), fl: G_(1.0, -2.0), bl: G_(-0.6, -1.5) }], [26, S0]],
+      hb: [HB(1, 5, 80, -26, 50, 9, 70, 7, 0.75, { auto: 1 }), HB(1, 5, -80, -26, 50, 9, 70, 7, 0.75, { auto: 1 })] },
     // 下必殺：断頭台（跳び上がって大剣を真下に突き立てる。着地で血がふき上がる）
     db: { len: 90, air: true, sfx: 8, keys: [[0, { by: 10 }], [6, { by: -4, fa: A_(3.2, 0.3), ba: A_(3.0, 0.4), fl: G_(0.9, -2.0), bl: G_(0.7, -1.8) }],
         [11, { fa: A_(0.04, 0), ba: A_(0.2, 0.3), fl: G_(0.2, -0.3), bl: G_(-0.1, -0.2) }], [90, { fa: A_(0.04, 0), ba: A_(0.2, 0.3), fl: G_(0.2, -0.3), bl: G_(-0.1, -0.2) }]],
@@ -2403,7 +2413,7 @@ function bloodHitFx(B, x, y, dmg, A, T) {
         if (f === 1 && F.ground) { F.vy = -12; F.ground = null; }
         if (f >= 9) { F.vy = 18; F.vx *= 0.9; return false; }
       },
-      onLand(F) { F.startMove('dbl'); BT.shake = Math.max(BT.shake, 14); BT.dust(F.x, F.y, 18); Snd.guillotine(); heavy(F, 20, -4, 30); } },
+      onLand(F) { F.startMove('dbl'); BT.shake = Math.max(BT.shake, 14); BT.dust(F.x, F.y, 18); Snd.guillotine(); heavy(F, 20, -4); } },
     dbl: { len: 30, keys: [[0, { by: 24, lean: 0.4, fa: A_(0.04, 0), ba: A_(0.3, 0.3), fl: G_(1.0, -2.0), bl: G_(-0.6, -1.5) }], [30, S0]],
       hb: [HB(1, 6, 90, -30, 52, 10, 65, 7, 0.75, { auto: 1 }), HB(1, 6, -90, -30, 52, 10, 65, 7, 0.75, { auto: 1 })],
       upd(F, f) { if (f === 1) for (const s of [-1, 1]) BT.parts.push({ x: F.x + s * 40, y: F.y, shock: 1, r: 10, vr: 11, life: 18, max: 18, col: '#c0001a', w: 10 }); } },
@@ -2415,7 +2425,7 @@ for (const k in BHMOVES) BHMOVES[k].hb = BHMOVES[k].hb.map(h => ({ ...h, ox: Mat
 for (const k in BHMOVES) BHMOVES[k].K = BHMOVES[k].keys.map(([f, o]) => [f, mk(o)]);
 // つかみ：左手で胸ぐらをつかみ、大剣で斬る
 { const H = { lean: 0.2, fa: A_(0.7, 0.5), ba: A_(1.5, 0.3), fl: G_(0.4, -0.4), bl: G_(-0.4, -0.3) };
-  const blood = (T, n = 10) => { if (BT && T) bloodSpray(BT, T.x, T.y - 75 * T.ch.scale, n, 0, 1); };
+  const blood = (T) => { if (BT && T) BT.parts.push({ x: T.x, y: T.y - 75 * T.ch.scale, slash: 1, rot: rnd(-1, -0.4), len: 120, life: 10, max: 10, col: '#ff1028' }); };
 makeGrabs(BHMOVES, { reach: 1.05, hv: [52, -8],
   grab: [[0, {}], [5, { lean: 0.4, ba: A_(1.7, 0), fa: A_(0.5, 0.6), fl: G_(0.7, -0.3), bl: G_(-0.6, 0) }], [12, { lean: 0.4, ba: A_(1.7, 0), fa: A_(0.5, 0.6), fl: G_(0.7, -0.3), bl: G_(-0.6, 0) }], [30, {}]],
   hold: [[0, H], [400, H]],
@@ -2482,8 +2492,8 @@ const CHARS = [
   { key: 'bhenry', name: 'ヘンリー（寝たら朝は来ない）', kana: 'BLOODY', img: BHEN_FACE, ar: BHEN_FACE_AR, eyes: false, scale: 1.15, run: 6.4, airs: 5.2, jv: -14.2, shv: -9.8, djv: -13.2,
     kbTake: 0.92, swords: false, doodle: true, bloody: true, hand: '#ffffff', moves: BHMOVES,
     fsName: '寝たら朝は来ない', fsDesc: '目の前でなぐり続け、返り血をあびたまま大剣でたたき切る',
-    specials: [['寝たら朝は来ない', '必殺', 'ふきだしを飛ばす。当たると相手がくらくらになる'], ['ブラッディラッシュ', '横＋必殺', '大剣を突き出して一直線に突っこむ'],
-      ['血風車', '上＋必殺', '大剣を回しながら舞い上がる（復帰用）'], ['断頭台', '下＋必殺', '跳び上がって大剣を真下に突き立てる。着地で血がふき上がる']] },
+    specials: [['地裂斬', '必殺', '斬撃を飛ばす。地上では地面を割りながら勢いよく突き進む'], ['ブラッディラッシュ', '横＋必殺', '大剣を突き出して一直線に突っこむ'],
+      ['天墜斬', '上＋必殺', '大剣を真上に投げて追いかけ、つかんで真下へたたき落とす（復帰用）'], ['断頭台', '下＋必殺', '跳び上がって大剣を真下に突き立てる。着地で血がふき上がる']] },
 ];
 // ---- 今井：触手の通常ワザ・スマッシュ・空中ワザ（当たり判定ひとつにつき1本の触手が伸びる）----
 {
@@ -5294,7 +5304,7 @@ function drawDoodle(F, P, J, C, t) {
   ctx.save(); ctx.translate(J.hip.x, J.hip.y); ctx.rotate(rot);
   const u = k / BH.img;
   ctx.drawImage(BHEN_BODY, -BH.root[0] * k, -BH.root[1] * k, BHEN_BODY.width * u, BHEN_BODY.height * u);
-  if (F.gore) drawGore(F.gore, k);
+  if (F.gore && F.state === 'super') drawGore(F.gore, k);   // 返り血は切り札の演出中だけ
   ctx.restore();
   if (F._swt.length > 1) {
     const T = F._swt;
@@ -5306,7 +5316,11 @@ function drawDoodle(F, P, J, C, t) {
     }
     ctx.restore();
   }
-  drawBigSword(fa[2], sa, swS, F.state === 'super' ? 0.8 : F.hasFS ? 0.35 + 0.2 * Math.sin(t * 0.2) : 0);
+  const tossed = F.state === 'move' && F.moveName === 'ub' && F.mf > 6 && F.mf < 30;
+  if (tossed) {   // 真上に投げた大剣：回りながら上がって落ちてくる
+    const q = (F.mf - 6) / 24, h = fa[2];
+    drawBigSword({ x: h.x, y: h.y - Math.sin(q * Math.PI) * 70 - 20 }, Math.PI + F.mf * 0.9, swS, 0.5);
+  } else drawBigSword(fa[2], sa, swS, F.state === 'super' ? 0.8 : F.hasFS ? 0.35 + 0.2 * Math.sin(t * 0.2) : 0);
   bhStick(fa);
 }
 
@@ -7084,7 +7098,7 @@ SC_.battle = (o) => {
   }
   function endSuper() {
     const S = B.sup, F = S.F, T = S.T;
-    F.setState(F.ground ? 'idle' : 'air'); F.inv = Math.max(F.inv, 30); F.vx = 0; F.vy = 0;
+    F.setState(F.ground ? 'idle' : 'air'); F.inv = Math.max(F.inv, 30); F.vx = 0; F.vy = 0; F.gore = 0;
     if (T && T.state === 'caught') T.setState('air');
     B.sup = null;
   }
@@ -7418,6 +7432,17 @@ SC_.battle = (o) => {
         } else p.vx *= 0.97;
         if (p.age % 9 === 0) Snd.whirl(0.4);
       }
+      if (p.type === 'gslash') {
+        // 地裂斬：足場の上では地面を割りながら進み、端で止まる
+        const pl = p.ground;
+        if (pl && (p.x < pl.x1 || p.x > pl.x2)) p.life = 0;
+        if (pl) {
+          if (p.life % 2 === 0) B.parts.push({ x: p.x, y: p.gy, crack: 1, life: 80, max: 80, seed: Math.random() * 1e4 | 0, dir: p.dir });
+          if (p.life % 2 === 1) for (let i = 0; i < 2; i++) B.parts.push({ x: p.x + rnd(-14, 14), y: p.gy - 4, vx: rnd(-2, 2) - p.dir * 1.5, vy: rnd(-10, -5), life: 30, max: 30, rock: 1, size: rnd(4, 9), g: 0.55, col: '#5a4a44', rot: rnd(0, TAU) });
+          if (p.life % 4 === 0) B.dust(p.x, p.gy, 2);
+        }
+        p.vx *= 0.985;
+      }
       if (p.type === 'shock') {
         // 地面を走る衝撃波：足場の端で消える
         const pl = p.ground;
@@ -7446,7 +7471,7 @@ SC_.battle = (o) => {
         const pl = st.plats.find(q => p.x >= q.x1 && p.x <= q.x2 && p.y >= q.y && p.y - p.vy <= q.y + 2);
         if (pl) { p.life = 0; B.parts.push({ x: p.x, y: pl.y, stuck: 1, rot: Math.atan2(p.vy, p.vx), life: 50, max: 50 }); B.dust(p.x, pl.y, 2); continue; }
       }
-      if (!['arrow', 'hammer', 'shock', 'note', 'wave', 'nemu'].includes(p.type) && p.life % 2 === 0) B.parts.push({ x: p.x, y: p.y, vx: 0, vy: 0, life: 10, max: 10, col: p.type === 'x' ? 'rgba(255,140,180,.7)' : p.type === 'ink' ? 'rgba(246,246,240,.75)' : p.type === 'psy' ? 'rgba(160,100,255,.7)' : 'rgba(110,130,255,.8)', size: 9, g: 0, smoke: 1 });
+      if (!['arrow', 'hammer', 'shock', 'note', 'wave', 'nemu', 'gslash'].includes(p.type) && p.life % 2 === 0) B.parts.push({ x: p.x, y: p.y, vx: 0, vy: 0, life: 10, max: 10, col: p.type === 'x' ? 'rgba(255,140,180,.7)' : p.type === 'ink' ? 'rgba(246,246,240,.75)' : p.type === 'psy' ? 'rgba(160,100,255,.7)' : 'rgba(110,130,255,.8)', size: 9, g: 0, smoke: 1 });
       if (B.orcs.length && B.hitOrcsProj(p)) { p.life = 0; continue; }
       for (const T of fs) {
         if (T === p.owner || !T.alive) continue;
@@ -8567,6 +8592,22 @@ SC_.battle = (o) => {
     drawBall();
     drawBeams();
     for (const p of B.proj) {
+      if (p.type === 'gslash') {   // 地裂斬：縦に長い三日月の斬撃
+        const by = p.gy !== null && p.gy !== undefined ? p.gy : p.y + 70, k2 = Math.min(1, p.life / p.max * 2), H = 190;
+        ctx.save(); ctx.translate(p.x, by); ctx.scale(p.dir, 1); ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.6 * k2; ctx.drawImage(glowSprite('rgba(255,20,40,.9)'), -70, -H - 30, 140, H + 50);
+        for (let i = 3; i >= 1; i--) {   // 残像
+          ctx.globalAlpha = 0.18 * k2 * (4 - i); ctx.fillStyle = '#ff2030';
+          ctx.beginPath(); ctx.moveTo(-i * 22, 4); ctx.quadraticCurveTo(-i * 22 + 70, -H / 2, -i * 22, -H); ctx.quadraticCurveTo(-i * 22 + 30, -H / 2, -i * 22, 4); ctx.fill();
+        }
+        ctx.globalAlpha = k2;
+        const g = ctx.createLinearGradient(0, 0, 60, 0); g.addColorStop(0, '#ffffff'); g.addColorStop(0.35, '#ff6070'); g.addColorStop(1, 'rgba(200,0,20,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0, 6); ctx.quadraticCurveTo(78, -H / 2, 0, -H - 6); ctx.quadraticCurveTo(34, -H / 2, 0, 6); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,240,240,.9)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(4, 2); ctx.quadraticCurveTo(62, -H / 2, 4, -H); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,120,130,.7)'; ctx.lineWidth = 2;
+        for (let i = 0; i < 5; i++) { const yy = -18 - i * 28; ctx.beginPath(); ctx.moveTo(-20, yy); ctx.lineTo(-90 - (i % 2) * 40, yy); ctx.stroke(); }   // 勢いの線
+        ctx.restore(); continue;
+      }
       if (p.type === 'nemu') {   // ふきだし「寝たら朝は来ない」
         const q = Math.min(1, (p.max - p.life) / 6), sc = 0.36 * q * (1 + Math.sin(p.life * 0.4) * 0.04);
         ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(Math.sin(p.life * 0.15) * 0.1);
@@ -8652,6 +8693,20 @@ SC_.battle = (o) => {
     }
     // 岩のかけら
     for (const p of B.parts) {
+      if (p.crack) {
+        const R = srand(p.seed), a = Math.min(1, p.life / p.max * 2.2);
+        ctx.save(); ctx.globalAlpha = a; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        const pts = []; let x = p.x - 22, y = p.y;
+        for (let i = 0; i < 6; i++) { pts.push([x, y]); x += 9; y = p.y + (R() - 0.5) * 6; }
+        const path = () => { ctx.beginPath(); pts.forEach(([px, py], i) => i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)); };
+        path(); ctx.strokeStyle = '#120608'; ctx.lineWidth = 7; ctx.stroke();
+        path(); ctx.strokeStyle = `rgba(255,${40 + (a * 60 | 0)},40,${0.9 * a})`; ctx.lineWidth = 2.5; ctx.stroke();
+        for (let b = 0; b < 2; b++) {   // 枝分かれ
+          const [sx, sy] = pts[1 + (R() * 4 | 0)], ex = sx + (R() - 0.5) * 30, ey = sy + 4 + R() * 8;
+          ctx.strokeStyle = '#120608'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+        }
+        ctx.restore(); continue;
+      }
       if (p.blood) {   // 血のしずく：先が丸く、後ろへ細く尾を引く
         const sp = Math.hypot(p.vx, p.vy) || 1, a = Math.atan2(p.vy, p.vx), L = p.size * (1 + Math.min(p.jet ? 6 : 3, sp * (p.jet ? 0.5 : 0.22))), w = p.size * (p.jet ? 0.55 : 0.85);
         ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(a); ctx.globalAlpha = Math.min(1, p.life / p.max * 3);
@@ -8692,7 +8747,7 @@ SC_.battle = (o) => {
     // エフェクト（加算合成で光らせる）
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
     for (const p of B.parts) {
-      if (p.smoke || p.rock || p.petal || p.stuck || p.splat || p.blood || p.bstain) continue;
+      if (p.smoke || p.rock || p.petal || p.stuck || p.splat || p.blood || p.bstain || p.crack) continue;
       if (p.kanji || p.rift || p.dzone) { ctx.save(); ctx.globalCompositeOperation = 'source-over'; drawFxDark(p); ctx.restore(); continue; }
       if (p.flare || p.shock || p.bolt || p.note || p.drop || p.feather || p.shard || p.spark || p.cut || p.bubble) { drawFx(p); continue; }
       if (p.sonic) {   // 音の波（水色とピンクの同心円）
