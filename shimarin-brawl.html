@@ -139,6 +139,42 @@ const Snd = {
       }
     }
   },
+  // ---- BGM（bgm/ フォルダ）：対戦中にランダムで1曲をループ再生 ----
+  BGM_LIST: ['bgm/mitanicho.mp3'],   // 曲を足すときはここに並べる
+  BGM_VOL: 0.36,
+  bgm: { buf: {}, loading: {}, src: null, gain: null, want: -1 },
+  bgmPlay(i) {
+    const B = this.bgm; B.want = i;
+    if (!this.ac || !this.on || i < 0) return;
+    const url = this.BGM_LIST[i % this.BGM_LIST.length];
+    if (B.buf[url]) return this._bgmStart(B.buf[url], i);
+    if (B.loading[url]) return;
+    B.loading[url] = true;
+    fetch(url).then(r => r.ok ? r.arrayBuffer() : Promise.reject())
+      .then(a => new Promise((ok, ng) => { const r = this.ac.decodeAudioData(a, ok, ng); if (r && r.catch) r.catch(ng); }))
+      .then(buf => {
+        // 曲の終わりの無音をとばしてループする
+        const d = buf.getChannelData(0); let e = d.length - 1; while (e > 0 && Math.abs(d[e]) < 0.012) e--;
+        buf._loopEnd = Math.max(1, (e + 1) / buf.sampleRate);
+        B.buf[url] = buf; B.loading[url] = false;
+        if (B.want === i) this._bgmStart(buf, i);
+      }).catch(() => { B.loading[url] = false; });
+  },
+  _bgmStart(buf) {
+    this.bgmStop(0.3); this.bgm.want = -2;
+    const ac = this.ac, g = ac.createGain(), s = ac.createBufferSource(), t = ac.currentTime;
+    s.buffer = buf; s.loop = true; s.loopStart = 0; s.loopEnd = buf._loopEnd || buf.duration;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(this.BGM_VOL, t + 1.5);
+    s.connect(g).connect(ac.destination); s.start(t);
+    this.bgm.src = s; this.bgm.gain = g;
+  },
+  bgmStop(fade = 0.8) {
+    const B = this.bgm; B.want = -1;
+    if (!B.src || !this.ac) return;
+    const t = this.ac.currentTime, g = B.gain.gain;
+    try { g.cancelScheduledValues(t); g.setValueAtTime(Math.max(0.0001, g.value), t); g.linearRampToValueAtTime(0, t + fade); B.src.stop(t + fade + 0.05); } catch (e) {}
+    B.src = null; B.gain = null;
+  },
   // 録音の音を鳴らす（なければ false）。rate で高さ、which で何番目か
   smp(name, vol = 1, rate = 1, delay = 0, which = -1) {
     if (!this.on || !this.ac || !this.se) return false;
@@ -5994,6 +6030,7 @@ SC_.battle = (o) => {
     kosp: [], cine: null, slow: 0, flashRGB: '255,255,255', hudShake: new Array(fs.length).fill(0), lostStock: null, scorePop: null, vcam: null,
     ball: null, ballT: R(420, 900), sup: null, stall: 0, leaveT: 0, netLost: 0, rains: [] };
   BT = B;
+  Snd.bgmPlay(ON ? (ON.seed >>> 0) % Snd.BGM_LIST.length : (Math.random() * Snd.BGM_LIST.length) | 0);
   B.introF = fs.find(f => f.ch.berserk) || null; B.intro = B.introF ? 170 : 0; B.introT = 0;
   if (B.introF) B.introF.auraBoost = 0;
 
@@ -8996,6 +9033,7 @@ const NATIVE = { title: 'Title', menu: 'Menu', css: 'CharSelect' };
 let nextScene = null, gT = 0;
 function go(name, arg) {
   if (nextScene) return;
+  if (name !== 'battle') Snd.bgmStop();   // 対戦の画面を出たら BGM を止める
   nextScene = [name, arg];
   const cur = PH.cur;
   // 切りかえ中のしるし（nextScene）は、次の画面が始まったときに消す。
@@ -9167,7 +9205,7 @@ class MenuScene extends Phaser.Scene {
       { key: 'brawl', box: [40, 92, 604, 452], fill: UI.red, txt: '#ffffff', label: '大乱闘', size: 92, sub: 'CPUと対戦！チーム戦もできる', nav: { right: 'online', down: 'sound' }, act: () => go('css') },
       { key: 'online', box: [676, 92, 1240, 300], fill: UI.ink, txt: '#ffffff', label: 'オンライン', size: 56, sub: 'インターネットで最大8人まで対戦！', nav: { left: 'brawl', down: 'howto' }, act: () => go('online') },
       { key: 'howto', box: [676, 318, 1240, 452], fill: 0x3a3a3a, txt: '#ffffff', label: 'あそびかた', size: 44, sub: '操作方法とワザ一覧', nav: { up: 'online', left: 'brawl', down: 'back' }, act: () => go('howto') },
-      { key: 'sound', box: [40, 470, 604, 632], fill: 0x8c8c8c, txt: '#ffffff', label: 'サウンド', size: 44, sub: '効果音の ON / OFF', nav: { up: 'brawl', right: 'back' }, act: () => { Snd.on = !Snd.on; this.refresh(); } },
+      { key: 'sound', box: [40, 470, 604, 632], fill: 0x8c8c8c, txt: '#ffffff', label: 'サウンド', size: 44, sub: '効果音・BGM の ON / OFF', nav: { up: 'brawl', right: 'back' }, act: () => { Snd.on = !Snd.on; this.refresh(); } },
       { key: 'back', box: [676, 470, 1240, 632], fill: UI.white, txt: '#141414', label: 'ゲーム選択へ', size: 44, sub: 'ほかのゲームをえらぶ画面にもどる', nav: { up: 'howto', left: 'sound' }, act: () => { location.href = 'index.html'; } },
     ];
     for (const it of this.items) {
