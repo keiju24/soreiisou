@@ -2200,6 +2200,13 @@ Object.assign(BMOVES, {
 });
 for (const k of ['nbc', 'nbp']) BMOVES[k].K = BMOVES[k].keys.map(([f, o]) => [f, mk(o)]);
 
+// 変わらないデータ（キャラの定義・ワザ表）：状態の保存ではこれらは写さずにそのまま使う
+const SHARED_DATA = new WeakSet();
+function markShared(o) {
+  if (!o || typeof o !== 'object' || SHARED_DATA.has(o)) return;
+  const pr = Object.getPrototypeOf(o); if (pr !== Object.prototype && !Array.isArray(o)) return;
+  SHARED_DATA.add(o); for (const k of Object.keys(o)) markShared(o[k]);
+}
 const CHARS = [
   { key: 'shimarin', name: 'しまりん', kana: 'PSYCHIC', img: FACE, ar: FACE_AR, eyes: true, scale: 1, run: 7.0, airs: 5.8, jv: -14.6, shv: -10, djv: -13.4, airJumps: 2,
     kbTake: 0.95, swords: false, arms4: true, psychic: true, hand: '#c9c3f2', moves: SMOVES,
@@ -2250,6 +2257,7 @@ const CHARS = [
     specials: [['ボイスキャノン', '必殺', 'ためるほど大きな声の衝撃波（押しっぱなし）'], ['エコーノーツ', '横＋必殺', 'はずむ音符を３つ飛ばす'],
       ['ジェットシャウト', '上＋必殺', '真下へ叫んだ反動で上昇（復帰用）'], ['ハウリング', '下＋必殺', '周りを連続攻撃し、最後にくらくらにする']] },
 ];
+for (const ch of CHARS) markShared(ch);   // キャラとワザ表は保存のとき写さない
 // 復帰を強く：空中ジャンプを1回ふやし、高さも少し上げる
 for (const ch of CHARS) { ch.airJumps = (ch.airJumps || 1) + 1; ch.djv *= 1.12; }
 
@@ -5471,6 +5479,7 @@ function netHostRecv(c, d) {
         if (fr < NET.nextOut || !Number.isInteger(v) || v < 0 || v >= (1 << BTN.length)) continue;
         const buf = NET.inbuf[fr] || (NET.inbuf[fr] = []);
         if (buf[idx] === undefined) buf[idx] = v;
+        netKnow(idx, fr, v);
       }
       while (hostHas(idx, NET.hAck[idx] + 1)) NET.hAck[idx]++;
       netHostFlush(); break;
@@ -5496,6 +5505,7 @@ function netHostFlush() {
     const f = NET.nextOut, buf = NET.inbuf[f] || [], a = [];
     for (let i = 0; i < n; i++) { const v = NET.dropped.has(i) ? -1 : buf[i]; if (v === undefined) return; a.push(v); }
     NET.frames[f] = a; delete NET.inbuf[f]; NET.nextOut++;
+    for (let i = 0; i < n; i++) netKnow(i, f, a[i]);
   }
 }
 // 毎フレーム、各プレイヤーに「まだ受け取っていない確定フレーム」をまとめて送る
@@ -5569,10 +5579,15 @@ function netRecv(d) {
       if (d.g !== NET.gid || !Number.isInteger(d.f) || !Array.isArray(d.a)) break;
       for (let i = 0; i < d.a.length && i < NET_WIN * 2; i++) {
         const fr = d.f + i, a = d.a[i];
-        if (NET.frames[fr] === undefined && Array.isArray(a) && a.every(isIn)) NET.frames[fr] = a;
+        if (NET.frames[fr] === undefined && Array.isArray(a) && a.every(isIn)) { NET.frames[fr] = a; a.forEach((v, j) => netKnow(j, fr, v)); }
       }
       while (NET.frames[NET.recvTo + 1]) NET.recvTo++;
       if (Number.isInteger(d.k) && d.k > NET.ackMine) NET.ackMine = d.k;
+      break;
+    }
+    case 'pi': {   // ほかの人の入力（まだ全員そろっていない分も）
+      if (d.g !== NET.gid || !Number.isInteger(d.f) || !Array.isArray(d.p)) break;
+      d.p.forEach((a, j) => { if (Array.isArray(a)) for (let i = 0; i < a.length && i < NET_WIN * 2; i++) netKnow(j, d.f + i, a[i]); });
       break;
     }
     case 'chk': NET.chk[d.f] = d.h; if (NET.myChk[d.f] !== undefined && NET.myChk[d.f] !== d.h) NET.desync = true; break;
@@ -5591,11 +5606,37 @@ function netResetFrames(n, gid) {
   NET.gid = gid; NET.frame = 0; NET.local = {}; NET.frames = {}; NET.inbuf = {}; NET.dropped = new Set(); NET.nextOut = NET_START;
   NET.hAck = new Array(n).fill(NET_START - 1); NET.cAck = {};
   NET.sentTo = NET.recvTo = NET.ackMine = NET_START - 1;
-  NET.delay = netTargetDelay(); NET.delayT = 0;
+  NET.delay = clamp(netTargetDelay() - 16 + 2, 2, 12); NET.delayT = 0;   // ロールバックなので、ふだんは2フレーム
   NET.chk = {}; NET.myChk = {}; NET.desync = false;
-  for (let f = 0; f < NET_START; f++) { NET.local[f] = 0; NET.frames[f] = new Array(n).fill(0); }
+  // ロールバック用
+  NET.kin = Array.from({ length: n }, () => ({})); NET.kTo = new Array(n).fill(NET_START - 1);
+  NET.snaps = {}; NET.used = {}; NET.conf = NET_START - 1; NET.rbFrom = Infinity; NET.rbCount = 0; NET.rbMax = 0;
+  for (let f = 0; f < NET_START; f++) { NET.local[f] = 0; NET.frames[f] = new Array(n).fill(0); for (let i = 0; i < n; i++) NET.kin[i][f] = 0; }
 }
 // 同期ズレ検出用：全員の状態を数値でまとめて、ホストの値と比べる
+// わかった入力を記録する（kin[だれ][フレーム]）。もう進めたフレームの入力なら、そこからやり直しが必要
+function netKnow(i, f, v) {
+  const k = NET.kin && NET.kin[i];
+  if (!k || f < NET_START || k[f] !== undefined || !isIn(v)) return;
+  k[f] = v;
+  while (k[NET.kTo[i] + 1] !== undefined) NET.kTo[i]++;
+  if (f < NET.frame && f < NET.rbFrom) NET.rbFrom = f;
+}
+// ホスト：各プレイヤーに、ほかの人の入力をわかっているところまで毎フレーム配る（全員そろうのを待たない）
+function netHostSendPartials() {
+  NET.order.forEach((s, idx) => {
+    if (!s) return;
+    const g = NET.gconns.get(s), c = g && g.open ? g : NET.conns.get(s);
+    if (!c) return;
+    const f0 = Math.max(NET_START, (NET.cAck[s] ?? NET_START - 1) + 1), p = [];
+    for (let j = 0; j < NET.order.length; j++) {
+      const a = [];
+      if (j !== idx) for (let f = f0; a.length < NET_WIN * 2 && NET.kin[j][f] !== undefined; f++) a.push(NET.kin[j][f]);
+      p.push(a);
+    }
+    connSend(c, { t: 'pi', g: NET.gid, f: f0, p });
+  });
+}
 function netCheck(f, h) {
   NET.myChk[f] = h;
   if (NET.isHost) { for (const [s, c] of NET.conns) if (NET.order.includes(s)) connSend(c, { t: 'chk', f, h }); }
@@ -5807,7 +5848,9 @@ SC_.battle = (o) => {
   for (const F of fs) { F.ground = st.plats[0]; F.state = 'idle'; }
   const ais = fs.map(F => F.cpu ? new AI(F, F.level) : null);
   // ゲームの結果に関わる乱数（ボールの出現など）は共通の種から作る：オンラインで両者が同じになる
-  const rng = srand(ON ? ON.seed : (Math.random() * 1e9) | 0), R = (a, b) => a + rng() * (b - a);
+  const RS = { s: 0 };
+  { let s0 = (ON ? ON.seed : (Math.random() * 1e9) | 0) % 2147483647; if (s0 <= 0) s0 += 2147483646; RS.s = s0; }
+  const rng = () => (RS.s = RS.s * 16807 % 2147483647) / 2147483647, R = (a, b) => a + rng() * (b - a);
   const B = { stage: st, fs, proj: [], parts: [], kofx: [], cam: { x: 0, y: -170, z: 1 }, shake: 0, phase: 'count', t: 0, endT: 0,
     paused: false, pm: null, flashScr: 0, winner: null, time: 0, zoomP: 0,
     kosp: [], cine: null, slow: 0, flashRGB: '255,255,255', hudShake: new Array(fs.length).fill(0), lostStock: null, scorePop: null, vcam: null,
@@ -8013,12 +8056,170 @@ SC_.battle = (o) => {
     ctx.restore();
   }
 
+  // ---- 1フレーム分の進行（オンラインのロールバックでは同じフレームを何度もやり直す）----
+  function stepSim() {
+    if (B.intro > 0) { updIntro(); return; }
+    B.t++;
+    if (B.shake > 0) B.shake = Math.max(0, B.shake - 1);
+    B.zoomP *= 0.86;
+    if (B.flashScr > 0) B.flashScr--;
+    if (B.invertT > 0) B.invertT--;
+    for (let i = 0; i < B.hudShake.length; i++) if (B.hudShake[i] > 0) B.hudShake[i]--;
+    if (B.lostStock && --B.lostStock.life <= 0) B.lostStock = null;
+    if (B.scorePop && --B.scorePop.life <= 0) B.scorePop = null;
+    if (B.cine && --B.cine.life <= 0) { B.cine = null; B.shake = Math.max(B.shake, 16); }
+    if (B.fsGetPop && --B.fsGetPop.life <= 0) B.fsGetPop = null;
+    if (B.impactF > 0) B.impactF--;
+    if (B.speed && --B.speed.life <= 0) B.speed = null;
+    if (B.sup) {
+      if (updSuper()) endSuper();
+      if (B.sup && (B.sup.t <= SUP_CUT || B.sup.movie)) return;   // カットイン中・ムービー中は全員停止
+    }
+    if (B.phase === 'count') {
+      if (B.t === 1 || B.t === 61 || B.t === 121) Snd.count();
+      if (B.t === 181) { B.phase = 'fight'; Snd.go(); }
+    }
+    if (B.phase === 'fight') B.time++;
+    if (B.phase === 'end') {
+      B.endT++;
+      if (B.endT === 80) Snd.go();
+      if (B.endT > 230) {
+        if (ON && !B.confirmedStep) return;   // 予測中のフレームでは試合を終わらせない
+        go(B.winner ? 'victory' : 'result', { winner: B.winner ? B.winner.id : -1, team: B.winner ? B.winner.team : undefined, stats: fs.map(f => ({ ...f.stats, stocks: Math.max(0, f.stocks), tag: f.col.tag, col: f.col, level: f.level, cpu: f.cpu, ch: f.ch, team: f.team })), time: B.time, online: !!ON });
+        return;
+      }
+      if (B.endT < 80 && B.endT % 4 !== 0) return; // スローモーション
+    }
+    if (B.slow > 0 && B.phase !== 'end') { B.slow--; if (B.slow % 2) return; }   // 撃墜直後のスローモーション
+    const can = B.phase === 'fight';
+    if (ON || B.__useNet) fs.forEach((F, i) => F.ctrl.set(can ? B.netIn[i] : {}));
+    else fs.forEach((F, i) => F.ctrl.set(can ? (ais[i] ? ais[i].think(B) : readHuman()) : {}));
+    sim();
+  }
+  // =================================================================
+  //  状態の保存と復元（ロールバック用）
+  //  勝敗に関わる状態（B・キャラ・足場・乱数）を丸ごと写す。キャラ同士・足場への参照は番号で保存する
+  // =================================================================
+  const SNAP_SKIP_B = new Set(['parts', 'kosp', 'kofx', 'pm', 'stage', 'fs', 'netIn', 'vcam']);
+  const SNAP_SKIP_F = new Set(['trail', 'scarf', 'hist', 'sw']);
+  const FIDX = new Map(fs.map((F, i) => [F, i])), PIDX = new Map(st.plats.map((p, i) => [p, i]));
+  const isPlain = v => { const pr = Object.getPrototypeOf(v); return pr === Object.prototype || pr === null || Array.isArray(v) || v instanceof Set || v instanceof Map || (pr && pr.constructor && pr.constructor.name !== 'HTMLImageElement' && !(v instanceof Node) && !(v instanceof HTMLCanvasElement) && !(v instanceof CanvasRenderingContext2D)); };
+  function cl(v, memo, save) {
+    if (v === null || typeof v !== 'object') return v;
+    if (save) { const fi = FIDX.get(v); if (fi !== undefined) return { __F: fi }; const pi = PIDX.get(v); if (pi !== undefined) return { __P: pi }; }
+    else if (Object.getPrototypeOf(v) === Object.prototype) { if (v.__F !== undefined) return fs[v.__F]; if (v.__P !== undefined) return st.plats[v.__P]; }
+    if (SHARED_DATA.has(v) || !isPlain(v)) return v;
+    let c = memo.get(v); if (c) return c;
+    if (Array.isArray(v)) { c = new Array(v.length); memo.set(v, c); for (let i = 0; i < v.length; i++) c[i] = cl(v[i], memo, save); return c; }
+    if (v instanceof Set) { c = new Set(); memo.set(v, c); for (const x of v) c.add(cl(x, memo, save)); return c; }
+    if (v instanceof Map) { c = new Map(); memo.set(v, c); for (const [k, x] of v) c.set(k, cl(x, memo, save)); return c; }
+    c = Object.create(Object.getPrototypeOf(v)); memo.set(v, c);
+    for (const k of Object.keys(v)) c[k] = cl(v[k], memo, save);
+    return c;
+  }
+  const ownData = (o, skip, memo) => { const d = {}; for (const k of Object.keys(o)) { const v = o[k]; if (typeof v === 'function' || skip.has(k)) continue; d[k] = cl(v, memo, true); } return d; };
+  function snapState() {
+    const memo = new Map();
+    return { B: ownData(B, SNAP_SKIP_B, memo), F: fs.map(F => ownData(F, SNAP_SKIP_F, memo)), P: st.plats.map(p => ownData(p, SNAP_SKIP_B, memo)), rng: RS.s };
+  }
+  function putInto(o, d, skip) {
+    for (const k of Object.keys(o)) if (!(k in d) && typeof o[k] !== 'function' && !skip.has(k)) delete o[k];
+    Object.assign(o, d);
+  }
+  function restoreState(sn) {
+    const memo = new Map(), d = { B: {}, F: [], P: [] };
+    for (const k of Object.keys(sn.B)) d.B[k] = cl(sn.B[k], memo, false);
+    sn.F.forEach((f, i) => { const o = {}; for (const k of Object.keys(f)) o[k] = cl(f[k], memo, false); d.F[i] = o; });
+    sn.P.forEach((f, i) => { const o = {}; for (const k of Object.keys(f)) o[k] = cl(f[k], memo, false); d.P[i] = o; });
+    putInto(B, d.B, SNAP_SKIP_B); fs.forEach((F, i) => putInto(F, d.F[i], SNAP_SKIP_F)); st.plats.forEach((p, i) => putInto(p, d.P[i], SNAP_SKIP_B));
+    RS.s = sn.rng;
+  }
+  // =================================================================
+  //  オンライン：ロールバック方式
+  //  自分の入力はほぼすぐ（RB_DELAY フレーム後）に反映。まだ届いていない人の入力は「直前と同じ」と予想して進め、
+  //  本当の入力が届いて予想とちがっていたら、そのフレームの状態にもどして、正しい入力でやり直す（音と粒は出さない）
+  // =================================================================
+  const NP = fs.length, RB_DELAY = 2, RB_MAX = 16;
+  function inputsFor(x) {
+    const a = [];
+    for (let i = 0; i < NP; i++) {
+      const k = NET.kin[i][x];
+      if (k !== undefined) { a.push(k); continue; }
+      const last = NET.kin[i][Math.min(NET.kTo[i], x)];   // 予想：最後にわかっている入力をそのまま続ける
+      a.push(last === undefined ? 0 : last);
+    }
+    return a;
+  }
+  function simFrame(x) {
+    NET.snaps[x] = snapState();
+    const a = inputsFor(x); NET.used[x] = a;
+    B.netIn = a.map(v => unpackIn(v));
+    B.confirmedStep = a.every((v, i) => NET.kin[i][x] !== undefined);
+    fs.forEach((F, i) => { if (a[i] < 0) B.forfeit(F); });
+    stepSim();
+  }
+  function resimFrom(g) {
+    restoreState(NET.snaps[g]);
+    const keep = [B.parts, B.kosp, B.kofx], so = Snd.on;
+    B.parts = []; B.kosp = []; B.kofx = []; Snd.on = false;
+    try { for (let x = g; x < NET.frame; x++) simFrame(x); }
+    finally { [B.parts, B.kosp, B.kofx] = keep; Snd.on = so; }
+    NET.rbCount++; NET.rbMax = Math.max(NET.rbMax, NET.frame - g);
+  }
+  function snapHash(sn) {
+    let h = 5381;
+    const str = sn.F.map(F => [F.x, F.y, F.vx, F.vy, F.percent, F.stocks].map(v => Math.round(v * 100)).join(',') + F.state).join('|') + '|' + (sn.B.ball ? Math.round(sn.B.ball.x) : 'n') + '|' + sn.B.orcs.map(O => Math.round(O.x) + ',' + Math.round(O.y) + ',' + O.hp).join(';');
+    for (let i = 0; i < str.length; i++) h = ((h * 33) ^ str.charCodeAt(i)) >>> 0;
+    return h;
+  }
+  function netTick() {
+    // 1) 自分の入力を記録して送る
+    //    遅らせ幅はふだん RB_DELAY。通信がとても遅くて「やり直せる幅」を超えそうなときだけ、少しずつ増やす
+    if (++NET.delayT >= 20) {
+      NET.delayT = 0;
+      const td = clamp(netTargetDelay() - RB_MAX + 2, RB_DELAY, 12);
+      NET.delay = clamp(NET.delay + (td > NET.delay ? 1 : td < NET.delay ? -1 : 0), RB_DELAY, 12);
+    }
+    const m = packIn(readHuman());
+    while (NET.sentTo < NET.frame + NET.delay) {
+      NET.sentTo++; NET.local[NET.sentTo] = m; netKnow(myIdx, NET.sentTo, m);
+      if (NET.isHost && NET.sentTo >= NET.nextOut) (NET.inbuf[NET.sentTo] || (NET.inbuf[NET.sentTo] = []))[myIdx] = m;
+    }
+    if (NET.isHost) { netHostFlush(); netHostSendFrames(); netHostSendPartials(); } else netClientSendInputs();
+    // 2) 予想がはずれていたら、そのフレームからやり直す
+    if (NET.rbFrom < NET.frame) {
+      let g = -1;
+      for (let x = Math.max(NET.rbFrom, NET.conf + 1); x < NET.frame && g < 0; x++) {
+        const u = NET.used[x]; if (!u) continue;
+        for (let i = 0; i < NP; i++) { const k = NET.kin[i][x]; if (k !== undefined && k !== u[i]) { g = x; break; } }
+      }
+      NET.rbFrom = Infinity;
+      if (g >= 0 && NET.snaps[g]) resimFrom(g);
+    }
+    // 3) 1フレーム進める（予想しすぎるほど遅れている人がいたら待つ）
+    let minK = Infinity; for (let i = 0; i < NP; i++) minK = Math.min(minK, NET.kTo[i]);
+    if (NET.frame - minK > RB_MAX) { B.stall++; return; }
+    B.stall = 0;
+    simFrame(NET.frame); NET.frame++;
+    // 4) 全員の入力がそろったフレームを確定する（同期ズレの確認もここで）
+    while (NET.conf + 1 < NET.frame) {
+      const x = NET.conf + 1, u = NET.used[x];
+      let ok = !!u;
+      for (let i = 0; ok && i < NP; i++) { const k = NET.kin[i][x]; if (k === undefined || k !== u[i]) ok = false; }
+      if (!ok) break;
+      NET.conf = x;
+      if ((x + 1) % 60 === 0) netCheck(x + 1, x + 1 < NET.frame ? snapHash(NET.snaps[x + 1]) : stateHash());
+      delete NET.snaps[x]; delete NET.used[x];
+    }
+  }
+  B.__snap = snapState; B.__restore = restoreState; B.__step = (ins) => { B.netIn = ins; B.__useNet = true; B.confirmedStep = true; stepSim(); };
   return {
     // オンライン：確定フレームがたまっている（自分だけ遅れている）ときは、まとめて進めて追いつく
     extra() {
       if (!ON || B.netLost || !netOpen()) return 0;
-      const ready = (NET.isHost ? NET.nextOut - 1 : NET.recvTo) - NET.frame;
-      return ready > NET.delay + 2 ? Math.min(3, ready - NET.delay - 1) : 0;
+      let mk = Infinity; for (let i = 0; i < fs.length; i++) if (i !== myIdx) mk = Math.min(mk, NET.kTo[i]);
+      const ready = mk - NET.frame;
+      return ready > NET.delay + 3 ? Math.min(3, ready - NET.delay - 2) : 0;
     },
     update() {
       if (ON) {
@@ -8033,62 +8234,13 @@ SC_.battle = (o) => {
           B.leaveT = 150; Snd.back();
         }
         if (B.leaveT > 0) B.leaveT--;
-        const f = NET.frame;
-        // 遅らせ幅は通信状況に合わせて少しずつ（20フレームに1ずつ）変える
-        if (++NET.delayT >= 20) { NET.delayT = 0; const td = netTargetDelay(); NET.delay += td > NET.delay ? 1 : td < NET.delay ? -1 : 0; }
-        const m = packIn(readHuman());
-        while (NET.sentTo < f + NET.delay) {
-          NET.sentTo++; NET.local[NET.sentTo] = m;
-          if (NET.isHost && NET.sentTo >= NET.nextOut) (NET.inbuf[NET.sentTo] || (NET.inbuf[NET.sentTo] = []))[myIdx] = m;
-        }
-        if (NET.isHost) { netHostFlush(); netHostSendFrames(); } else netClientSendInputs();
-        const a = NET.frames[f];
-        if (!a) { B.stall++; return; }
-        B.stall = 0;
-        B.netIn = fs.map((F, i) => unpackIn(a[i] === undefined ? 0 : a[i]));
-        fs.forEach((F, i) => { if (a[i] < 0) B.forfeit(F); });
-        if (f % 60 === 0) netCheck(f, stateHash());
-        NET.frame++;
+        netTick();
+        return;
       } else {
         if (B.paused) { B.pm.update(); if (anyP('Escape')) { B.paused = false; Snd.ok(); } return; }
         if (B.phase === 'fight' && anyP('Escape', 'Enter')) { openPause(); return; }
       }
-      if (B.intro > 0) { updIntro(); return; }
-      B.t++;
-      if (B.shake > 0) B.shake = Math.max(0, B.shake - 1);
-      B.zoomP *= 0.86;
-      if (B.flashScr > 0) B.flashScr--;
-      if (B.invertT > 0) B.invertT--;
-      for (let i = 0; i < B.hudShake.length; i++) if (B.hudShake[i] > 0) B.hudShake[i]--;
-      if (B.lostStock && --B.lostStock.life <= 0) B.lostStock = null;
-      if (B.scorePop && --B.scorePop.life <= 0) B.scorePop = null;
-      if (B.cine && --B.cine.life <= 0) { B.cine = null; B.shake = Math.max(B.shake, 16); }
-      if (B.fsGetPop && --B.fsGetPop.life <= 0) B.fsGetPop = null;
-      if (B.impactF > 0) B.impactF--;
-      if (B.speed && --B.speed.life <= 0) B.speed = null;
-      if (B.sup) {
-        if (updSuper()) endSuper();
-        if (B.sup && (B.sup.t <= SUP_CUT || B.sup.movie)) return;   // カットイン中・ムービー中は全員停止
-      }
-      if (B.phase === 'count') {
-        if (B.t === 1 || B.t === 61 || B.t === 121) Snd.count();
-        if (B.t === 181) { B.phase = 'fight'; Snd.go(); }
-      }
-      if (B.phase === 'fight') B.time++;
-      if (B.phase === 'end') {
-        B.endT++;
-        if (B.endT === 80) Snd.go();
-        if (B.endT > 230) {
-          go(B.winner ? 'victory' : 'result', { winner: B.winner ? B.winner.id : -1, team: B.winner ? B.winner.team : undefined, stats: fs.map(f => ({ ...f.stats, stocks: Math.max(0, f.stocks), tag: f.col.tag, col: f.col, level: f.level, cpu: f.cpu, ch: f.ch, team: f.team })), time: B.time, online: !!ON });
-          return;
-        }
-        if (B.endT < 80 && B.endT % 4 !== 0) return; // スローモーション
-      }
-      if (B.slow > 0 && B.phase !== 'end') { B.slow--; if (B.slow % 2) return; }   // 撃墜直後のスローモーション
-      const can = B.phase === 'fight';
-      if (ON) fs.forEach((F, i) => F.ctrl.set(can ? B.netIn[i] : {}));
-      else fs.forEach((F, i) => F.ctrl.set(can ? (ais[i] ? ais[i].think(B) : readHuman()) : {}));
-      sim();
+      stepSim();
     },
     draw() {
       drawWorld();
