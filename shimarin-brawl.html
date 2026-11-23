@@ -2295,10 +2295,13 @@ function bloodSpray(B, x, y, n, dir = 0, pow = 1, fy) {
   for (let i = 0; i < 2 + (n / 8 | 0); i++) { const a = dir ? (dir > 0 ? -0.5 : Math.PI + 0.5) + rnd(-0.5, 0.5) : rnd(-Math.PI, 0); B.parts.push({ x, y, vx: Math.cos(a) * rnd(8, 15) * pow, vy: Math.sin(a) * rnd(8, 15) * pow, g: 0.5, life: 22, max: 22, blood: 1, jet: 1, size: rnd(2, 3.5), fy, seed: Math.random() * 1e4 | 0 }); }
 }
 // 大地の割れ目を左右に走らせる（pl：足場。足場の端で止まる）
-function riftBurst(B, x, y, pl, speed = 22, life = 16) {
+function riftBurst(B, x, y, pl, speed = 24, life = 18) {
   B.parts.push({ x, y, crack: 1, len: 60, life: 110, max: 110, seed: (x * 13 | 0) & 0xffff, big: 1 });
   for (let i = 0; i < 3; i++) B.parts.push({ x: x + rnd(-20, 20), y, shaft: 1, w: rnd(14, 26), h: rnd(160, 260), life: 20, max: 20 });
   for (const d of [-1, 1]) B.parts.push({ x: x + d * 20, y, runner: 1, vx: d * speed, x1: pl.x1, x2: pl.x2, life, max: life });
+  // 中心：大きな岩盤がいくつも割れて突き上がる＋大岩が飛ぶ
+  for (let i = 0; i < 5; i++) B.parts.push({ x: x + (i - 2) * 26 + rnd(-8, 8), y, slab: 1, w: rnd(40, 64), h: rnd(55, 95), tilt: (i - 2) * 0.22 + rnd(-0.1, 0.1), life: 90, max: 90, seed: Math.random() * 1e4 | 0 });
+  for (let i = 0; i < 8; i++) B.parts.push({ x: x + rnd(-40, 40), y: y - 10, vx: rnd(-7, 7), vy: rnd(-18, -9), life: 46, max: 46, rock: 1, size: rnd(10, 20), g: 0.6, col: i % 2 ? '#3a2c28' : '#5e4b45', rot: rnd(0, TAU) });
 }
 function bloodHitFx(B, x, y, dmg, A, T) {
   B.parts.push({ x, y, slash: 1, rot: rnd(-1.0, -0.4), len: 90 + dmg * 6, life: 11, max: 11, col: '#ff1028' });
@@ -7621,10 +7624,13 @@ SC_.battle = (o) => {
       if (p.runner) {   // 割れ目の先頭：進みながら裂け目・めくれる岩盤・光の柱・岩くずを残す
         p.x += p.vx; p.vx *= 0.93;
         if (p.x < p.x1 || p.x > p.x2) { p.life = 0; continue; }
-        B.parts.push({ x: p.x - p.vx * 0.5, y: p.y, crack: 1, len: Math.abs(p.vx) + 4, life: 100, max: 100, seed: (p.x * 7 | 0) ^ (p.life * 131) });
-        if (p.life % 2 === 0) B.parts.push({ x: p.x + rnd(-8, 8), y: p.y, slab: 1, w: rnd(16, 30), h: rnd(16, 34) * (0.5 + p.life / p.max), tilt: rnd(0.25, 0.6) * (Math.random() < 0.5 ? -1 : 1), life: 70, max: 70, seed: Math.random() * 1e4 | 0 });
-        if (p.life % 3 === 0) B.parts.push({ x: p.x, y: p.y, shaft: 1, w: rnd(8, 16), h: rnd(80, 160), life: 16, max: 16 });
-        B.parts.push({ x: p.x + rnd(-10, 10), y: p.y - 4, vx: rnd(-2, 2) + p.vx * 0.1, vy: rnd(-12, -5), life: 32, max: 32, rock: 1, size: rnd(3, 8), g: 0.6, col: '#4a3a36', rot: rnd(0, TAU) });
+        const k = 0.45 + 0.55 * p.life / p.max;   // 先へ行くほど小さく
+        B.parts.push({ x: p.x - p.vx * 0.5, y: p.y, crack: 1, big: 1, len: Math.abs(p.vx) + 6, life: 110, max: 110, seed: (p.x * 7 | 0) ^ (p.life * 131) });
+        // 大きな岩盤が割れて、両側へ傾きながら突き上がる
+        if (p.life % 2 === 0) for (const sd of [-1, 1]) B.parts.push({ x: p.x + rnd(-10, 10), y: p.y, slab: 1, w: rnd(34, 56) * k, h: rnd(40, 80) * k, tilt: rnd(0.3, 0.7) * sd, life: 80, max: 80, seed: Math.random() * 1e4 | 0 });
+        if (p.life % 3 === 0) B.parts.push({ x: p.x, y: p.y, shaft: 1, w: rnd(12, 22), h: rnd(120, 220) * k, life: 18, max: 18 });
+        for (let i = 0; i < 2; i++) B.parts.push({ x: p.x + rnd(-14, 14), y: p.y - 6, vx: rnd(-3, 3) + p.vx * 0.15, vy: rnd(-15, -7), life: 40, max: 40, rock: 1, size: rnd(6, 15) * k, g: 0.6, col: i ? '#3a2c28' : '#5e4b45', rot: rnd(0, TAU) });
+        if (p.life % 2 === 0) B.dust(p.x, p.y, 2);
         continue;
       }
       if (p.feather || p.shard) p.rot += 0.18;
