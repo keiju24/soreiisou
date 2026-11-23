@@ -2304,7 +2304,12 @@ function riftBurst(B, x, y, pl, speed = 15, life = 8) {
   for (let i = 0; i < 10; i++) B.parts.push({ x: x + rnd(-30, 30), y: y - 10, vx: rnd(-9, 9), vy: rnd(-20, -10), life: 50, max: 50, rock: 1, size: rnd(10, 20), g: 0.65, col: i % 2 ? '#3a2c28' : '#5e4b45', rot: rnd(0, TAU) });
 }
 function bloodHitFx(B, x, y, dmg, A, T) {
-  B.parts.push({ x, y, slash: 1, rot: rnd(-1.0, -0.4), len: 90 + dmg * 6, life: 11, max: 11, col: '#ff1028' });
+  const r0 = rnd(-1.0, -0.4);
+  B.parts.push({ x, y, slash: 1, rot: r0, len: 110 + dmg * 8, life: 12, max: 12, col: '#ff1028' });
+  B.parts.push({ x, y, slash: 1, rot: r0, len: 80 + dmg * 6, life: 9, max: 9, col: '#fff0e0' });
+  if (dmg >= 7) B.parts.push({ x, y, slash: 1, rot: r0 + 1.3, len: 90 + dmg * 6, life: 11, max: 11, col: '#ff5030' });
+  for (let i = 0; i < 8 + dmg; i++) { const a = rnd(0, TAU), sp = rnd(5, 14 + dmg * 0.4); B.parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 2, life: rnd(16, 30) | 0, max: 30, col: i % 3 ? '#ffb060' : '#ff2a2a', size: rnd(2, 4), g: 0.3, spark: 1 }); }
+  B.parts.push({ x, y, shock: 1, r: 10, vr: 10 + dmg * 0.5, life: 14, max: 14, col: '#ff2a3a', w: 8 });
   if (dmg >= 10) B.parts.push({ x, y, flare: 1, r: 70 + dmg * 5, life: 14, max: 14, col: '#a0000e', rot: rnd(0, TAU), n: 7 });
   if (dmg >= 12) { B.flashScr = Math.max(B.flashScr || 0, 4); B.flashRGB = '120,0,8'; }
   B.shake = Math.max(B.shake, Math.min(18, 3 + dmg * 0.7));
@@ -5344,8 +5349,8 @@ function drawDoodle(F, P, J, C, t) {
   if (!F._swt) F._swt = [];
   if (swinging) {
     const L = BH.grip[1] * BH.swS * swS, h = fa[2];
-    F._swt.push({ tx: h.x + Math.sin(sa) * L, ty: h.y + Math.cos(sa) * L, mx: h.x + Math.sin(sa) * L * 0.35, my: h.y + Math.cos(sa) * L * 0.35 });
-    if (F._swt.length > 7) F._swt.shift();
+    F._swt.push({ tx: h.x + Math.sin(sa) * L, ty: h.y + Math.cos(sa) * L, mx: h.x + Math.sin(sa) * L * 0.3, my: h.y + Math.cos(sa) * L * 0.3, ix: h.x + Math.sin(sa) * L * 0.62, iy: h.y + Math.cos(sa) * L * 0.62 });
+    if (F._swt.length > 10) F._swt.shift();
   } else F._swt.length = 0;
   bhStick(bl); bhStick(fl); bhStick(ba);
   // 顔と胴体（手描きの絵そのまま）＋返り血
@@ -5353,13 +5358,20 @@ function drawDoodle(F, P, J, C, t) {
   const u = k / BH.img;
   ctx.drawImage(BHEN_BODY, -BH.root[0] * k, -BH.root[1] * k, BHEN_BODY.width * u, BHEN_BODY.height * u);
   ctx.restore();
-  if (F._swt.length > 1) {
-    const T = F._swt;
-    ctx.save(); ctx.globalCompositeOperation = 'lighter';
-    for (let i = 1; i < T.length; i++) {
-      const a = T[i - 1], b = T[i];
-      ctx.globalAlpha = (i / T.length) * 0.55; ctx.fillStyle = i === T.length - 1 ? '#ff8080' : '#c00018';
-      ctx.beginPath(); ctx.moveTo(a.mx, a.my); ctx.lineTo(a.tx, a.ty); ctx.lineTo(b.tx, b.ty); ctx.lineTo(b.mx, b.my); ctx.closePath(); ctx.fill();
+  if (F._swt.length > 1) {   // 剣の軌跡：外側の赤い光 → 内側の燃える帯 → 剣先の白く光る筋 → 飛び散る火花
+    const T = F._swt, n = T.length;
+    const band = (ax, ay, bx, by, i, col, al) => { ctx.globalAlpha = al; ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(T[i - 1][ax], T[i - 1][ay]); ctx.lineTo(T[i - 1][bx], T[i - 1][by]); ctx.lineTo(T[i][bx], T[i][by]); ctx.lineTo(T[i][ax], T[i][ay]); ctx.closePath(); ctx.fill(); };
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (let i = 1; i < n; i++) { const k2 = i / n; band('mx', 'my', 'tx', 'ty', i, '#e0102a', k2 * 0.75); band('ix', 'iy', 'tx', 'ty', i, '#ff7a3a', k2 * k2 * 0.95); }
+    for (let i = 1; i < n; i += 2) { ctx.globalAlpha = 0.5 * i / n; ctx.drawImage(glowSprite('rgba(255,40,40,.9)'), T[i].tx - 40, T[i].ty - 40, 80, 80); }
+    for (const [w, col, al] of [[26, '#ff1030', 0.5], [11, '#ffb070', 0.85], [4, '#fffaf0', 1]]) {
+      ctx.strokeStyle = col; ctx.lineWidth = w;
+      for (let i = 1; i < n; i++) { ctx.globalAlpha = al * (i / n); ctx.beginPath(); ctx.moveTo(T[i - 1].tx, T[i - 1].ty); ctx.lineTo(T[i].tx, T[i].ty); ctx.stroke(); }
+    }
+    const e = T[n - 1]; ctx.globalAlpha = 0.9; ctx.drawImage(glowSprite('rgba(255,120,60,.95)'), e.tx - 34, e.ty - 34, 68, 68);
+    for (let i = Math.max(1, n - 5); i < n; i++) {   // 剣先から散る火花
+      const R = srand((F.mf || 0) * 131 + i * 17 + 7); R(); R();
+      for (let j = 0; j < 3; j++) { const a = R() * TAU, d = 6 + R() * 26, x = T[i].tx + Math.cos(a) * d, y = T[i].ty + Math.sin(a) * d; ctx.globalAlpha = 0.9 * (i / n); ctx.strokeStyle = j % 2 ? '#ffd890' : '#ff4040'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * 8, y + Math.sin(a) * 8); ctx.stroke(); }
     }
     ctx.restore();
   }
@@ -5367,7 +5379,7 @@ function drawDoodle(F, P, J, C, t) {
   if (tossed) {   // 真上に投げた大剣：回りながら上がって落ちてくる
     const q = (F.mf - 6) / 24, h = fa[2];
     drawBigSword({ x: h.x, y: h.y - Math.sin(q * Math.PI) * 70 - 20 }, Math.PI + F.mf * 0.9, swS, 0.5);
-  } else drawBigSword(fa[2], sa, swS, F.state === 'super' ? 0.8 : F.hasFS ? 0.35 + 0.2 * Math.sin(t * 0.2) : 0);
+  } else drawBigSword(fa[2], sa, swS, F.state === 'super' ? 0.8 : swinging ? 0.7 : F.hasFS ? 0.35 + 0.2 * Math.sin(t * 0.2) : 0);
   bhStick(fa);
 }
 
@@ -5376,7 +5388,7 @@ function drawDoodle(F, P, J, C, t) {
 //  つき飛ばされてしりもち → 見上げるとヘンリーが一歩ずつ迫りながら殴ってくる
 //  → 返り血まみれのまま大剣をかかげ、たたき切る
 // =====================================================================
-const HM = { SHOVE: 16, SIT: 28, LAND: 40, H0: 76, N: 8, GAP: 16, GRAB: 202, RAISE: 214, SWING: 280, CHOP: 288, END: 356 };
+const HM = { SHOVE: 18, SIT: 36, LAND: 74, H0: 110, N: 8, GAP: 16, GRAB: 236, RAISE: 248, SWING: 314, CHOP: 322, END: 390 };
 const HMV = { cut: null, cutS: null };
 const hmHitAt = n => HM.H0 + n * HM.GAP;
 // 棒の腕（近づくほど太くなる：w0 = 肩の太さ、w1 = 手の太さ）
@@ -5582,13 +5594,14 @@ function hmThird(S, mt, t) {
   ctx.fillStyle = bg; ctx.fillRect(0, 0, VW, VH);
   // 位置（地面 y = 0 の世界の座標）
   const hit = mt >= HM.SHOVE, q = hit ? clamp((mt - HM.SHOVE) / (HM.SIT - HM.SHOVE), 0, 1) : 0;
-  const hx = mt < 8 ? -120 : lerp(-120, -80, ease(clamp((mt - 8) / (HM.SHOVE - 8), 0, 1)));
-  const vx = 40 + (1 - (1 - q) ** 2) * 110, vy = hit && q < 1 ? -Math.sin(q * Math.PI) * 50 : 0;
+  const walkK = clamp((mt - HM.SIT - 6) / (HM.LAND - HM.SIT - 10), 0, 1);   // 尻もちのあと、じわじわ近づく
+  const hx = (mt < 8 ? -120 : lerp(-120, -80, ease(clamp((mt - 8) / (HM.SHOVE - 8), 0, 1)))) + walkK * 110;
+  const vx = 40 + (1 - (1 - q) ** 2) * 110 + (mt >= HM.SIT ? Math.sin(mt * 2.3) * 1.5 : 0), vy = hit && q < 1 ? -Math.sin(q * Math.PI) * 60 : 0;   // 尻もちのあとは震えている
   const hp = mt < 8 ? HM3.stand : mt < HM.SHOVE - 3 ? lp(HM3.stand, HM3.wind, ease((mt - 8) / (HM.SHOVE - 11))) : mt < HM.SHOVE ? lp(HM3.wind, HM3.push, (mt - HM.SHOVE + 3) / 3) : lp(HM3.push, HM3.stand, clamp((mt - HM.SHOVE - 8) / 12, 0, 1));
   const vp = !hit ? HM3.stand : mt < HM.SIT - 4 ? P_HURT : mt < HM.SIT ? lp(P_HURT, HM3.vSit, (mt - HM.SIT + 4) / 4) : HM3.vSit;
   // カメラ：ふたりの間 → しりもちをついた相手に寄る
-  const sitK = ease(clamp((mt - HM.SIT) / 10, 0, 1));
-  const z = lerp(2.0, 2.5, sitK), camX = lerp((hx + vx) / 2, vx - 30, sitK);
+  const sitK = ease(clamp((mt - HM.SIT) / 12, 0, 1)), zin = ease(clamp((mt - HM.SIT - 10) / (HM.LAND - HM.SIT - 10), 0, 1));
+  const z = lerp(2.0, 2.5, sitK) + zin * 0.5, camX = lerp((hx + vx) / 2, vx - 30, sitK) - zin * 20;
   const land = mt >= HM.SIT ? Math.exp(-(mt - HM.SIT) / 4) : 0, imp = hit ? Math.exp(-(mt - HM.SHOVE) / 3) : 0;
   const shx = rnd(-1, 1) * (land * 14 + imp * 10), shy = rnd(-1, 1) * (land * 14 + imp * 6);
   ctx.save(); ctx.translate(VW / 2 + shx, VH * 0.74 + shy); ctx.scale(z, z); ctx.translate(-camX, 0);
@@ -5599,7 +5612,8 @@ function hmThird(S, mt, t) {
   // 影
   for (const [x, w] of [[hx, 50], [vx, 50]]) { ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.ellipse(x, 2, w, 7, 0, 0, TAU); ctx.fill(); }
   if (T) hmFig(T, vx, vy, 1, vp, -1, t);
-  hmFig(F, hx, 0, 1, hp, 1, t);
+  const stepP = walkK > 0 && walkK < 1 ? mk({ lean: 0.15, ba: A_(0.2, 0.4), fa: A_(0.3, 0.4), fl: G_(0.4 * Math.sin(mt * 0.35), -0.3), bl: G_(-0.4 * Math.sin(mt * 0.35), -0.3) }) : null;
+  hmFig(F, hx, -Math.abs(Math.sin(mt * 0.35)) * 3 * (stepP ? 1 : 0), 1, stepP || hp, 1, t);
   // つき飛ばした瞬間の衝撃
   if (imp > 0.05) {
     const ix = (hx + vx) / 2 + 20, iy = -90;
@@ -7159,6 +7173,7 @@ SC_.battle = (o) => {
       const mt = ++S.mt;
       if (T && T.state === 'caught') { T.x = F.x + S.dir * 80; T.y = F.y; }
       if (mt === HM.SHOVE) { supHit(S, 2); Snd.hmPunch(0); }                             // つき飛ばす
+      if (mt > HM.SIT + 6 && mt < HM.LAND - 4 && (mt - HM.SIT) % 9 === 0) Snd.stepC({ key: 'hammer' });
       if (mt === HM.SIT) { Snd.osc('sine', 70, 0.3, 0.5, 30); Snd.nz(0.2, 0.25, 'lowpass', 400, 1, 0, 80); }   // しりもち
       if (mt >= HM.LAND + 8 && mt < HM.H0 && (mt - HM.LAND) % 10 === 0) Snd.stepC({ key: 'hammer' });   // 迫ってくる足音
       if (mt >= HM.H0 && mt < HM.H0 + HM.N * HM.GAP && (mt - HM.H0) % HM.GAP === 0) {   // 顔面への連打
