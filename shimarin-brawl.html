@@ -389,7 +389,7 @@ const Snd = {
     });
   },
   // 効果音ぜんぶの音量（BGM がちゃんと聞こえるように、効果音はひかえめ）
-  SE_VOL: 0.4,
+  SE_VOL: 0.22,
   seMaster() {
     if (!this.seM) { this.seM = this.ac.createGain(); this.seM.gain.value = this.SE_VOL; this.seM.connect(this.ac.destination); }
     return this.seM;
