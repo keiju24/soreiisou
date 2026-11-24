@@ -160,7 +160,7 @@ const Snd = {
   },
   // ---- BGM（bgm/ フォルダ）：対戦中にランダムで1曲をループ再生 ----
   BGM_LIST: ['bgm/mitanicho.mp3'],   // 曲を足すときはここに並べる
-  BGM_VOL: 0.36,
+  BGM_VOL: 0.5,
   bgm: { buf: {}, loading: {}, src: null, gain: null, want: -1 },
   bgmPlay(i) {
     const B = this.bgm; B.want = i;
@@ -308,7 +308,7 @@ const Snd = {
     if (!this.hbus) {
       const ac = this.ac, c = ac.createDynamicsCompressor();
       c.threshold.value = -20; c.knee.value = 6; c.ratio.value = 10; c.attack.value = 0.003; c.release.value = 0.3;
-      const mg = ac.createGain(); mg.gain.value = 1.3; c.connect(mg).connect(ac.destination);
+      const mg = ac.createGain(); mg.gain.value = 1.3; c.connect(mg).connect(this.seMaster());
       const low = ac.createBiquadFilter(); low.type = 'lowshelf'; low.frequency.value = 160; low.gain.value = 11;
       const mid = ac.createBiquadFilter(); mid.type = 'peaking'; mid.frequency.value = 70; mid.Q.value = 1.2; mid.gain.value = 5;
       const hi = ac.createBiquadFilter(); hi.type = 'highshelf'; hi.frequency.value = 4500; hi.gain.value = -5;
@@ -388,12 +388,18 @@ const Snd = {
       this.nz(d, 0.12, 'lowpass', 300, 2, 0, 700, 10);
     });
   },
+  // 効果音ぜんぶの音量（BGM がちゃんと聞こえるように、効果音はひかえめ）
+  SE_VOL: 0.4,
+  seMaster() {
+    if (!this.seM) { this.seM = this.ac.createGain(); this.seM.gain.value = this.SE_VOL; this.seM.connect(this.ac.destination); }
+    return this.seM;
+  },
   out() {
     if (this._heavy) return this.hout();
     if (!this.bus) {
       const ac = this.ac, c = ac.createDynamicsCompressor();
       c.threshold.value = -16; c.knee.value = 8; c.ratio.value = 7; c.attack.value = 0.002; c.release.value = 0.18;
-      const mg = ac.createGain(); mg.gain.value = 1.15; c.connect(mg).connect(ac.destination);
+      const mg = ac.createGain(); mg.gain.value = 1.15; c.connect(mg).connect(this.seMaster());
       // 残響：だんだん小さくなるノイズを「響き方」として使う（左右で少し違う）
       const len = ac.sampleRate * 1.6, ir = ac.createBuffer(2, len, ac.sampleRate);
       for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); }
@@ -619,7 +625,7 @@ const Snd = {
     if (!this.ac) return;
     const C = this.chip; this.chipStop(0.05); C.on = true; C.step = 0; C.rate = 1;
     const ac = this.ac, t = ac.currentTime; C.next = t + 0.15;
-    C.gain = ac.createGain(); C.gain.gain.setValueAtTime(0.0001, t); C.gain.gain.exponentialRampToValueAtTime(0.5, t + 0.8); C.gain.connect(ac.destination);
+    C.gain = ac.createGain(); C.gain.gain.setValueAtTime(0.0001, t); C.gain.gain.exponentialRampToValueAtTime(0.75, t + 0.8); C.gain.connect(ac.destination);
     if (!C.noise) { const b = ac.createBuffer(1, ac.sampleRate * 0.2, ac.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; C.noise = b; }
     C.timer = setInterval(() => this._chipTick(), 25);
   },
@@ -5608,8 +5614,16 @@ function drawDoodle(F, P, J, C, t) {
   const rot = P.lean + P.hd * 0.25, cs = Math.cos(rot), sn = Math.sin(rot), k = BH.k;
   const at = v => { const x = (v[0] - BH.root[0]) * k, y = (v[1] - BH.root[1]) * k; return { x: J.hip.x + x * cs - y * sn, y: J.hip.y + x * sn + y * cs }; };
   const mv = (L, o) => { const dx = o.x - L[0].x, dy = o.y - L[0].y; return L.map(p => ({ x: p.x + dx, y: p.y + dy })); };
-  const fa = mv(J.fa, at(BH.sR)), ba = mv(J.ba, at(BH.sL)), fl = mv(J.fl, at(BH.hR)), bl = mv(J.bl, at(BH.hL));
-  const sa = P.fa.s + P.fa.e, swS = 1 + (F.state === 'super' ? 0.35 : 0);
+  let fa = mv(J.fa, at(BH.sR)), ba = mv(J.ba, at(BH.sL)), fl = mv(J.fl, at(BH.hR)), bl = mv(J.bl, at(BH.hL));
+  let sa = P.fa.s + P.fa.e;
+  // 攻撃していないとき：片手で大剣を肩にかつぐ（ひじを下げて、柄を肩の前でにぎる）
+  const attacking = F.state === 'move' || F.state === 'super';
+  if (!attacking) {
+    const sh = fa[0], bob = F.state === 'run' ? Math.sin(t * 0.4) * 1.5 : 0;
+    fa = [sh, { x: sh.x + 13, y: sh.y + 13 + bob }, { x: sh.x + 8, y: sh.y - 3 + bob }];
+    sa = Math.PI + 1.12 + (F.state === 'air' || F.state === 'jumpsquat' ? 0.12 : 0);
+  }
+  const swS = 1 + (F.state === 'super' ? 0.35 : 0);
   // 剣の軌跡（攻撃中だけ）：剣先と剣の中ほどを記録して赤い帯にする
   const swinging = F.state === 'move' && F.move.hb.length;
   if (!F._swt) F._swt = [];
@@ -5621,12 +5635,13 @@ function drawDoodle(F, P, J, C, t) {
   // 両手持ち：奥の手も大剣の柄（手前の手のすぐ下）をにぎる。つかみ・投げ・剣を投げている間は片手
   const tossedNow = F.state === 'move' && F.moveName === 'ub' && F.mf > 6 && F.mf < 30;
   let ba2 = ba;
-  if (!(F.state === 'move' && F.move.oneHand) && !tossedNow && F.state !== 'helpless' && F.state !== 'hitstun') {
+  if (attacking && !(F.state === 'move' && F.move.oneHand) && !tossedNow) {   // 攻撃中だけ両手でにぎる
     const g = { x: fa[2].x - Math.sin(sa) * 7, y: fa[2].y - Math.cos(sa) * 7 }, o = at([46, 112]);   // 肩は胴体の裏（見えない）から出す
     const dx = g.x - o.x, dy = g.y - o.y, d = Math.hypot(dx, dy) || 1, slack = Math.max(0, 30 - d) * 0.5;
     ba2 = [o, { x: (o.x + g.x) / 2 - dy / d * (6 + slack), y: (o.y + g.y) / 2 + dx / d * (6 + slack) }, g];
   }
   bhStick(bl); bhStick(fl); bhStick(ba2);
+  if (!attacking) drawBigSword(fa[2], sa, swS, F.hasFS ? 0.35 + 0.2 * Math.sin(t * 0.2) : 0);   // かついだ剣は頭の後ろ
   // 顔と胴体（手描きの絵そのまま）＋返り血
   ctx.save(); ctx.translate(J.hip.x, J.hip.y); ctx.rotate(rot);
   const u = k / BH.img;
@@ -5645,7 +5660,7 @@ function drawDoodle(F, P, J, C, t) {
   if (tossed) {   // 真上に投げた大剣：回りながら上がって落ちてくる
     const q = (F.mf - 6) / 24, h = fa[2];
     drawBigSword({ x: h.x, y: h.y - Math.sin(q * Math.PI) * 70 - 20 }, Math.PI + F.mf * 0.9, swS, 0.5);
-  } else drawBigSword(fa[2], sa, swS, F.state === 'super' ? 0.8 : F.hasFS ? 0.35 + 0.2 * Math.sin(t * 0.2) : 0);
+  } else if (attacking) drawBigSword(fa[2], sa, swS, F.state === 'super' ? 0.8 : F.hasFS ? 0.35 + 0.2 * Math.sin(t * 0.2) : 0);
   bhStick(fa);
 }
 
