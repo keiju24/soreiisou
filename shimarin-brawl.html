@@ -9779,7 +9779,7 @@ SC_.battle = (o) => {
     }
   }
   function drawCine() {
-    if (!B.cine && B.critT > 0 && fs[B.critId]) { const k = B.critT / 60; drawCrit(fs[B.critId], k * k, 1, true); }
+    if (!B.cine && B.critT > 0 && fs[B.critId]) { const k = B.critT / 30; drawCrit(fs[B.critId], k * k, 1, true); }
     const c = B.cine; if (!c) return;
     if (c.crit) {
       const e = 1 - c.life / c.max, inA = Math.min(1, e * 10) * Math.min(1, (1 - e) * 8);
@@ -9879,7 +9879,7 @@ SC_.battle = (o) => {
     for (let i = 0; i < B.hudShake.length; i++) if (B.hudShake[i] > 0) B.hudShake[i]--;
     if (B.lostStock && --B.lostStock.life <= 0) B.lostStock = null;
     if (B.scorePop && --B.scorePop.life <= 0) B.scorePop = null;
-    if (B.cine && --B.cine.life <= 0) { if (B.cine.crit) { B.slow = Math.max(B.slow || 0, 60); B.critT = 60; B.critId = fs.indexOf(B.cine.T); B.shake = 26; } B.cine = null; B.shake = Math.max(B.shake, 16); }
+    if (B.cine && --B.cine.life <= 0) { if (B.cine.crit) { B.critT = 30; B.critId = fs.indexOf(B.cine.T); B.shake = 26; } B.cine = null; B.shake = Math.max(B.shake, 16); }
     if (B.critT > 0) B.critT--;
     if (B.fsGetPop && --B.fsGetPop.life <= 0) B.fsGetPop = null;
     if (B.impactF > 0) B.impactF--;
