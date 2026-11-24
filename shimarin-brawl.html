@@ -6453,7 +6453,7 @@ const PEER_OPTIONS = { config: { iceServers: [
 ] } };
 const NET = { peer: null, hostConn: null, gameConn: null, conns: new Map(), gconns: new Map(), toks: {}, tok: '',
   isHost: false, code: '', status: '', err: '', notice: '', noticeUntil: 0,
-  myCh: undefined, mySlot: -1, myReady: false, stage: 0, stocks: 3, lobby: [], busy: false, inGame: false, order: [], startMsg: null, gid: 0,
+  myCh: undefined, myCur: 0, myTeam: 0, mode: 'ffa', rules: null, phase: 'css', mySlot: -1, myReady: false, stage: 0, stocks: 3, lobby: [], busy: false, inGame: false, order: [], startMsg: null, gid: 0,
   frame: 0, local: {}, frames: {}, inbuf: {}, nextOut: 0, dropped: new Set(), hAck: [], cAck: {}, sentTo: 0, recvTo: 0, ackMine: 0,
   rtt: 0, rtts: {}, maxRtt: 0, delay: 4, delayT: 0, pingTimer: null,
   chk: {}, myChk: {}, desync: false, t0: 0, retrySignal: null };
@@ -6462,6 +6462,8 @@ const unpackIn = m => { const o = {}; if (m < 0) return o; BTN.forEach((b, i) =>
 const netOpen = () => NET.isHost ? !!(NET.peer && !NET.peer.destroyed && NET.status === 'open')
   : !!(NET.hostConn && NET.hostConn.open && NET.status === 'open');
 const validCh = c => Number.isInteger(c) && c >= 0 && c < CHARS.length ? c : 0;
+const pickCh = c => Number.isInteger(c) && c >= -1 && c < CHARS.length ? c : null;   // null = まだ / -1 = おまかせ
+const pickOf = (slot, d) => ({ slot, ch: pickCh(d.ch), cur: Number.isInteger(d.cur) ? clamp(d.cur, 0, CHARS.length) : 0, team: Number.isInteger(d.team) ? clamp(d.team, 0, 3) : slot % 2 });
 const isIn = v => Number.isInteger(v) && v >= -1 && v < (1 << BTN.length);
 function netLoad(cb) {
   if (window.Peer) return cb();
@@ -6514,12 +6516,12 @@ function netTargetDelay() {
 // ---------- ホスト（サーバー役） ----------
 function netLobbySync() {
   if (!NET.isHost) return;
-  NET.lobby[0] = { slot: 0, ch: NET.myCh, ready: NET.myReady };
-  netBroadcast({ t: 'lobby', players: NET.lobby.filter(Boolean), stage: NET.stage, stocks: NET.stocks, busy: NET.inGame });
+  NET.lobby[0] = { slot: 0, ch: NET.myCh, cur: NET.myCur, team: NET.myTeam };
+  netBroadcast({ t: 'lobby', players: NET.lobby.filter(Boolean), stage: NET.stage, mode: NET.mode, rules: NET.rules, phase: NET.phase, busy: NET.inGame });
 }
 function netHost(retry = 0) {
   netClose(); NET.isHost = true; NET.code = genCode(); NET.status = 'loading'; NET.err = ''; NET.t0 = performance.now();
-  NET.mySlot = 0; NET.stocks = SET.stocks;
+  NET.mySlot = 0; NET.stocks = SET.stocks; NET.rules = rulesFromSET(); NET.mode = 'ffa'; NET.phase = 'css'; NET.myCh = null; NET.myCur = 0; NET.myTeam = 0;
   netLoad(err => {
     if (err) { NET.status = 'error'; NET.err = '通信ライブラリを読み込めませんでした（インターネット接続を確認してね）'; return; }
     const peer = NET.peer = new Peer(PEER_PREFIX + NET.code, PEER_OPTIONS);
@@ -6558,7 +6560,7 @@ function netHostRecv(c, d) {
     }
     c._slot = slot; NET.conns.set(slot, c);
     if (typeof d.tok === 'string' && d.tok) NET.toks[d.tok] = slot;
-    NET.lobby[slot] = { slot, ch: validCh(d.ch), ready: false };
+    NET.lobby[slot] = pickOf(slot, { ch: null, cur: 0, team: slot % 2 });
     connSend(c, { t: 'welcome', slot });
     netNotice(NCOL[slot].tag + ' が入りました'); netLobbySync(); Snd.move();
     return;
@@ -6574,7 +6576,7 @@ function netHostRecv(c, d) {
   if (slot === undefined || (NET.conns.get(slot) !== c && NET.gconns.get(slot) !== c)) return;
   switch (d.t) {
     case 'pick':
-      if (NET.lobby[slot]) { NET.lobby[slot].ch = validCh(d.ch); NET.lobby[slot].ready = !!d.ready; netLobbySync(); }
+      if (NET.lobby[slot] && NET.phase === 'css') { NET.lobby[slot] = pickOf(slot, d); netLobbySync(); }
       break;
     case 'ping':
       connSend(c, { t: 'pong', ts: d.ts, m: NET.maxRtt });
@@ -6634,7 +6636,7 @@ function netHostSendFrames() {
 // ---------- 参加する人 ----------
 function netJoin(code) {
   netClose(); NET.isHost = false; NET.code = code; NET.status = 'loading'; NET.err = ''; NET.t0 = performance.now();
-  NET.tok = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  NET.tok = Math.random().toString(36).slice(2) + Date.now().toString(36); NET.myCh = null; NET.myCur = 0; NET.myTeam = 0; NET.phase = 'css';
   netLoad(err => {
     if (err) { NET.status = 'error'; NET.err = '通信ライブラリを読み込めませんでした（インターネット接続を確認してね）'; return; }
     const peer = NET.peer = new Peer(PEER_OPTIONS);
@@ -6642,7 +6644,7 @@ function netJoin(code) {
       if (NET.peer !== peer || NET.hostConn) return;   // つなぎ直しただけのときは、ホストへの接続はそのまま
       NET.status = 'connecting';
       const c = NET.hostConn = peer.connect(PEER_PREFIX + code, { reliable: true, serialization: 'json' });
-      c.on('open', () => connSend(c, { t: 'hello', ch: NET.myCh, tok: NET.tok }));
+      c.on('open', () => connSend(c, { t: 'hello', tok: NET.tok }));
       c.on('data', d => { if (NET.hostConn === c) netRecv(d); });
       c.on('close', () => { if (NET.hostConn === c && NET.status !== 'error') NET.status = 'closed'; });
       c.on('error', () => { if (NET.hostConn === c && NET.status !== 'error') NET.status = 'closed'; });
@@ -6666,15 +6668,17 @@ function netRecv(d) {
   if (!d || typeof d !== 'object') return;
   switch (d.t) {
     case 'welcome':
-      if (Number.isInteger(d.slot) && d.slot > 0 && d.slot < NET_MAX && NET.status !== 'open') { NET.mySlot = d.slot; NET.status = 'open'; netAfterWelcome(); }
+      if (Number.isInteger(d.slot) && d.slot > 0 && d.slot < NET_MAX && NET.status !== 'open') { NET.mySlot = d.slot; NET.myTeam = d.slot % 2; NET.status = 'open'; netAfterWelcome(); }
       break;
     case 'deny': NET.status = 'error'; NET.err = String(d.msg || 'ルームに入れませんでした'); break;
     case 'lobby':
       if (!Array.isArray(d.players)) break;
       NET.lobby = [];
-      for (const p of d.players) if (p && Number.isInteger(p.slot) && p.slot >= 0 && p.slot < NET_MAX) NET.lobby[p.slot] = { slot: p.slot, ch: validCh(p.ch), ready: !!p.ready };
-      if (Number.isInteger(d.stage) && d.stage >= 0 && d.stage < STAGES.length) NET.stage = d.stage;
-      if (Number.isInteger(d.stocks) && d.stocks > 0 && d.stocks < 100) NET.stocks = d.stocks;
+      for (const p of d.players) if (p && Number.isInteger(p.slot) && p.slot >= 0 && p.slot < NET_MAX) NET.lobby[p.slot] = pickOf(p.slot, p);
+      if (Number.isInteger(d.stage) && d.stage >= 0 && d.stage <= STAGES.length) NET.stage = d.stage;   // STAGES.length = ランダム
+      if (d.mode === 'ffa' || d.mode === 'team') NET.mode = d.mode;
+      if (validRules(d.rules)) NET.rules = d.rules;
+      if (d.phase === 'css' || d.phase === 'stage') NET.phase = d.phase;
       NET.busy = !!d.busy;
       break;
     case 'pong': {
@@ -6769,7 +6773,7 @@ SC_.vs = (o) => {
   const st = STAGES[o.stage];
   const vsCh = o.chars.map(i => CHARS[i]);
   const n = vsCh.length, myIdx = o.slots ? o.slots.indexOf(NET.mySlot) : -1;
-  const colOf = i => o.cols ? o.cols[i] : o.slots ? NCOL[o.slots[i]] : COL[i];
+  const colOf = i => o.cols ? o.cols[i] : Array.isArray(o.teams) ? { ...TEAM_COL[o.teams[i]], tag: NCOL[o.slots[i]].tag } : o.slots ? NCOL[o.slots[i]] : COL[i];
   const vsText = () => {
     if (t > 60) {
       const k = clamp((t - 60) / 12, 0, 1), s = 3 - 2 * (1 - Math.pow(1 - k, 3));
@@ -7015,8 +7019,9 @@ SC_.battle = (o) => {
   const spawnX = i => nP <= 2 ? st.spawns[i] : lerp(st.plats[0].x1 + 110, st.plats[0].x2 - 110, i / (nP - 1));
   const RU = validRules(o.rules) ? o.rules : rulesFromSET(), STK = RU.rule === 'time' ? 99 : RU.stocks;   // タイム制はストック無限
   const fs = ON ? ON.chars.map((c, i) => {
-    const x = spawnX(i), col = NCOL[ON.slots[i]];
-    const F = new Fighter({ id: i, col: { ...col, tag: i === myIdx ? 'YOU' : col.tag }, cpu: false, stocks: STK, x, dir: x < 0 ? 1 : -1, ch: CHARS[c] });
+    const x = spawnX(i), tm = Array.isArray(ON.teams) ? ON.teams[i] : undefined, col = tm !== undefined ? TEAM_COL[tm] : NCOL[ON.slots[i]];
+    const F = new Fighter({ id: i, col: { ...col, tag: i === myIdx ? 'YOU' : NCOL[ON.slots[i]].tag }, cpu: false, stocks: STK, x, dir: x < 0 ? 1 : -1, ch: CHARS[c] });
+    if (tm !== undefined) F.team = tm;
     if (nP > 2) F.rx = lerp(-330, 330, i / (nP - 1)) * st.k;
     return F;
   }) : o.roster.map((r, i) => {
@@ -10017,24 +10022,36 @@ SC_.online = (o) => {
   let t = 0, mode = o && o.lobby && netOpen() ? 'lobby' : 'top', code = '', started = false;
   if (mode === 'top') { netClose(); NET.status = ''; NET.err = ''; }
   if (o && o.join) { code = o.join; netJoin(code); mode = 'connecting'; }   // 招待リンクから
-  let shareMsg = '', shareT = 0;
+  let shareMsg = '', shareT = 0, myTeamBtn = null;
   const share = () => { Snd.ok(); shareInvite(NET.code, m => { shareMsg = m; shareT = 240; }); };
-  const SHARE_BTN = { x: VW / 2 + 290, y: 76, w: 250, h: 52 }, PASTE_BTN = { x: VW / 2 - 150, y: 470, w: 300, h: 50 };
+  const SHARE_BTN = { x: 250, y: 12, w: 210, h: 36 }, PASTE_BTN = { x: VW / 2 - 150, y: 470, w: 300, h: 50 };
   const hit = b => mouse.click && mouse.x >= b.x && mouse.x <= b.x + b.w && mouse.y >= b.y && mouse.y <= b.y + b.h;
-  if (NET.myCh === undefined) NET.myCh = SET.p1;
+  if (NET.myCh === undefined) NET.myCh = null;
   NET.myReady = false; NET.startMsg = null;
-  const sendPick = () => { if (NET.isHost) netLobbySync(); else netSend({ t: 'pick', ch: NET.myCh, ready: NET.myReady }); };
+  const sendPick = () => { if (NET.isHost) netLobbySync(); else netSend({ t: 'pick', ch: NET.myCh, cur: NET.myCur, team: NET.myTeam }); };
+  const tokP = {};   // トークンの見た目の位置（なめらかに動かす）
+  const tileAt = (x, y) => { for (let k = 0; k < TILE_N; k++) { const r = tileRect(k); if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return k; } return -1; };
+  const chOfTile = k => k === CHARS.length ? -1 : k;
+  const tileOf = ch => ch === -1 ? CHARS.length : ch;
+  const STAGE_N = STAGES.length + 1, previews = STAGES.map(cloneStage);
+  const stageRect = k => { const w = Math.min(230, Math.floor((VW - 60 - (STAGE_N - 1) * 20) / STAGE_N)), x0 = Math.round((VW - STAGE_N * w - (STAGE_N - 1) * 20) / 2); return { x: x0 + k * (w + 20), y: 470, w, h: 170 }; };
+  function stagePreview(st, x, y, w, h, z) {
+    ctx.save(); rr(x, y, w, h, 14); ctx.clip(); ctx.translate(x, y); ctx.scale(w / VW, h / VH);
+    const cam = { x: 0, y: -170, z }; drawStageBG(st, cam, t);
+    ctx.translate(VW / 2, VH / 2); ctx.scale(z, z); ctx.translate(-cam.x, -cam.y); drawPlatforms(st); ctx.restore();
+  }
   if (mode === 'lobby') { if (NET.isHost) NET.inGame = false; sendPick(); }
   const validStart = m => m && Array.isArray(m.chars) && Array.isArray(m.slots) && m.chars.length === m.slots.length
     && m.chars.length >= 2 && m.chars.length <= NET_MAX
     && m.chars.every(c => Number.isInteger(c) && c >= 0 && c < CHARS.length)
     && m.slots.every(s => Number.isInteger(s) && s >= 0 && s < NET_MAX) && m.slots.includes(NET.mySlot)
-    && Number.isInteger(m.seed) && Number.isInteger(m.stage) && m.stage >= 0 && m.stage < STAGES.length && Number.isInteger(m.stocks) && m.stocks > 0 && m.stocks < 100;
+    && Number.isInteger(m.seed) && Number.isInteger(m.stage) && m.stage >= 0 && m.stage < STAGES.length && validRules(m.rules)
+    && (m.teams === null || m.teams === undefined || (Array.isArray(m.teams) && m.teams.length === m.chars.length && m.teams.every(x => Number.isInteger(x) && x >= 0 && x <= 3)));
   const begin = msg => {
     if (started) return;   // 開始は1回だけ（同じ乱数の種で全員が始めるため）
     started = true; mode = 'starting';
     netResetFrames(msg.chars.length, msg.seed); NET.startMsg = null; SET.stage = msg.stage;
-    go('vs', { stage: msg.stage, online: true, seed: msg.seed, chars: msg.chars, slots: msg.slots, stocks: msg.stocks });
+    go('vs', { stage: msg.stage, online: true, seed: msg.seed, chars: msg.chars, slots: msg.slots, rules: msg.rules, teams: msg.teams || null });
   };
   const topMenu = new Menu([
     { x: VW / 2 - 320, y: 150, w: 640, h: 120, label: 'ルームを作る', sub: 'コードを友だちに伝えて入ってもらう', act: () => { Snd.ok(); NET.stage = SET.stage; netHost(); mode = 'host'; } },
@@ -10043,7 +10060,7 @@ SC_.online = (o) => {
   ]);
   const players = () => {
     const ps = NET.lobby.slice(0, NET_MAX);
-    if (NET.mySlot >= 0) ps[NET.mySlot] = { slot: NET.mySlot, ch: NET.myCh, ready: NET.myReady };   // 自分の分は手元の最新を使う
+    if (NET.mySlot >= 0) ps[NET.mySlot] = { slot: NET.mySlot, ch: NET.myCh, cur: NET.myCur, team: NET.myTeam };   // 自分の分は手元の最新を使う
     return ps;
   };
   return {
@@ -10079,25 +10096,50 @@ SC_.online = (o) => {
           if (!netOpen()) { mode = 'lost'; break; }
           if (shareT > 0) shareT--;
           if (hit(SHARE_BTN) || anyP('KeyC')) share();   // 招待リンクをコピー
-          if (!NET.myReady) {
-            if (MI.left() || MI.right()) { NET.myCh = (NET.myCh + (MI.left() ? -1 : 1) + CHARS.length) % CHARS.length; sendPick(); Snd.move(); }
-            if (NET.isHost && (MI.up() || MI.down())) { NET.stage = (NET.stage + (MI.up() ? -1 : 1) + STAGES.length) % STAGES.length; netLobbySync(); Snd.move(); }
-            if (anyP('Enter', 'Space', 'KeyZ', 'KeyJ')) { NET.myReady = true; sendPick(); Snd.ok(); }
-            else if (anyP('Escape')) { netSend({ t: 'bye' }); netClose(); mode = 'top'; Snd.back(); break; }
-          } else if (anyP('Escape', 'Backspace', 'KeyX', 'KeyK')) { NET.myReady = false; sendPick(); Snd.back(); }
-          if (NET.isHost) {
-            // 2人以上いて全員が準備OKなら開始（ホストがまとめて合図を出す）
-            const ps = NET.lobby.filter(Boolean);
-            if (!started && ps.length >= 2 && ps.every(p => p.ready)) {
-              const msg = { t: 'start', seed: (Math.random() * 1e9) | 0, stage: NET.stage, chars: ps.map(p => p.ch), slots: ps.map(p => p.slot), stocks: NET.stocks };
-              NET.order = msg.slots; NET.inGame = true;
-              for (const p of ps) p.ready = false;
-              NET.myReady = false;
-              begin(msg); netBroadcast(msg); netLobbySync();
+          const all = players().filter(Boolean), team = NET.mode === 'team';
+          const teamsOk = !team || new Set(all.map(p => p.team)).size >= 2;
+          const allChosen = all.length >= 2 && all.every(p => p.ch !== null) && teamsOk;
+          if (NET.phase === 'css') {
+            // ---- キャラ選択：自分のトークンを動かしてキャラの上に置く ----
+            if (NET.myCh === null) {
+              let moved = false;
+              if (MI.left()) { NET.myCur = (NET.myCur + TILE_N - 1) % TILE_N; moved = true; }
+              if (MI.right()) { NET.myCur = (NET.myCur + 1) % TILE_N; moved = true; }
+              if (mouse.moved) { const k = tileAt(mouse.x, mouse.y); if (k >= 0 && k !== NET.myCur) { NET.myCur = k; moved = true; } }
+              if (moved) { sendPick(); Snd.move(); }
+              const k = mouse.click ? tileAt(mouse.x, mouse.y) : -1;
+              if (k >= 0) NET.myCur = k;
+              if (anyP('Enter', 'Space', 'KeyZ', 'KeyJ') || k >= 0) { NET.myCh = chOfTile(NET.myCur); sendPick(); Snd.ok(); break; }
+              if (anyP('Escape')) { netSend({ t: 'bye' }); netClose(); mode = 'top'; Snd.back(); break; }
+            } else {
+              if (anyP('Escape', 'Backspace', 'KeyX', 'KeyK')) { NET.myCh = null; sendPick(); Snd.back(); break; }   // トークンを持ち上げる
+              const k = mouse.click ? tileAt(mouse.x, mouse.y) : -1;
+              if (k >= 0) { NET.myCur = k; NET.myCh = chOfTile(k); sendPick(); Snd.ok(); }
+              if (NET.isHost && allChosen && anyP('Enter', 'Space')) { NET.phase = 'stage'; netLobbySync(); Snd.ok(); break; }   // ホストがステージ選択へ
             }
-          } else if (NET.startMsg) {
-            if (validStart(NET.startMsg)) begin(NET.startMsg); else NET.startMsg = null;
+            if (team && (anyP('KeyT') || (mouse.click && myTeamBtn && mouse.x >= myTeamBtn.x && mouse.x <= myTeamBtn.x + myTeamBtn.w && mouse.y >= myTeamBtn.y && mouse.y <= myTeamBtn.y + myTeamBtn.h))) { NET.myTeam = (NET.myTeam + 1) % 4; sendPick(); Snd.move(); }
+            if (NET.isHost) {
+              if (anyP('KeyM') || (mouse.click && mouse.y < 60 && mouse.x > 470 && mouse.x < 800)) { NET.mode = team ? 'ffa' : 'team'; netLobbySync(); Snd.move(); }
+              if (anyP('KeyR') || (mouse.click && mouse.y < 60 && mouse.x >= 860)) { Snd.ok(); go('rules', { online: true, back: 'online', backArg: { lobby: true } }); return; }
+            }
+          } else {
+            // ---- ステージ選択：ホストだけが選ぶ（ほかの人にはホストのカーソルが見える） ----
+            if (NET.isHost) {
+              if (MI.left()) { NET.stage = (NET.stage + STAGE_N - 1) % STAGE_N; netLobbySync(); Snd.move(); }
+              if (MI.right()) { NET.stage = (NET.stage + 1) % STAGE_N; netLobbySync(); Snd.move(); }
+              if (mouse.click) for (let k = 0; k < STAGE_N; k++) { const r = stageRect(k); if (mouse.x >= r.x && mouse.x <= r.x + r.w && mouse.y >= r.y && mouse.y <= r.y + r.h) { NET.stage = k; netLobbySync(); } }
+              if (anyP('Escape', 'Backspace')) { NET.phase = 'css'; netLobbySync(); Snd.back(); break; }
+              if (!started && (anyP('Enter', 'Space') || (mouse.click && mouse.y > 470))) {
+                if (!allChosen) { NET.phase = 'css'; netLobbySync(); break; }
+                const stage = NET.stage >= STAGES.length ? (Math.random() * STAGES.length | 0) : NET.stage;
+                const msg = { t: 'start', seed: (Math.random() * 1e9) | 0, stage, slots: all.map(p => p.slot), rules: NET.rules || rulesFromSET(),
+                  chars: all.map(p => p.ch < 0 ? (Math.random() * CHARS.length | 0) : p.ch), teams: team ? all.map(p => p.team) : null };
+                NET.order = msg.slots; NET.inGame = true; NET.phase = 'css';
+                begin(msg); netBroadcast(msg); netLobbySync();
+              }
+            }
           }
+          if (!NET.isHost && NET.startMsg) { if (validStart(NET.startMsg)) begin(NET.startMsg); else NET.startMsg = null; }
           break;
         }
         case 'lost': case 'error':
@@ -10138,57 +10180,89 @@ SC_.online = (o) => {
         text('ルーム ' + NET.code + ' に接続中' + dots, VW / 2, 310, 32, UIC.ink, 'center', '900');
         uiFooter('', 'Esc：やめる');
       } else if (mode === 'lobby' || mode === 'starting') {
-        // ルームコード
-        ctx.fillStyle = UIC.ink; uiPara(VW / 2 - 270, 76, 540, 52, 18); ctx.fill();
-        text('ルームコード', VW / 2 - 140, 102, 20, '#ff9a9a', 'center', '900');
-        text(NET.code, VW / 2 + 70, 102, 34, '#fff', 'center', '900');
-        { const b = SHARE_BTN, hov = mouse.x >= b.x && mouse.x <= b.x + b.w && mouse.y >= b.y && mouse.y <= b.y + b.h;
-          ctx.fillStyle = hov ? UIC.ink : UIC.red; uiPara(b.x, b.y, b.w, b.h, 16); ctx.fill();
-          text('🔗 招待リンクをコピー（C）', b.x + b.w / 2, b.y + 27, 18, '#fff', 'center', '900'); }
-        // 8人ぶんの枠（4×2）
-        const ps = players(), PW = 282, PH = 196, GX = 16, GY = 14, X0 = (VW - (4 * PW + 3 * GX)) / 2, Y0 = 142;
-        for (let s = 0; s < NET_MAX; s++) {
-          const p = ps[s], c = NCOL[s], x = X0 + (s % 4) * (PW + GX), y = Y0 + (s >> 2) * (PH + GY);
-          if (!p) {
-            ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fillRect(x, y, PW, PH);
-            ctx.setLineDash([12, 8]); ctx.lineWidth = 3; ctx.strokeStyle = '#9a9a9a'; ctx.strokeRect(x + 3, y + 3, PW - 6, PH - 6); ctx.setLineDash([]);
-            text(c.tag, x + 16, y + 24, 20, '#9a9a9a', 'left', '900');
-            text('あき', x + PW / 2, y + PH / 2, 26, '#b0aca4', 'center', '900');
-            continue;
+        const ps = players(), all = ps.filter(Boolean), team = NET.mode === 'team', R0 = NET.rules || rulesFromSET();
+        // ヘッダー：ルームコード・ルール（大乱闘／チーム戦）・詳細設定
+        ctx.fillStyle = UIC.ink; ctx.fillRect(0, 0, VW, 60);
+        text('ルーム ' + NET.code, 24, 30, 24, '#fff', 'left', '900');
+        ['大乱闘', 'チーム戦'].forEach((nm, k) => { const on = (k === 1) === team; ctx.fillStyle = on ? UIC.red : '#3a3a3a'; uiPara(480 + k * 160, 12, 160, 36, 12); ctx.fill(); text(nm, 560 + k * 160, 30, 21, on ? '#fff' : '#9a9a9a', 'center', '900'); });
+        ctx.fillStyle = NET.isHost ? UIC.red : '#3a3a3a'; uiPara(860, 10, 406, 40, 12); ctx.fill();
+        fitText('⚙ ' + rulesText(R0) + (NET.isHost ? '（R）' : ''), 884, 30, 15, 370, '#fff', 'left', '900');
+        { const b = SHARE_BTN; ctx.fillStyle = 'rgba(20,20,20,.85)'; uiPara(250, 12, 210, 36, 12); ctx.fill(); text('🔗 招待リンク（C）', 355, 30, 15, '#fff', 'center', '900'); }
+        if (NET.phase === 'css') {
+          // キャラのタイル（通常の大乱闘と同じ並び）
+          for (let k = 0; k < TILE_N; k++) { const r = tileRect(k); ctx.drawImage(tileCanvas(k < CHARS.length ? k : -1), r.x, r.y, r.w, r.h); }
+          // 帯：いまの状況
+          const chosenN = all.filter(p => p.ch !== null).length, teamsOk = !team || new Set(all.map(p => p.team)).size >= 2;
+          const ready = all.length >= 2 && chosenN === all.length && teamsOk;
+          ctx.fillStyle = ready ? UIC.red : '#8c8c8c'; ctx.fillRect(0, 244, VW, 42);
+          const bandMsg = all.length < 2 ? '友だちが入るのを待っています（' + all.length + '/' + NET_MAX + '人）' : !teamsOk ? 'チームを2つ以上に分けてね（T でチーム変更）'
+            : !ready ? 'みんながキャラを選ぶのを待っています（' + chosenN + '/' + all.length + '）' : NET.isHost ? 'たたかう！　▶　ステージ選択へ（Enter）' : 'ホストがステージ選択に進むのを待っています';
+          text(bandMsg, VW / 2, 265, 22, '#fff', 'center', '900');
+          // プレイヤーのパネル（最大8人：4×2）
+          const n = Math.max(all.length, 1), cols = 4, cw = (1216 - 3 * 12) / cols, chh = 168, y0 = 298;
+          myTeamBtn = null;
+          ps.forEach((p, s2) => {
+            if (!p) return;
+            const idx = all.indexOf(p), x = 32 + (idx % cols) * (cw + 12), y = y0 + Math.floor(idx / cols) * (chh + 10), mine = s2 === NET.mySlot;
+            const col = team ? TEAM_COL[p.team] : NCOL[s2];
+            ctx.fillStyle = 'rgba(0,0,0,.15)'; ctx.fillRect(x + 6, y + 6, cw, chh);
+            ctx.fillStyle = '#fff'; ctx.fillRect(x, y, cw, chh);
+            ctx.fillStyle = col.main; ctx.fillRect(x, y, cw, 30);
+            ctx.save(); ctx.beginPath(); ctx.rect(x, y + 30, cw, chh - 30); ctx.clip();
+            ctx.globalAlpha = 0.12; ctx.fillStyle = col.main; uiPara(x + cw * 0.45, y + 30, cw * 0.55, chh - 30, cw * 0.2); ctx.fill(); ctx.globalAlpha = 1;
+            const showCh = p.ch !== null ? p.ch : chOfTile(p.cur);
+            if (showCh >= 0) { ctx.globalAlpha = p.ch !== null ? 1 : 0.35; drawFace(x + 66, y + 98, 112, 0, 0.4, t, CHARS[showCh]); ctx.globalAlpha = 1; }
+            else text('?', x + 66, y + 98, 80, p.ch !== null ? UIC.red : '#cfcfcf', 'center', '900');
+            ctx.restore();
+            ctx.lineWidth = mine ? 5 : 3; ctx.strokeStyle = mine ? UIC.red : UIC.ink; ctx.strokeRect(x, y, cw, chh);
+            text(NCOL[s2].tag + (mine ? '（あなた）' : s2 === 0 ? '（ホスト）' : ''), x + 10, y + 15, 17, '#fff', 'left', '900');
+            const nm = p.ch === null ? 'えらんでいます…' : p.ch < 0 ? 'おまかせ' : CHARS[p.ch].name;
+            fitText(nm, x + 130, y + 70, 20, cw - 140, p.ch === null ? '#9a9a9a' : UIC.ink, 'left', '900');
+            if (p.ch !== null) { ctx.fillStyle = UIC.red; uiPara(x + 130, y + 92, 90, 30, 8); ctx.fill(); text('OK!', x + 175, y + 107, 18, '#fff', 'center', '900'); }
+            if (team) {   // チームの札（自分の分は T かクリックで変える）
+              const b = { x: x + 130, y: y + chh - 40, w: cw - 142, h: 30 };
+              ctx.fillStyle = TEAM_COL[p.team].main; rr(b.x, b.y, b.w, b.h, 8); ctx.fill();
+              text(TEAM_NAME[p.team] + 'チーム' + (mine ? '（T）' : ''), b.x + b.w / 2, b.y + 15, 15, '#fff', 'center', '900');
+              if (mine) myTeamBtn = b;
+            }
+          });
+          // トークン：みんなのカーソルの位置（選んだ人はそのキャラの上）。なめらかに動く
+          ps.forEach((p, s2) => {
+            if (!p) return;
+            const r = tileRect(p.ch !== null ? tileOf(p.ch) : p.cur), o2 = TOKEN_OFS[s2], tx = r.x + r.w / 2 + o2[0] * 0.8, ty = r.y + r.h / 2 + o2[1] * 0.7 + 10;
+            const q = tokP[s2] || (tokP[s2] = { x: tx, y: ty }); q.x += (tx - q.x) * 0.3; q.y += (ty - q.y) * 0.3;
+            const col = team ? TEAM_COL[p.team] : NCOL[s2], lift = p.ch === null ? -6 + Math.sin(t * 0.15 + s2) * 3 : 0;
+            ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.arc(q.x + 3, q.y + 5, 21, 0, TAU); ctx.fill();
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(q.x, q.y + lift, 21, 0, TAU); ctx.fill();
+            ctx.fillStyle = col.main; ctx.beginPath(); ctx.arc(q.x, q.y + lift, 17, 0, TAU); ctx.fill();
+            if (s2 === NET.mySlot) { ctx.strokeStyle = UIC.ink; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(q.x, q.y + lift, 23, 0, TAU); ctx.stroke(); }
+            text(NCOL[s2].tag, q.x, q.y + lift + 1, 13, '#fff', 'center', '900');
+          });
+          uiFooter(NET.myCh === null ? '←→：キャラ　Enter：決定' + (team ? '　T：チーム' : '') + '　Esc：ルームを出る' : 'Esc：選びなおす' + (team ? '　T：チーム' : '') + (NET.isHost ? '　M：大乱闘／チーム戦　R：ルール' : ''),
+            NET.isHost ? 'あなたがホストです' : 'ホスト：' + NCOL[0].tag);
+        } else {
+          // ステージ選択（ホストだけが選ぶ）
+          const cur = NET.stage, big = { x: 240, y: 76, w: 800, h: 344 };
+          if (cur < STAGES.length) stagePreview(previews[cur], big.x, big.y, big.w, big.h, 0.62);
+          else { ctx.fillStyle = UIC.ink; ctx.fillRect(big.x, big.y, big.w, big.h); text('?', VW / 2, 240, 180, UIC.red, 'center', '900'); }
+          ctx.lineWidth = 5; ctx.strokeStyle = UIC.ink; ctx.strokeRect(big.x, big.y, big.w, big.h);
+          ctx.fillStyle = UIC.red; uiPara(big.x - 20, big.y + big.h - 66, 520, 56, 18); ctx.fill();
+          text(cur < STAGES.length ? STAGES[cur].name : 'ランダム', big.x + 16, big.y + big.h - 38, 30, '#fff', 'left', '900');
+          for (let k = 0; k < STAGE_N; k++) {
+            const r = stageRect(k);
+            if (k < STAGES.length) stagePreview(previews[k], r.x, r.y, r.w, r.h, 0.55); else { ctx.fillStyle = UIC.ink; ctx.fillRect(r.x, r.y, r.w, r.h); text('?', r.x + r.w / 2, r.y + r.h / 2 - 14, 80, UIC.red, 'center', '900'); }
+            ctx.fillStyle = k === cur ? UIC.red : UIC.ink; ctx.fillRect(r.x, r.y + r.h - 32, r.w, 32);
+            text(k < STAGES.length ? STAGES[k].name : 'ランダム', r.x + r.w / 2, r.y + r.h - 16, 17, '#fff', 'center', '900');
+            ctx.lineWidth = k === cur ? 6 : 3; ctx.strokeStyle = k === cur ? UIC.red : UIC.ink; ctx.strokeRect(r.x, r.y, r.w, r.h);
           }
-          const ch = CHARS[p.ch], mine = s === NET.mySlot;
-          ctx.fillStyle = 'rgba(0,0,0,.15)'; ctx.fillRect(x + 6, y + 6, PW, PH);
-          ctx.fillStyle = UIC.paper; ctx.fillRect(x, y, PW, PH);
-          ctx.save(); ctx.beginPath(); ctx.rect(x, y, PW, PH); ctx.clip();
-          ctx.fillStyle = c.main; ctx.globalAlpha = 0.14; uiPara(x + PW * 0.45, y, PW * 0.55, PH, PW * 0.25); ctx.fill(); ctx.globalAlpha = 1;
-          drawFace(x + PW / 2, y + 104, 130, 0, p.ready ? 1 : 0.4, t, ch);
-          ctx.restore();
-          ctx.fillStyle = c.main; ctx.fillRect(x, y, PW, 34);
-          ctx.fillStyle = UIC.ink; ctx.fillRect(x, y + PH - 40, PW, 40);
-          ctx.lineWidth = 4; ctx.strokeStyle = mine ? UIC.red : UIC.ink; ctx.strokeRect(x, y, PW, PH);
-          if (mine) { ctx.lineWidth = 2; ctx.strokeStyle = UIC.ink; ctx.strokeRect(x - 4, y - 4, PW + 8, PH + 8); }
-          text(c.tag + (mine ? '（あなた）' : s === 0 ? '（ホスト）' : ''), x + 12, y + 18, 18, '#fff', 'left', '900');
-          fitText(mine && !p.ready ? '◀ ' + ch.name + ' ▶' : ch.name, x + PW / 2, y + PH - 20, 22, PW - 16, '#fff', 'center', '900');
-          if (p.ready) {
-            ctx.save(); ctx.translate(x + PW - 56, y + 64); ctx.rotate(-0.15);
-            ctx.fillStyle = UIC.red; uiPara(-48, -18, 96, 36, 10); ctx.fill();
-            text('OK!', 0, 1, 24, '#fff', 'center', '900'); ctx.restore();
-          }
+          { const r = stageRect(cur); ctx.fillStyle = NCOL[0].main; ctx.beginPath(); ctx.arc(r.x + r.w - 18, r.y + 18, 18, 0, TAU); ctx.fill(); text('P1', r.x + r.w - 18, r.y + 19, 13, '#fff', 'center', '900'); }   // ホストのカーソル
+          uiFooter(NET.isHost ? '←→：ステージ　Enter：決定してスタート　Esc：キャラ選択にもどる' : 'ホストがステージを選んでいます' + dots, rulesText(R0));
         }
-        const all = ps.filter(Boolean), cnt = all.length, readyN = all.filter(p => p.ready).length;
-        ctx.fillStyle = UIC.ink; uiPara(VW / 2 - 350, 568, 700, 40, 14); ctx.fill();
-        text('ステージ：' + STAGES[NET.stage].name + (NET.isHost ? '　（↑↓で変更）' : '') + '　ストック ' + NET.stocks, VW / 2, 588, 19, '#fff', 'center', 'bold');
-        let msg;
-        if (!NET.isHost && NET.busy) msg = 'いま対戦中です。終わるまでロビーで待ってね' + dots;
-        else if (NET.myReady) msg = cnt < 2 ? '友だちが入るのを待っています' + dots + '（Esc：取り消し）'
-          : readyN === cnt ? 'まもなく開始！' : 'みんなの準備を待っています（' + readyN + '/' + cnt + '）' + dots + '（Esc：取り消し）';
-        else msg = '←→：キャラ選択　Enter：準備OK　Esc：ルームを出る';
-        if (shareT > 0) msg = shareMsg;   // 招待リンクをコピーしたときのお知らせ
-        text(msg, VW / 2, 630, shareT > 0 && msg.length > 40 ? 16 : 21, shareT > 0 ? UIC.red : UIC.ink, 'center', '900');
-        uiFooter(cnt + '/' + NET_MAX + '人　全員が準備OKで開始（2人以上）　人数が多いほどステージが広くなります', NET.isHost ? 'あなたがホストです' : '');
+        if (!NET.isHost && NET.busy) { ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(0, 0, VW, VH); text('いま対戦中です。終わるまで待ってね' + dots, VW / 2, VH / 2, 30, '#fff', 'center', '900'); }
+        if (shareT > 0) { ctx.fillStyle = UIC.red; uiPara(VW / 2 - 360, 60, 720, 40, 12); ctx.fill(); fitText(shareMsg, VW / 2, 80, 17, 680, '#fff', 'center', '900'); }
         if (NET.notice && performance.now() < NET.noticeUntil) {
-          ctx.fillStyle = UIC.red; uiPara(VW - 320, 76, 300, 44, 14); ctx.fill();
-          text(NET.notice, VW - 175, 98, 18, '#fff', 'center', '900');
+          ctx.fillStyle = UIC.red; uiPara(VW - 320, 64, 300, 40, 14); ctx.fill();
+          text(NET.notice, VW - 175, 84, 18, '#fff', 'center', '900');
         }
       } else {
         box(VW / 2 - 400, 200, 800, 260);
@@ -10549,8 +10623,17 @@ function faceTex(scene, i, h = 220) {
   const ch = CHARS[i], w = Math.ceil(h * Math.max(1, ch.ar || 1)) + 24;
   return canvasTex(scene, `face${i}_${h}`, w, h + 24, () => drawFace(w / 2, (h + 24) / 2, h, 0, 0.6, 0, ch));
 }
-function tileTex(scene, i) {   // キャラ選択のタイル（i = -1 は「おまかせ」）
-  return canvasTex(scene, 'tile' + i, TILE.w, 160, (g, w, h) => {
+function tileTex(scene, i) { return canvasTex(scene, 'tile' + i, TILE.w, 160, tileDraw(i)); }
+const TILE_CV = {};
+function tileCanvas(i) {   // オンラインのキャラ選択用（キャンバスに描いてとっておく）
+  if (TILE_CV[i]) return TILE_CV[i];
+  const c = document.createElement('canvas'); c.width = TILE.w; c.height = 160;
+  const save = ctx; ctx = c.getContext('2d');
+  try { tileDraw(i)(ctx, TILE.w, 160); } finally { ctx = save; }
+  return (TILE_CV[i] = c);
+}
+function tileDraw(i) {   // キャラ選択のタイル（i = -1 は「おまかせ」）
+  return (g, w, h) => {
     g.fillStyle = '#141414'; g.fillRect(0, 0, w, h);
     g.fillStyle = '#262626'; for (let k = -h; k < w; k += 14) { g.beginPath(); g.moveTo(k, h); g.lineTo(k + 6, h); g.lineTo(k + 6 + h, 0); g.lineTo(k + h, 0); g.fill(); }
     if (i >= 0) {
@@ -10565,7 +10648,7 @@ function tileTex(scene, i) {   // キャラ選択のタイル（i = -1 は「お
     let fz = nm.length > 5 ? 15 : 18; g.font = `900 ${fz}px ${FONT}`;
     while (fz > 8 && g.measureText(nm).width > w - 8) { fz--; g.font = `900 ${fz}px ${FONT}`; }   // 長い名前は小さく
     g.fillText(nm, w / 2, h - 15);
-  });
+  };
 }
 function logoTex(scene) {
   return canvasTex(scene, 'logo', 1010, 340, (g) => {
