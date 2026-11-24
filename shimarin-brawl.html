@@ -266,6 +266,12 @@ const Snd = {
     this.tone(70, 1.4, 'sine', 0.3, 28); this.noise(1.6, 0.45, 700);
     setTimeout(() => { this.tone(2200, 0.7, 'sawtooth', 0.03, 300); this.noise(0.9, 0.2, 5000); }, 60);
   },
+  // 致命的な一撃：重い衝撃＋バチバチと走る電撃＋低いうなり
+  crit() {
+    this.tone(70, 1.4, 'sine', 0.4, 28); this.noise(0.5, 0.4, 300); this.tone(3200, 0.25, 'sine', 0.06, 900);
+    for (let i = 0; i < 9; i++) { this.nz(0.05 + (i % 3) * 0.03, 0.12, 'highpass', 2500 + (i % 4) * 900, 0.8, 0.05 + i * 0.13 + (i % 2) * 0.04); }
+    this.osc('sawtooth', 55, 1.3, 0.07, 48, 0.1);
+  },
   cine() { this.tone(95, 0.7, 'sine', 0.32, 40); this.noise(0.6, 0.35, 380); this.tone(2600, 0.5, 'sine', 0.05, 700); },
   ballIn() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => this.tone(f, 0.18, 'triangle', 0.05), i * 70)); },
   ballHit() { this.tone(1400, 0.08, 'square', 0.04, 900); },
@@ -7227,12 +7233,12 @@ SC_.battle = (o) => {
     if (hb.ang < 0) Snd.voice2('meteor', 3);   // メテオ
     // 決定打：このまま撃墜されるならスローのカットイン演出
     if (kb > 15 && B.phase === 'fight' && !B.cine && willKO(T)) {
-      const fr = 46;
-      B.cine = { T, A, life: fr, max: fr, col: A.col };
-      if (T.stocks === 1) Snd.voice2('danger', 3.2);   // 残りストック1でピンチ
+      const crit = T.stocks === 1, fr = crit ? 84 : 46;   // 残りストック1：致命的な一撃の演出（長め）
+      B.cine = { T, A, life: fr, max: fr, col: A.col, crit };
+      if (crit) { Snd.voice2('danger', 3.2); Snd.crit(); }
       T.hitlag = fr; if (!isProj) A.hitlag = fr;
       B.flashScr = 5; B.flashRGB = '255,255,255'; B.shake = 0;
-      Snd.cine();
+      if (!crit) Snd.cine();
     }
     return true;
   };
@@ -8454,7 +8460,7 @@ SC_.battle = (o) => {
     Snd.back();
   }
 
-  const toScreen = (x, y) => { const c = B.vcam || B.cam; return { x: (x - c.x) * c.z + VW / 2, y: (y - c.y) * c.z + VH / 2 }; };
+  const toScreen = (x, y) => { const c = B.vcam || B.cam, z = c.z * (1 + (B.zoomP || 0)); return { x: (x - c.x) * z + VW / 2, y: (y - c.y) * z + VH / 2 }; };
 
   // ---- バーサーカーのオーラ解放の演出 ----
   const INTRO_ROAR = 72;
@@ -9409,7 +9415,8 @@ SC_.battle = (o) => {
     let cam = B.cam;
     if (B.cine) {
       const c = B.cine, e = c.life / c.max, k = ease(Math.min(1, (1 - e) * 4) * Math.min(1, e * 5));
-      cam = { x: lerp(B.cam.x, c.T.x, k * 0.8), y: lerp(B.cam.y, c.T.y - 75, k * 0.8), z: B.cam.z * (1 + 0.45 * k) };
+      const kk = c.crit ? ease(Math.min(1, (1 - e) * 2.5)) * Math.min(1, e * 8) : k;   // 致命的：ぐっと寄ってから、さらにじわじわ寄る
+      cam = { x: lerp(B.cam.x, c.T.x, kk * (c.crit ? 1 : 0.8)), y: lerp(B.cam.y, c.T.y - 75, kk * (c.crit ? 1 : 0.8)), z: B.cam.z * (1 + (c.crit ? 0.85 + (1 - e) * 0.3 : 0.45) * kk) };
     }
     B.vcam = cam;
     drawStageBGCached(st, cam, B.t);
@@ -9712,8 +9719,73 @@ SC_.battle = (o) => {
   }
 
   // ---- 決定打カットイン（集中線＋暗転＋色フラッシュ） ----
+  // ---- 致命的な一撃（残りストック1）：画面全体が赤黒く沈み、赤と黒の稲妻が走る ----
+  function critBolt(R, x0, y0, x1, y1, seg, jag) {
+    const pts = [[x0, y0]];
+    for (let i = 1; i < seg; i++) { const q = i / seg; pts.push([lerp(x0, x1, q) + (R() - 0.5) * jag, lerp(y0, y1, q) + (R() - 0.5) * jag]); }
+    pts.push([x1, y1]); return pts;
+  }
+  function strokePts(pts) { ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke(); }
+  function drawCrit(T, inA, e, tail) {
+    const s = toScreen(T.x, T.y - 75 * T.ch.scale);
+    ctx.save();
+    // 赤黒く沈む画面（相手のまわりだけ少し残る）
+    ctx.fillStyle = `rgba(25,0,0,${0.4 * inA})`; ctx.fillRect(0, 0, VW, VH);
+    ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = `rgba(255,${(255 - 175 * inA) | 0},${(255 - 195 * inA) | 0},1)`; ctx.fillRect(0, 0, VW, VH);
+    ctx.globalCompositeOperation = 'source-over';
+    const vg = ctx.createRadialGradient(s.x, s.y, 60, s.x, s.y, 760);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(0.55, `rgba(30,0,0,${0.35 * inA})`); vg.addColorStop(1, `rgba(0,0,0,${0.9 * inA})`);
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, VW, VH);
+    // 稲妻（3フレームごとに形が変わる）
+    const R = srand(((B.t / 3 | 0) * 2654435761 >>> 0) % 1e9 + 13), n = tail ? 4 : 9;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (let i = 0; i < n; i++) {
+      // 画面の外から相手に向かう／画面を横切る
+      const side = R() * 4 | 0, ex = [R() * VW, VW + 40, R() * VW, -40][side], ey = [-40, R() * VH, VH + 40, R() * VH][side];
+      const toT = R() < 0.6, tx = toT ? s.x + (R() - 0.5) * 120 : R() * VW, ty = toT ? s.y + (R() - 0.5) * 120 : R() * VH;
+      const pts = critBolt(R, ex, ey, tx, ty, 12 + (R() * 6 | 0), 90);
+      const a = inA * (0.55 + R() * 0.45) * (R() < 0.25 ? 0.4 : 1);
+      if (i % 3 === 2) {   // 黒い稲妻
+        ctx.globalAlpha = a * 0.9; ctx.strokeStyle = '#000'; ctx.lineWidth = 9; strokePts(pts);
+        ctx.strokeStyle = '#3a0000'; ctx.lineWidth = 3; strokePts(pts);
+        continue;
+      }
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = a * 0.35; ctx.strokeStyle = '#ff0000'; ctx.lineWidth = 22; strokePts(pts);
+      ctx.globalAlpha = a * 0.8; ctx.strokeStyle = '#ff2a10'; ctx.lineWidth = 7; strokePts(pts);
+      ctx.globalAlpha = a; ctx.strokeStyle = '#ffd0c0'; ctx.lineWidth = 2; strokePts(pts);
+      // 枝分かれ
+      const b = pts[(pts.length * (0.3 + R() * 0.4)) | 0], ang = R() * TAU;
+      const br = critBolt(R, b[0], b[1], b[0] + Math.cos(ang) * 200, b[1] + Math.sin(ang) * 200, 6, 50);
+      ctx.globalAlpha = a * 0.7; ctx.strokeStyle = '#ff3a20'; ctx.lineWidth = 3; strokePts(br);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    // 相手を包む赤い光と、ひび割れたような衝撃リング
+    ctx.globalCompositeOperation = 'lighter';
+    const gr = (tail ? 120 : 200) + Math.sin(B.t * 1.3) * 18;
+    ctx.globalAlpha = inA * 0.45; ctx.drawImage(glowSprite('rgba(255,20,0,.9)'), s.x - gr, s.y - gr, gr * 2, gr * 2);
+    if (!tail) for (let j = 0; j < 3; j++) {
+      const q = (e * 2.6 + j / 3) % 1;
+      ctx.globalAlpha = inA * (1 - q) * 0.9; ctx.strokeStyle = j === 1 ? '#ffe0d0' : '#ff1a00'; ctx.lineWidth = 12 * (1 - q) + 2;
+      ctx.beginPath(); ctx.arc(s.x, s.y, 50 + q * 420, 0, TAU); ctx.stroke();
+    }
+    // 走る赤いノイズの横線
+    ctx.globalAlpha = inA * 0.5;
+    for (let i = 0; i < 6; i++) { ctx.fillStyle = i % 2 ? '#ff1000' : '#600000'; ctx.fillRect(0, R() * VH, VW, 1 + R() * 3); }
+    ctx.restore();
+    if (!tail) {   // 上下の黒帯（太め）
+      const bh = 92 * inA; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, bh); ctx.fillRect(0, VH - bh, VW, bh);
+      ctx.fillStyle = `rgba(255,20,0,${inA})`; ctx.fillRect(0, bh - 3, VW, 3); ctx.fillRect(0, VH - bh, VW, 3);
+    }
+  }
   function drawCine() {
+    if (!B.cine && B.critT > 0 && fs[B.critId]) { const k = B.critT / 60; drawCrit(fs[B.critId], k * k, 1, true); }
     const c = B.cine; if (!c) return;
+    if (c.crit) {
+      const e = 1 - c.life / c.max, inA = Math.min(1, e * 10) * Math.min(1, (1 - e) * 8);
+      if (e < 0.06) { ctx.fillStyle = `rgba(255,${e < 0.03 ? 255 : 40},${e < 0.03 ? 255 : 20},${1 - e * 8})`; ctx.fillRect(0, 0, VW, VH); }   // 一瞬の白→赤フラッシュ
+      return drawCrit(c.T, inA, e, false);
+    }
     const e = 1 - c.life / c.max, inA = Math.min(1, e * 6) * Math.min(1, (1 - e) * 5);
     const s = toScreen(c.T.x, c.T.y - 75 * c.T.ch.scale);
     const rgb = rgbOf(c.col.main).slice(0, 3).join(',');
@@ -9807,7 +9879,8 @@ SC_.battle = (o) => {
     for (let i = 0; i < B.hudShake.length; i++) if (B.hudShake[i] > 0) B.hudShake[i]--;
     if (B.lostStock && --B.lostStock.life <= 0) B.lostStock = null;
     if (B.scorePop && --B.scorePop.life <= 0) B.scorePop = null;
-    if (B.cine && --B.cine.life <= 0) { B.cine = null; B.shake = Math.max(B.shake, 16); }
+    if (B.cine && --B.cine.life <= 0) { if (B.cine.crit) { B.slow = Math.max(B.slow || 0, 60); B.critT = 60; B.critId = fs.indexOf(B.cine.T); B.shake = 26; } B.cine = null; B.shake = Math.max(B.shake, 16); }
+    if (B.critT > 0) B.critT--;
     if (B.fsGetPop && --B.fsGetPop.life <= 0) B.fsGetPop = null;
     if (B.impactF > 0) B.impactF--;
     if (B.speed && --B.speed.life <= 0) B.speed = null;
