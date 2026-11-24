@@ -147,7 +147,7 @@ const Snd = {
   // ---- 録音した効果音（se/ フォルダ。効果音ラボ と OpenGameArt の素材。出典は se/README.md）----
   // 読みこめないとき（ファイルを直接ひらいた等）は、今までどおり合成の音で鳴らす
   SE_FILES: { swish: 3, blade: 5, iai: 1, sheath: 1, dash: 1, punch: 5, flesh: 2, boom: 2, glass: 2, bowdraw: 1, release: 1, pierce: 1, tent: 4, slime: 1, whip: 3, tswing: 2,
-    meteor: 1, cdthree: 1, cdtwo: 1, cdone: 1, danger: 1, kovoice: 1, gameset: 1 },
+    meteor: 1, cdthree: 1, cdtwo: 1, cdone: 1, cdgo: 1, danger: 1, kovoice: 1, gameset: 1 },
   loadSE() {
     this.seTried = true; this.se = {};
     for (const [name, n] of Object.entries(this.SE_FILES)) {
@@ -259,7 +259,7 @@ const Snd = {
   swing() { this.noise(0.07, 0.07, 3200); },
   shield() { this.tone(900, 0.06, 'sine', 0.06); },
   count(n) { if (!this.smp(['cdthree', 'cdtwo', 'cdone'][n] || 'cdthree', 3.2)) this.tone(440, 0.22, 'square', 0.06); },
-  go() { this.tone(880, 0.5, 'square', 0.07); },
+  go() { if (!this.smp('cdgo', 3.2)) this.tone(880, 0.5, 'square', 0.07); },
   voice2(name, v = 3) { return this.smp(name, v); },
   psy() { this.tone(320, 0.3, 'sine', 0.07, 960); this.tone(480, 0.25, 'triangle', 0.035, 1400); },
   koBoom() {
@@ -6835,7 +6835,6 @@ SC_.vs = (o) => {
     update() {
       t++;
       if (t === 20 || t === 50) Snd.hit(10);
-      if (t === 80) Snd.go();
       if (t > 170 || (t > 40 && (MI.ok() || mouse.click))) go('battle', o);
     },
     draw() {
@@ -9818,7 +9817,7 @@ SC_.battle = (o) => {
     }
     if (B.phase === 'count') {
       if (B.t === 1 || B.t === 61 || B.t === 121) Snd.count((B.t - 1) / 60);
-      if (B.t === 181) B.phase = 'fight';
+      if (B.t === 181) { B.phase = 'fight'; Snd.go(); }
     }
     if (B.phase === 'fight') B.time++;
     if (B.phase === 'end') {

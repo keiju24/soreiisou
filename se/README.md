@@ -34,7 +34,7 @@
 
 ## ニコニ・コモンズ（ユーザーさん提供の素材）
 - meteor1.mp3 … nc207374（メテオ攻撃が当たったとき）
-- cdthree1 / cdtwo1 / cdone1.mp3 … nc221890 を切り分けた 3・2・1（対戦開始のカウントダウン。GO の部分は使っていない）
+- cdthree1 / cdtwo1 / cdone1 / cdgo1.mp3 … nc221890 を4つに切り分け（対戦開始のカウントダウン）
 - danger1.mp3 … nc204763（残りストック1で撃墜されそうなとき）
 - kovoice1.mp3 … nc204774（撃墜したとき）
 - gameset1.mp3 … nc204762（GAME SET）
