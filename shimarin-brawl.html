@@ -7227,7 +7227,7 @@ SC_.battle = (o) => {
   function spawnBall() {
     const m = st.plats[0];
     B.ball = { x: R(m.x1 + 80, m.x2 - 80), y: -640, vx: 0, vy: 0, kx: 0, ky: 0, r: 46, hp: 36, max: 36, life: 1500,
-      flash: 0, tx: 0, ty: -220, tt: 0, rot: 0, born: 0, dying: false, fade: 0, seed: (Math.random() * 1e6) | 0 };
+      flash: 0, tx: 0, ty: -220, tt: 0, rot: 0, born: 0, dying: false, fade: 0, seed: (B.t * 2654435761 >>> 0) % 1e6 };   // ひびの模様用。Math.random を使うとロールバック後に状態がずれるので時刻から作る
     Snd.ballIn();
   }
   function updBall() {
@@ -7427,7 +7427,8 @@ SC_.battle = (o) => {
       for (const n of S.notes) { n.y += n.vy; n.x += Math.sin(n.life * 0.1) * 0.8; n.life--; }
       S.notes = S.notes.filter(n => n.life > 0);
       S.show = Math.min(1, u / 20);
-      if (u % 5 === 0 && u < 150) S.notes.push({ x: F.x + rnd(-320, 320), y: F.y - rnd(0, 120), vy: -rnd(1.5, 3), life: 70, n: (u / 5 | 0) % 3 });
+      // 音符は見た目だけだが B.sup に入る（ロールバックで保存される）ので Math.random ではなく u から決まる乱数で作る
+      if (u % 5 === 0 && u < 150) { const q = srand(u * 7919 + 13); S.notes.push({ x: F.x + (q() * 640 - 320), y: F.y - q() * 120, vy: -(1.5 + q() * 1.5), life: 70, n: (u / 5 | 0) % 3 }); }
       if (!S.caught && !S.miss) {
         if (u === 30) {
           S.rings.push({ x: F.x, y: F.y - 110, r: 30, v: 26, life: 40 }); Snd.chintaVoice(1);
