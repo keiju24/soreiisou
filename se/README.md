@@ -31,3 +31,11 @@
 | boom1 | [Chunky Explosion](https://opengameart.org/content/chunky-explosion) |
 | glass1 | [Glass Break](https://opengameart.org/content/glass-break) |
 | glass2 | [75 CC0 breaking / falling / hit sfx](https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx) |
+
+## ニコニ・コモンズ（ユーザーさん提供の素材）
+- meteor1.mp3 … nc207374（メテオ攻撃が当たったとき）
+- cdthree1 / cdtwo1 / cdone1 / cdgo1.mp3 … nc221890 を4つに切り分け（対戦開始のカウントダウン）
+- danger1.mp3 … nc204763（残りストック1で撃墜されそうなとき）
+- kovoice1.mp3 … nc204774（撃墜したとき）
+- gameset1.mp3 … nc204762（GAME SET）
+

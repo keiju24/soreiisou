@@ -146,7 +146,8 @@ const Snd = {
   },
   // ---- 録音した効果音（se/ フォルダ。効果音ラボ と OpenGameArt の素材。出典は se/README.md）----
   // 読みこめないとき（ファイルを直接ひらいた等）は、今までどおり合成の音で鳴らす
-  SE_FILES: { swish: 3, blade: 5, iai: 1, sheath: 1, dash: 1, punch: 5, flesh: 2, boom: 2, glass: 2, bowdraw: 1, release: 1, pierce: 1, tent: 4, slime: 1, whip: 3, tswing: 2 },
+  SE_FILES: { swish: 3, blade: 5, iai: 1, sheath: 1, dash: 1, punch: 5, flesh: 2, boom: 2, glass: 2, bowdraw: 1, release: 1, pierce: 1, tent: 4, slime: 1, whip: 3, tswing: 2,
+    meteor: 1, cdthree: 1, cdtwo: 1, cdone: 1, cdgo: 1, danger: 1, kovoice: 1, gameset: 1 },
   loadSE() {
     this.seTried = true; this.se = {};
     for (const [name, n] of Object.entries(this.SE_FILES)) {
@@ -257,8 +258,9 @@ const Snd = {
   jump() { this.tone(300, 0.08, 'triangle', 0.05, 620); },
   swing() { this.noise(0.07, 0.07, 3200); },
   shield() { this.tone(900, 0.06, 'sine', 0.06); },
-  count() { this.tone(440, 0.22, 'square', 0.06); },
-  go() { this.tone(880, 0.5, 'square', 0.07); },
+  count(n) { if (!this.smp(['cdthree', 'cdtwo', 'cdone'][n] || 'cdthree', 3.2)) this.tone(440, 0.22, 'square', 0.06); },
+  go() { if (!this.smp('cdgo', 3.2)) this.tone(880, 0.5, 'square', 0.07); },
+  voice2(name, v = 3) { return this.smp(name, v); },
   psy() { this.tone(320, 0.3, 'sine', 0.07, 960); this.tone(480, 0.25, 'triangle', 0.035, 1400); },
   koBoom() {
     this.tone(70, 1.4, 'sine', 0.3, 28); this.noise(1.6, 0.45, 700);
@@ -7193,10 +7195,12 @@ SC_.battle = (o) => {
     if (kb > 22) { B.flashScr = 6; B.flashRGB = '255,255,255'; }
     B.fxHit(A, T, hx, hy, dmg, kb);
     Snd.hitC(A.ch, dmg, isProj);
+    if (hb.ang < 0) Snd.voice2('meteor', 3);   // メテオ
     // 決定打：このまま撃墜されるならスローのカットイン演出
     if (kb > 15 && B.phase === 'fight' && !B.cine && willKO(T)) {
       const fr = 46;
       B.cine = { T, A, life: fr, max: fr, col: A.col };
+      if (T.stocks === 1) Snd.voice2('danger', 3.2);   // 残りストック1でピンチ
       T.hitlag = fr; if (!isProj) A.hitlag = fr;
       B.flashScr = 5; B.flashRGB = '255,255,255'; B.shake = 0;
       Snd.cine();
@@ -7609,7 +7613,7 @@ SC_.battle = (o) => {
     B.shake = 34; B.flashScr = 10; B.flashRGB = rgbOf(F.col.light).slice(0, 3).join(','); B.slow = 26; B.zoomP = 0.1;
     B.hudShake[F.id] = 36;
     B.lostStock = { id: F.id, idx: F.stocks - 1, life: 70, ch: F.ch };
-    Snd.ko(); Snd.koBoom();
+    if (!Snd.voice2('kovoice', 3)) Snd.ko(); Snd.koBoom();
     if (F.ch._base) F.ch = F.ch._base; F.miBig = 0; F.miFast = 0; F.miStar = 0;
     F.fsC = (F.fsC || 0) * 0.5;
     F.stocks--; F.stats.falls++; F.hasFS = false; F.bleedT = 0; F.bpStore = 0; F.dimT = 0; F.dimG = (F.dimG || 0) * 0.5;
@@ -9783,13 +9787,13 @@ SC_.battle = (o) => {
       if (B.sup && (B.sup.t <= SUP_CUT || B.sup.movie)) return;   // カットイン中・ムービー中は全員停止
     }
     if (B.phase === 'count') {
-      if (B.t === 1 || B.t === 61 || B.t === 121) Snd.count();
+      if (B.t === 1 || B.t === 61 || B.t === 121) Snd.count((B.t - 1) / 60);
       if (B.t === 181) { B.phase = 'fight'; Snd.go(); }
     }
     if (B.phase === 'fight') B.time++;
     if (B.phase === 'end') {
       B.endT++;
-      if (B.endT === 80) Snd.go();
+      if (B.endT === 76 && !Snd.voice2('gameset', 3.2)) Snd.go();
       if (B.endT > 230) {
         go(B.winner ? 'victory' : 'result', { winner: B.winner ? B.winner.id : -1, team: B.winner ? B.winner.team : undefined, stats: fs.map(f => ({ ...f.stats, stocks: Math.max(0, f.stocks), tag: f.col.tag, col: f.col, level: f.level, cpu: f.cpu, ch: f.ch, team: f.team })), time: B.time, online: !!ON });
         return;
@@ -10010,7 +10014,16 @@ SC_.battle = (o) => {
         const k = Math.min(1, (B.endT - 75) / 15);
         ctx.fillStyle = `rgba(0,0,0,${0.35 * k})`; ctx.fillRect(0, 0, VW, VH);
         ctx.save(); ctx.translate(VW / 2, VH / 2 - 40); ctx.scale(2 - k, 2 - k); ctx.globalAlpha = k;
-        text('GAME SET', 0, 0, 130, '#fff', 'center', '900', '#c4123a', 18);
+        ctx.font = `900 italic 138px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+        ctx.lineWidth = 22; ctx.strokeStyle = '#04200d'; ctx.strokeText('GAME SET', 0, 0);
+        ctx.lineWidth = 8; ctx.strokeStyle = '#c8ffd8'; ctx.strokeText('GAME SET', 0, 0);
+        const mg = ctx.createLinearGradient(0, -62, 0, 62);   // 金属のように上が明るく、まん中で一度暗く、下でまた光る
+        mg.addColorStop(0, '#f2fff4'); mg.addColorStop(0.28, '#6cf08f'); mg.addColorStop(0.5, '#0e7a34'); mg.addColorStop(0.53, '#0a5a26'); mg.addColorStop(0.75, '#3fcf6a'); mg.addColorStop(1, '#b8ffcb');
+        ctx.fillStyle = mg; ctx.fillText('GAME SET', 0, 0);
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.6;   // 光が横に流れる
+        const sx = ((B.endT - 75) * 22) % 1400 - 700, sh = ctx.createLinearGradient(sx - 80, 0, sx + 80, 0);
+        sh.addColorStop(0, 'rgba(255,255,255,0)'); sh.addColorStop(0.5, 'rgba(255,255,255,.9)'); sh.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = sh; ctx.fillText('GAME SET', 0, 0); ctx.restore();
         ctx.restore();
       }
       if (B.phase === 'fight' && B.t < 400) {
