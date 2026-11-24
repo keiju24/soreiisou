@@ -7230,7 +7230,7 @@ SC_.battle = (o) => {
     if (kb > 22) { B.flashScr = 6; B.flashRGB = '255,255,255'; }
     B.fxHit(A, T, hx, hy, dmg, kb);
     Snd.hitC(A.ch, dmg, isProj);
-    if (hb.ang < 0) Snd.voice2('meteor', 3);   // メテオ
+    if (hb.ang < 0 && !A.ch.berserk) Snd.voice2('meteor', 3);   // メテオ（バーサーカーは元の音のまま）
     // 決定打：このまま撃墜されるならスローのカットイン演出
     if (kb > 15 && B.phase === 'fight' && !B.cine && willKO(T)) {
       const crit = T.stocks === 1, fr = crit ? 84 : 46;   // 残りストック1：致命的な一撃の演出（長め）
