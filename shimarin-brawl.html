@@ -11151,8 +11151,6 @@ SC_.battle = (o) => {
       for (let j = 0; j < 4; j++) { const q = ((k * 0.05 + j / 4) % 1); ctx.globalAlpha = (1 - q) * 0.9; ctx.strokeStyle = j % 2 ? '#ff6a6a' : '#ffd34e'; ctx.lineWidth = 5 - q * 3; ctx.beginPath(); ctx.arc(tipX, tipY, 20 + q * 120, -0.7, 0.7); ctx.stroke(); }
       ctx.globalAlpha = 0.6 + 0.4 * Math.sin(k * 0.8); ctx.drawImage(glowSprite('rgba(255,60,40,.95)'), tipX - 50, tipY - 50, 100, 100);
       ctx.restore();
-      if (k > 6 && k % 12 < 7) cuteText('ピッ', tipX + 60, tipY - 70, 40, '#ffd34e', -0.1);
-      if (k > 22) cuteText('うんこばくだん きどう！', tipX - 40, tipY - 110, 30, '#ff8ab0', -0.04);
     }
     if (mt < UM_BEAT1) pets.forEach(drawP);
     // 噴き出す光の柱と土
