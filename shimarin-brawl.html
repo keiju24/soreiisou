@@ -817,6 +817,7 @@ const Snd = {
     this.nz(0.2, 0.08 + k * 0.08, 'bandpass', 1800, 1.5, 0, 500);
   },
   kHole() { this.osc('sine', 52, 1.6, 0.22, 28); this.osc('sawtooth', 105, 1.4, 0.04, 38); this.nz(1.4, 0.1, 'lowpass', 600, 2, 0, 80); },   // ブラックホールのうなり
+  kWarp(inn = 0) { if (inn) { this.osc('square', 1900, 0.22, 0.035, 260); this.osc('sine', 900, 0.18, 0.05, 140); } else { this.osc('square', 260, 0.22, 0.035, 2000); this.osc('sine', 140, 0.18, 0.05, 900); } },   // ワープの「ピュイーン」
   kBeam() { this.osc('sawtooth', this.vary(220), 0.16, 0.035, 270); this.nz(0.14, 0.05, 'bandpass', 2600, 3); this.osc('square', this.vary(1400), 0.03, 0.015); },
   // ---------- ヘンリー（寝たら朝は来ない）----------
   // 大剣を地面にたたきつけた「ズドォン」＋岩がくずれる音
@@ -3204,6 +3205,8 @@ function kSparks(x, y, n = 6) {
 function kParts(x, y, n = 3, sp = 6) {
   for (let i = 0; i < n; i++) BT.parts.push({ x, y, vx: rnd(-sp, sp), vy: rnd(-sp * 1.4, -1), g: 0.4, life: 44, max: 44, comp: 1, kind: Math.random() * 5 | 0, rot: rnd(0, TAU), spin: rnd(-0.35, 0.35), size: rnd(0.8, 1.1) });
 }
+// 切り札ムービーのタイミング（吸いこみ・ワープ開始・登場・ためる・発射・発射おわり・爆発・終わり）
+const KM_SUCK = 44, KM_WARP = 40, KM_APPEAR = 54, KM_CHG = 86, KM_FIRE = 128, KM_FIRE_END = 182, KM_BOOM = 194, KM_END = 226;
 const KMOVES = {};
 for (const k in MOVES) KMOVES[k] = { ...MOVES[k], hb: MOVES[k].hb.map(h => ({ ...h, dmg: Math.round(h.dmg * 1.05) })) };
 {
@@ -3473,7 +3476,7 @@ makeGrabs(KTMOVES, { reach: 1, hv: [52, -8],
     fx: (F, f, T) => { if (f === 24 && T) { BT.dust(T.x, F.y, 12); BT.shake = Math.max(BT.shake, 8); } } },
 }); }
 // 切り札ムービーのタイミング（鍵・振り向き・殴りかかる・3連打・背負い投げ・ビン・2発・とどめ・しめ・終わり）
-const KM_LOCK = 30, KM_TURN = 48, KM_LUNGE = 66, KM_HITS = [90, 112, 134], KM_THROW = 154, KM_BOTTLE = 182, KM_SHOTS = [212, 220], KM_FIN0 = 230, KM_SLASH = 262, KM_AFTER = 284, KM_END = 326;
+const KT_LOCK = 30, KT_TURN = 48, KT_LUNGE = 66, KT_HITS = [90, 112, 134], KT_THROW = 154, KT_BOTTLE = 182, KT_SHOTS = [212, 220], KT_FIN0 = 230, KT_SLASH = 262, KT_AFTER = 284, KT_END = 326;
 const CHARS = [
   { key: 'shimarin', name: 'しまりん', kana: 'PSYCHIC', img: FACE, ar: FACE_AR, eyes: true, scale: 1, run: 7.0, airs: 5.8, jv: -14.6, shv: -10, djv: -13.4, airJumps: 2,
     kbTake: 0.95, swords: false, arms4: true, psychic: true, hand: '#c9c3f2', moves: SMOVES,
@@ -3544,7 +3547,7 @@ const CHARS = [
   { key: 'kenshin', name: 'Kenshin', kana: 'ENGINEER', img: KENSHIN, ar: KENSHIN_AR, eyes: false, scale: 1.04, run: 6.2, airs: 5.2, jv: -14.2, shv: -9.8, djv: -13,
     kbTake: 0.9, swords: false, mech: true, hand: '#4a5260', moves: KMOVES,
     outfit: { main: '#5b6472', dark: '#2a3038', light: '#a8b4c4', pants: '#2e343e', shoe: '#1c2026' },
-    fsName: 'シンギュラリティ・ビーム', fsDesc: '小型ブラックホールで相手を吸いこみ、電子部品のビームを撃ちこむ',
+    fsName: 'シンギュラリティ・ビーム', fsDesc: 'ブラックホールボムで相手を吸いこみ、ムービーでワープしてきて腕のバスターから巨大ビーム',
     specials: [['サーキットスピン', '必殺', 'その場で回転して何度も当て、最後に電気ではじき飛ばす'], ['波動弾', '横＋必殺', '電気の玉を撃つ。押しっぱなしでためるほど大きく強い'],
       ['エンタージャンプ', '上＋必殺', '巨大なエンターキーをトランポリンにして大きく跳ぶ（復帰用）'], ['キーボードリフレクター', '下＋必殺', 'キーを体のまわりで回して飛び道具をはね返し、さわった相手に小ダメージ']] },
   { key: 'kotan', name: 'こうたんご主人様', kana: 'GENTLEMAN', img: KOTAN, ar: KOTAN_AR, eyes: false, scale: 1.0, run: 7.0, airs: 5.8, jv: -14.8, shv: -10.2, djv: -13.8,
@@ -4146,7 +4149,7 @@ class AI {
       const inRange = k === 'shimarin' ? Math.hypot(ddx, ddy) < 420 : k === 'ichigo' ? ddy < 90 && ddx < 650 && sgn(opp.x - F.x) === F.dir
         : k === 'archer' ? Math.hypot(ddx, ddy) < 850
         : k === 'hammer' ? ddx < 650 && ddy < 300 && sgn(opp.x - F.x) === F.dir
-        : k === 'imai' ? ddx < 500 : k === 'henry' ? Math.hypot(ddx, ddy) < 750 : k === 'chinta' ? Math.hypot(ddx, ddy) < 1000 : k === 'bhenry' ? ddx < 600 && ddy < 260 : k === 'nagata' ? ddx < 480 && ddy < 300 : k === 'unko' ? Math.hypot(ddx, ddy) < 950 : k === 'kotan' ? Math.hypot(ddx, ddy) < 850 : k === 'kenshin' ? Math.hypot(ddx, ddy) < 800 : true;
+        : k === 'imai' ? ddx < 500 : k === 'henry' ? Math.hypot(ddx, ddy) < 750 : k === 'chinta' ? Math.hypot(ddx, ddy) < 1000 : k === 'bhenry' ? ddx < 600 && ddy < 260 : k === 'nagata' ? ddx < 480 && ddy < 300 : k === 'unko' ? Math.hypot(ddx, ddy) < 950 : k === 'kotan' ? Math.hypot(ddx, ddy) < 850 : k === 'kenshin' ? ddx < 720 && ddy < 260 && sgn(opp.x - F.x) === F.dir : true;
       if (inRange && R() < 0.08 + L * 0.02) { this.plan = [{ n: 1, c: { special: true } }, { n: 20, c: {} }]; return c; }
       if (k === 'ichigo' && ddy < 90 && sgn(opp.x - F.x) !== F.dir) { c[opp.x > F.x ? 'right' : 'left'] = true; return this.safe(c, B); }
     }
@@ -7515,53 +7518,111 @@ function drawKenshinFx(F, t) {
     ctx.restore();
   }
 }
-// Kenshin の切り札：小型ブラックホールと、そこへ撃ちこむ電子部品のビーム（キャラより奥にかく）
-function drawKenshinHole(S, t) {
-  const bh = S.bh || 0; if (bh <= 0.01) return;
-  const x = S.bx, y = S.by, F = S.F, r = 70 * bh * (1 + 0.05 * Math.sin(t * 0.3));
+// ---- Kenshin の切り札（参考：スマブラのロックマンの切り札）の絵 ----
+// 宇宙の背景（星が (cx, cy) へ流れこむ）
+function kSpaceBg(cx, cy, t, k = 1) {
+  const g = ctx.createRadialGradient(cx, cy, 20, cx, cy, VW);
+  g.addColorStop(0, '#2a0f4a'); g.addColorStop(0.4, '#10061f'); g.addColorStop(1, '#030108');
+  ctx.fillStyle = g; ctx.fillRect(-60, -60, VW + 120, VH + 120);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+  for (let i = 0; i < 90; i++) {
+    const R = srand(i * 97 + 11), a = R() * TAU, sp = 0.6 + R(), q = (R() + t * 0.012 * sp * k) % 1, d = (1 - q) * VW * 0.9 + 30;
+    const x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d * 0.8, L = 6 + q * 40 * k;
+    ctx.globalAlpha = Math.min(1, q * 2) * 0.8; ctx.strokeStyle = i % 3 ? '#bfa8ff' : '#9ff0ff'; ctx.lineWidth = 1.2 + R() * 1.5;
+    line(x, y, x + Math.cos(a) * L, y + Math.sin(a) * L * 0.8);
+  }
+  ctx.restore();
+}
+// ブラックホール（r：大きさ、a：濃さ）
+function kHoleAt(x, y, r, a, t) {
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
-  ctx.globalAlpha = 0.8 * bh; ctx.drawImage(glowSprite('rgba(150,80,255,.8)'), x - r * 3.2, y - r * 3.2, r * 6.4, r * 6.4);
-  // 吸いこまれていく光の筋
+  ctx.globalAlpha = 0.8 * a; ctx.drawImage(glowSprite('rgba(150,80,255,.8)'), x - r * 3.2, y - r * 3.2, r * 6.4, r * 6.4);
   ctx.lineWidth = 2;
-  for (let i = 0; i < 16; i++) {
-    const a = i * TAU / 16 + t * 0.05, q = (t * 0.035 + i * 0.37) % 1, d = r * (4.2 - q * 3.2);
-    ctx.globalAlpha = bh * q * 0.85; ctx.strokeStyle = i % 2 ? '#c9a0ff' : '#7fe8ff';
-    line(x + Math.cos(a) * d, y + Math.sin(a) * d, x + Math.cos(a + 0.3) * (d - r * 0.7), y + Math.sin(a + 0.3) * (d - r * 0.7));
+  for (let i = 0; i < 18; i++) {   // 吸いこまれていく光の筋
+    const an = i * TAU / 18 + t * 0.05, q = (t * 0.035 + i * 0.37) % 1, d = r * (4.4 - q * 3.4);
+    ctx.globalAlpha = a * q * 0.85; ctx.strokeStyle = i % 2 ? '#c9a0ff' : '#7fe8ff';
+    line(x + Math.cos(an) * d, y + Math.sin(an) * d, x + Math.cos(an + 0.3) * (d - r * 0.7), y + Math.sin(an + 0.3) * (d - r * 0.7));
   }
-  // ななめに回る降着円盤
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 3; i++) {   // ななめに回る降着円盤
     ctx.save(); ctx.translate(x, y); ctx.rotate(-0.35);
-    ctx.globalAlpha = bh * (0.9 - i * 0.25); ctx.strokeStyle = i === 1 ? '#7fe8ff' : '#c9a0ff'; ctx.lineWidth = 6 - i * 1.5;
+    ctx.globalAlpha = a * (0.9 - i * 0.25); ctx.strokeStyle = i === 1 ? '#7fe8ff' : '#c9a0ff'; ctx.lineWidth = (6 - i * 1.5) * Math.max(1, r / 80);
     ctx.setLineDash([r * 0.7, r * 0.25]); ctx.lineDashOffset = -t * (4 + i * 2);
     ctx.beginPath(); ctx.ellipse(0, 0, r * (1.9 + i * 0.35), r * (0.5 + i * 0.1), 0, 0, TAU); ctx.stroke();
     ctx.restore();
   }
   ctx.setLineDash([]);
-  // 黒い穴
-  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = a;
   const g = ctx.createRadialGradient(x, y, r * 0.2, x, y, r);
   g.addColorStop(0, 'rgba(0,0,0,.97)'); g.addColorStop(0.72, 'rgba(6,0,14,.92)'); g.addColorStop(1, 'rgba(30,0,60,0)');
   ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
-  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = bh; ctx.strokeStyle = '#e0c8ff'; ctx.lineWidth = 2.5;
+  ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = '#e0c8ff'; ctx.lineWidth = 2.5 * Math.max(1, r / 80);
   ctx.beginPath(); ctx.arc(x, y, r * 0.72, 0, TAU); ctx.stroke();
-  // 電子部品のビーム
-  const bk = S.beamK || 0;
-  if (bk > 0) {
-    const sc = F.ch.scale, hx = F.x + S.dir * 66 * sc, hy = F.y - 100 * sc, dx = x - hx, dy = y - hy, d = Math.hypot(dx, dy) || 1, w = 24 * bk * (1 + 0.15 * Math.sin(t * 1.1));
-    ctx.save(); ctx.translate(hx, hy); ctx.rotate(Math.atan2(dy, dx));
-    ctx.globalAlpha = 1; ctx.drawImage(glowSprite('rgba(60,200,255,.85)'), -30, -w * 2.4, d + 60, w * 4.8);
-    ctx.fillStyle = 'rgba(110,225,255,.7)'; ctx.fillRect(0, -w * 0.5, d, w);
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, -w * 0.17, d, w * 0.34);
-    ctx.globalCompositeOperation = 'source-over';
-    for (let i = 0; i < 10; i++) {   // ビームの中を流れていく電子部品
-      const q = (t * 0.05 + i / 10) % 1;
-      ctx.save(); ctx.translate(q * d, Math.sin(i * 2.3 + t * 0.2) * w * 0.4); ctx.rotate(t * 0.2 + i);
-      ctx.globalAlpha = Math.min(1, q * 5, (1 - q) * 5) * bk; drawComp(i % 5, 1.1); ctx.restore();
-    }
-    ctx.restore();
+  ctx.restore();
+}
+// 腕のバスターに光をためる（c：0〜1、s：大きさ）
+function kChargeAt(hx, hy, c, t, s = 1) {
+  const r = (10 + c * 46 * (1 + 0.08 * Math.sin(t * 0.9))) * s;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  ctx.drawImage(glowSprite('rgba(70,210,255,.95)'), hx - r * 2, hy - r * 2, r * 4, r * 4);
+  ctx.fillStyle = 'rgba(230,252,255,.95)'; ctx.beginPath(); ctx.arc(hx, hy, r * 0.45, 0, TAU); ctx.fill();
+  ctx.lineWidth = 2 * s;
+  for (let i = 0; i < 14; i++) {   // まわりから光が集まる
+    const a = i * TAU / 14 + i * 0.7, q = (t * 0.06 + i * 0.29) % 1, d = (30 + (1 - q) * 150) * s;
+    ctx.globalAlpha = q * 0.9; ctx.strokeStyle = i % 2 ? '#ffffff' : '#7fe8ff';
+    line(hx + Math.cos(a) * d, hy + Math.sin(a) * d, hx + Math.cos(a) * (d - 26 * s), hy + Math.sin(a) * (d - 26 * s));
+  }
+  for (let j = 0; j < 2; j++) { const q = (t * 0.05 + j * 0.5) % 1; ctx.globalAlpha = (1 - q) * 0.8; ctx.strokeStyle = '#bff6ff'; ctx.lineWidth = 3 * s; ctx.beginPath(); ctx.arc(hx, hy, r * (2.2 - q * 1.6), 0, TAU); ctx.stroke(); }
+  ctx.restore();
+}
+// 巨大ビーム：(hx, hy) から (tx, ty) をつらぬいて、その先まで。中を電子部品が流れる
+function kBeamAt(hx, hy, tx, ty, w, bk, t) {
+  const dx = tx - hx, dy = ty - hy, d = Math.hypot(dx, dy) || 1, L = d + VW, W = w * bk * (1 + 0.06 * Math.sin(t * 1.3));
+  ctx.save(); ctx.translate(hx, hy); ctx.rotate(Math.atan2(dy, dx));
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = 0.9; ctx.drawImage(glowSprite('rgba(60,200,255,.9)'), -60, -W * 1.6, L + 120, W * 3.2);
+  const g = ctx.createLinearGradient(0, -W / 2, 0, W / 2);
+  g.addColorStop(0, 'rgba(60,190,255,0)'); g.addColorStop(0.25, 'rgba(90,220,255,.75)'); g.addColorStop(0.5, '#ffffff'); g.addColorStop(0.75, 'rgba(90,220,255,.75)'); g.addColorStop(1, 'rgba(60,190,255,0)');
+  ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fillRect(0, -W / 2, L, W);
+  ctx.lineWidth = 4 * Math.max(1, w / 90);
+  for (let i = 0; i < 8; i++) {   // 流れていく光の輪（チャージショットの波）
+    const q = (t * 0.06 + i / 8) % 1, x = q * L;
+    ctx.globalAlpha = Math.min(1, (1 - q) * 3) * 0.8; ctx.strokeStyle = i % 2 ? '#ffffff' : '#9ff0ff';
+    ctx.beginPath(); ctx.ellipse(x, 0, 10 + W * 0.12, W * 0.6, 0, 0, TAU); ctx.stroke();
+  }
+  ctx.globalAlpha = 1; ctx.drawImage(glowSprite('rgba(200,250,255,.95)'), -W, -W, W * 2, W * 2);   // 銃口の光
+  ctx.globalCompositeOperation = 'source-over';
+  for (let i = 0; i < 12; i++) {
+    const q = (t * 0.05 + i / 12) % 1;
+    ctx.save(); ctx.translate(q * d, Math.sin(i * 2.3 + t * 0.2) * W * 0.3); ctx.rotate(t * 0.2 + i);
+    ctx.globalAlpha = Math.min(1, q * 5, (1 - q) * 5) * bk; drawComp(i % 5, 1.2 * Math.max(1, w / 90)); ctx.restore();
   }
   ctx.restore();
+}
+// 光の柱（ワープ）
+function kPillar(x, y0, y1, a, w = 18) {
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a;
+  const top = Math.min(y0, y1), h = Math.abs(y1 - y0);
+  ctx.drawImage(glowSprite('rgba(90,230,255,.9)'), x - w * 2.2, top - 20, w * 4.4, h + 40);
+  ctx.fillStyle = '#bff6ff'; ctx.fillRect(x - w / 2, top, w, h);
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(x - w / 4.5, top, w / 2.25, h);
+  ctx.restore();
+}
+// バトル中の切り札：飛んでいくブラックホールボムと、広がったブラックホール（キャラより奥にかく）
+function drawKenshinHole(S, t) {
+  ctx.save();
+  if (S.bomb) {
+    const x = S.bx, y = S.by;
+    ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(glowSprite('rgba(150,80,255,.85)'), x - 46, y - 46, 92, 92);
+    for (let i = 1; i <= 4; i++) { ctx.globalAlpha = 0.3 / i; ctx.drawImage(glowSprite('rgba(120,220,255,.7)'), x - S.dir * i * 16 - 18, y - 18, 36, 36); }
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = '#05010c'; ctx.beginPath(); ctx.arc(x, y, 15, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#c9a0ff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x, y, 15, t * 0.4, t * 0.4 + 4.2); ctx.stroke();
+    ctx.strokeStyle = '#7fe8ff'; ctx.beginPath(); ctx.arc(x, y, 10, -t * 0.5, -t * 0.5 + 3.5); ctx.stroke();
+  }
+  ctx.restore();
+  const bh = S.bh || 0;
+  if (bh > 0.01) kHoleAt(S.bx, S.by, 78 * bh * (1 + 0.05 * Math.sin(t * 0.3)), bh, t);
 }
 function drawFighterExtras(F, t) {
   const C = F.col;
@@ -8919,48 +8980,64 @@ SC_.battle = (o) => {
       return k >= 92;
     }
     if (S.kind === 'kenshin') {
-      // ---- シンギュラリティ・ビーム：小型ブラックホールを展開 → 吸いこんだ相手へ電子部品のビーム → ブラックホールが崩れてふっとばす ----
+      // ---- シンギュラリティ・ビーム（参考：スマブラのロックマンの切り札）----
+      //   ブラックホールボムを撃つ → 相手に当たるか一定距離で広がり、吸いこんだらムービー
+      //   （宇宙のブラックホール → 光の柱でワープしてくる → 腕のバスターをためる → 巨大ビーム → 大爆発）→ バトルにもどってふっとばす
       // （B.sup はロールバックで保存されるので、ここに入れる値は Math.random を使わず u から決める）
-      const dir = S.dir;
-      F.dir = dir;
-      if (u === 1) { S.bx = clamp(F.x + dir * 330, m.x1 + 80, m.x2 - 80); S.by = F.y - 210; S.bh = 0; S.beamK = 0; Snd.kHole(); }
-      S.bh = S.end ? Math.max(0, S.bh - 0.08) : Math.min(1, u / 26);
-      if (!S.caught && !S.miss) {
-        F.superPose = mk(u < 12 ? { lean: -0.25, hd: -0.2, fa: A_(2.7, 0.4), ba: A_(-1.2, 0.4), fl: G_(0.5, -0.2), bl: G_(-0.5, 0) }
-          : { lean: 0.15, fa: A_(2.0, 0.1), ba: A_(-1.0, 0.5), fl: G_(0.6, -0.2), bl: G_(-0.5, 0) });
-        if (u === 30) {
-          if (canCatch(T) && Math.hypot(T.x - S.bx, T.y - 75 * T.ch.scale - S.by) < 820) { catchT(S); S.cu = u; S.tx0 = T.x; S.ty0 = T.y; Snd.ko(); B.shake = 12; }
-          else S.miss = u;
+      const sc = F.ch.scale, bl = st.blast;
+      if (u === 1) { S.bh = 0; S.bomb = 0; Snd.kCharge(0.5); }
+      if (S.done) { S.bh = Math.max(0, S.bh - 0.1); F.superPose = mk({ lean: -0.05, hd: 0.1, fa: A_(1.1, 1.6), ba: A_(-0.4, 0.4), fl: G_(0.4, -0.1), bl: G_(-0.4, 0) }); return u >= S.done + 24; }
+      // 1) ブラックホールボムを撃つ
+      if (!S.exp) {
+        F.superPose = mk(u < 8 ? { lean: -0.12, fa: A_(1.2, 1.4), ba: A_(1.0, 1.4), fl: G_(0.6, -0.3), bl: G_(-0.6, 0) }
+          : { lean: 0.25, fa: A_(1.57, 0), ba: A_(1.1, 1.2), fl: G_(0.75, -0.3), bl: G_(-0.7, 0) });
+        if (u === 8) { S.bomb = 1; S.bx = S.bx0 = F.x + S.dir * 80 * sc; S.by = F.y - 95 * sc; Snd.kShot(0.6); B.shake = Math.max(B.shake, 6); }
+        if (S.bomb) {
+          S.bx += S.dir * 13;
+          const hitT = canCatch(T) && Math.hypot(T.x - S.bx, T.y - 75 * T.ch.scale - S.by) < 70 * T.ch.scale + 24;
+          if (hitT || Math.abs(S.bx - S.bx0) > 560 || S.bx < bl.l + 220 || S.bx > bl.r - 220) {
+            S.bomb = 0; S.exp = u; Snd.kHole(); B.shake = 12; B.flashScr = 5; B.flashRGB = '180,140,255';
+          }
         }
         return false;
       }
-      if (S.miss) { S.end = 1; F.superPose = null; return u >= S.miss + 30; }
-      const k = u - S.cu, q = ease(Math.min(1, k / 22));
-      // 吸いこまれて中心で浮く
-      T.x = lerp(S.tx0, S.bx, q) + (k > 22 ? Math.sin(k * 1.7) * 3 : 0); T.y = lerp(S.ty0, S.by + 75 * T.ch.scale, q);
-      // 両手をブラックホールへ向けてビーム
-      const aim = Math.atan2(S.by - (F.y - 96 * F.ch.scale), Math.abs(S.bx - F.x)), sa = 1.57 - aim;
-      F.superPose = mk(k < 20 ? { lean: 0.1, fa: A_(2.0, 0.1), ba: A_(-1.0, 0.5), fl: G_(0.6, -0.2), bl: G_(-0.5, 0) }
-        : { lean: 0.2, fa: A_(sa, 0), ba: A_(sa - 0.1, 0.1), fl: G_(0.8, -0.3), bl: G_(-0.7, 0) });
-      S.beamK = k < 24 ? 0 : k < 96 ? Math.min(1, (k - 24) / 6) : Math.max(0, 1 - (k - 96) / 6);
-      if (k >= 26 && k < 96) {
-        if (k % 6 === 2) {
-          supHit(S, 1.5); Snd.kBeam(); B.shake = Math.max(B.shake, 6); T.flash = 2;
-          kBolt(S.bx, S.by, 2, 80); kParts(S.bx, S.by, 1, 7);
+      // 2) 広がって吸いこむ（はずれたら、しぼんで終わり）
+      if (!S.movie) {
+        const e = u - S.exp;
+        S.bh = S.end ? Math.max(0, S.bh - 0.08) : Math.min(1, e / 16);
+        if (S.miss) { S.end = 1; F.superPose = null; return u >= S.miss + 30; }
+        F.superPose = mk({ lean: 0.1, fa: A_(1.4, 0.4), ba: A_(1.0, 1.3), fl: G_(0.6, -0.2), bl: G_(-0.5, 0) });
+        if (e === 14) {
+          if (canCatch(T) && Math.hypot(T.x - S.bx, T.y - 75 * T.ch.scale - S.by) < 340) { catchT(S); S.cu = u; S.tx0 = T.x; S.ty0 = T.y; Snd.ko(); B.shake = 12; }
+          else S.miss = u;
         }
-        if (k % 3 === 0) kSparks(S.bx + rnd(-30, 30), S.by + rnd(-30, 30), 2);
+        if (S.caught) {   // 中心へ吸いこんでから、ムービーへ
+          const k = u - S.cu, q = ease(Math.min(1, k / 12));
+          T.x = lerp(S.tx0, S.bx, q); T.y = lerp(S.ty0, S.by + 75 * T.ch.scale, q);
+          if (k >= 16) { S.movie = true; S.mt = 0; }
+        }
+        return false;
       }
-      if (k === 100) {
-        S.end = 1;
+      // 3) ムービー（時間は S.mt で数える）
+      const mt = ++S.mt;
+      T.x = S.bx; T.y = S.by + 75 * T.ch.scale;
+      if (mt === 2) Snd.kHole();
+      if (mt === KM_WARP) Snd.kWarp(1);
+      if (mt === KM_APPEAR) { Snd.kZap(0.6); Snd.osc('sine', 600, 0.3, 0.06, 1200); }
+      if (mt >= KM_CHG && mt < KM_FIRE && (mt - KM_CHG) % 6 === 0) Snd.kCharge((mt - KM_CHG) / (KM_FIRE - KM_CHG));
+      if (mt === KM_FIRE) { Snd.kShot(1); Snd.kZap(1); Snd.heavy(() => Snd.kShot(1)); }
+      if (mt > KM_FIRE && mt < KM_FIRE_END && (mt - KM_FIRE) % 6 === 0) { supHit(S, 1.6); Snd.kBeam(); }
+      if (mt === KM_FIRE_END) Snd.osc('sawtooth', 600, 0.4, 0.05, 60);   // ブラックホールがしぼむ
+      if (mt === KM_BOOM) { supHit(S, 3); Snd.explode(1.6); Snd.koBoom(); Snd.heavy(() => Snd.doom(1.1)); }
+      if (mt === KM_END) {   // バトルにもどって、ぶっ飛ばす
+        S.movie = false; S.done = u; S.end = 1; S.bh = 0;
         for (let j = 0; j < 4; j++) B.parts.push({ x: S.bx, y: S.by, ring: 1, r: 20 + j * 34, life: 24 + j * 4, max: 24 + j * 4, col: j % 2 ? '#7fe8ff' : '#c9a0ff' });
-        B.parts.push({ x: S.bx, y: S.by, flare: 1, r: 220, life: 16, max: 16, col: '#7fe8ff', rot: 0, n: 10 });
+        B.parts.push({ x: S.bx, y: S.by, flare: 1, r: 240, life: 16, max: 16, col: '#7fe8ff', rot: 0, n: 10 });
         kBolt(S.bx, S.by, 8, 180); kParts(S.bx, S.by, 10, 12);
-        B.flashScr = 12; B.flashRGB = '170,240,255'; B.shake = 36; B.zoomP = 0.12;
-        Snd.kZap(1); Snd.koBoom();
-        supLaunch(S, { dmg: 14, ang: 48, base: 20, gr: 1.45 }, dir);
+        B.flashScr = 12; B.flashRGB = '170,240,255'; B.shake = 34; B.zoomP = 0.12; Snd.kZap(1);
+        supLaunch(S, { dmg: 12, ang: 48, base: 20, gr: 1.45 }, S.dir);
       }
-      if (k > 100) F.superPose = mk({ lean: -0.05, hd: 0.1, fa: A_(1.1, 1.6), ba: A_(-0.4, 0.4), fl: G_(0.4, -0.1), bl: G_(-0.4, 0) });
-      return k >= 128;
+      return false;
     }
     if (S.kind === 'chinta') {
       // ---- 絶唱・ソニックブーム：ライブ会場 → 歌声の衝撃波を何度も → 大音量でふっとばす ----
@@ -9074,20 +9151,20 @@ SC_.battle = (o) => {
       }
       const mt = ++S.mt;
       T.x = S.tx; T.y = S.ty;
-      if (mt < KM_LUNGE && mt % 20 === 0) Snd.clockTick();   // 時計の音だけ
-      if (mt === KM_LOCK + 2) Snd.osc('square', 2200, 0.03, 0.04);   // 傘の柄のボタン
-      if (mt === KM_LOCK + 9) Snd.lockClick();   // 「カチャ」
-      if (mt === KM_LUNGE + 6) Snd.swingC(F.ch, 8);
-      if (mt === KM_LUNGE + 10) { Snd.shield(); }   // 受け流し
-      for (const h of KM_HITS) if (mt === h) { supHit(S, 2.6); Snd.gentHit(10); }
-      if (mt === KM_THROW) { supHit(S, 3); Snd.gentHit(14); Snd.heavy(() => Snd.doom(0.5)); }
-      if (mt === KM_BOTTLE) Snd.swingC(F.ch, 4);
-      if (mt === KM_BOTTLE + 4) Snd.umbOpen();
-      if (mt === KM_BOTTLE + 9) Snd.shatter();
-      for (const h of KM_SHOTS) if (mt === h) { supHit(S, 2); Snd.umbShot(); }
-      if (mt === KM_SLASH - 10) Snd.swingC(F.ch, 14);
-      if (mt === KM_SLASH) { supHit(S, 4); Snd.gentHit(18); Snd.smp('blade', 1, 0.8); Snd.heavy(() => Snd.doom(1.0)); Snd.shatter(); }
-      if (mt === KM_END) {
+      if (mt < KT_LUNGE && mt % 20 === 0) Snd.clockTick();   // 時計の音だけ
+      if (mt === KT_LOCK + 2) Snd.osc('square', 2200, 0.03, 0.04);   // 傘の柄のボタン
+      if (mt === KT_LOCK + 9) Snd.lockClick();   // 「カチャ」
+      if (mt === KT_LUNGE + 6) Snd.swingC(F.ch, 8);
+      if (mt === KT_LUNGE + 10) { Snd.shield(); }   // 受け流し
+      for (const h of KT_HITS) if (mt === h) { supHit(S, 2.6); Snd.gentHit(10); }
+      if (mt === KT_THROW) { supHit(S, 3); Snd.gentHit(14); Snd.heavy(() => Snd.doom(0.5)); }
+      if (mt === KT_BOTTLE) Snd.swingC(F.ch, 4);
+      if (mt === KT_BOTTLE + 4) Snd.umbOpen();
+      if (mt === KT_BOTTLE + 9) Snd.shatter();
+      for (const h of KT_SHOTS) if (mt === h) { supHit(S, 2); Snd.umbShot(); }
+      if (mt === KT_SLASH - 10) Snd.swingC(F.ch, 14);
+      if (mt === KT_SLASH) { supHit(S, 4); Snd.gentHit(18); Snd.smp('blade', 1, 0.8); Snd.heavy(() => Snd.doom(1.0)); Snd.shatter(); }
+      if (mt === KT_END) {
         S.movie = false; S.done = u;
         supLaunch(S, { dmg: 8, ang: 38, base: 20, gr: 1.5 }, S.dir);
         B.flashScr = 10; B.flashRGB = '230,240,255'; B.shake = 26; Snd.koBoom();
@@ -11021,6 +11098,82 @@ SC_.battle = (o) => {
     ctx.drawImage(glowSprite('rgba(205,207,212,.95)'), cx - cs, cy - cs * 0.8, cs * 2, cs * 1.6);
     ctx.restore();
   }
+  // ---- Kenshin の切り札ムービー（参考：スマブラのロックマンの切り札。ロックマンが何人も出るところは Kenshin ひとり）----
+  const KMV = {
+    ready: mk({ lean: 0.05, fa: A_(1.1, 1.35), ba: A_(0.8, 1.5), fl: G_(0.5, -0.4), bl: G_(-0.4, -0.3) }),
+    buster: mk({ lean: 0.12, hd: 0.05, fa: A_(1.57, 0), ba: A_(1.15, 1.25), fl: G_(0.75, -0.3), bl: G_(-0.65, 0) }),
+    recoil: mk({ lean: -0.1, hd: -0.1, fa: A_(1.62, 0), ba: A_(1.15, 1.25), fl: G_(0.7, -0.3), bl: G_(-0.8, 0) }),
+  };
+  function drawKenshinMovie(S) {
+    const F = S.F, T = S.T, mt = S.mt || 0, t = 1000 + mt, CS = F.ch.scale;
+    const zin = ease(clamp(mt / 8, 0, 1)), zout = mt > KM_END - 10 ? clamp((KM_END - mt) / 10, 0, 1) : 1;
+    const close = mt >= KM_CHG && mt < KM_FIRE, firing = mt >= KM_FIRE && mt < KM_FIRE_END, boomQ = mt - KM_BOOM;
+    const shk = (firing ? 5 + (mt < KM_FIRE + 8 ? 20 * (1 - (mt - KM_FIRE) / 8) : 0) : 0) + (boomQ >= 0 ? 34 * Math.exp(-boomQ / 7) : 0) + (mt >= KM_APPEAR && mt < KM_APPEAR + 6 ? 10 : 0);
+    ctx.save(); ctx.globalAlpha = zin * zout;
+    ctx.translate(rnd(-shk, shk), rnd(-shk, shk));
+    // ---- 引きの絵：左に Kenshin、右にブラックホール ----
+    const hx = VW * 0.7, hy = VH * 0.44, ksc = 1.55, kx = VW * 0.17, ky = hy + 95 * CS * ksc;
+    // ---- アップの絵：腕のバスターに寄る（じわじわ寄っていく）----
+    const cq = close ? (mt - KM_CHG) / (KM_FIRE - KM_CHG) : 0, csc = lerp(2.5, 3.0, ease(cq)), chx = VW * 0.6, chy = VH * 0.5;
+    if (close) kSpaceBg(chx, chy, t, 2.2); else kSpaceBg(hx, hy, t, firing ? 2 : 1);
+    if (!close) {
+      // ブラックホール：ビームのあとでしぼみ、爆発で消える
+      const shrink = mt >= KM_FIRE_END && boomQ < 0 ? 1 - 0.75 * ease((mt - KM_FIRE_END) / (KM_BOOM - KM_FIRE_END)) : 1;
+      const R = 150 * Math.min(1, mt / 10 + 0.4) * shrink * (boomQ >= 0 ? 0 : 1);
+      if (R > 1) kHoleAt(hx, hy, R, 1, t);
+      // 相手：渦を描きながら中心へ吸いこまれ、中でもがく
+      if (T && boomQ < 0) {
+        const q = ease(clamp(mt / KM_SUCK, 0, 1)), a = mt * 0.17, d = (1 - q) * 380, s = lerp(1.6, 0.85, q) * shrink;
+        const sh = firing ? Math.sin(mt * 2.1) * 9 : Math.sin(mt * 0.5) * 3 * q;
+        ctx.save(); if (firing && (mt >> 1) % 2) ctx.globalAlpha *= 0.7;
+        drawFigureAt(T, hx + Math.cos(a) * d + sh, hy + Math.sin(a) * d * 0.5 + 75 * T.ch.scale * s, s, MOV.tumble, -1, t, mt * 0.12);
+        ctx.restore();
+      }
+      // Kenshin：光の柱で上から降りてきて、姿をあらわす
+      if (mt >= KM_WARP && mt < KM_APPEAR) {
+        const p = ease((mt - KM_WARP) / (KM_APPEAR - KM_WARP));
+        kPillar(kx, -40, lerp(0, ky, p), 1, 26);
+      }
+      if (mt >= KM_APPEAR) {
+        const a0 = mt - KM_APPEAR, sq = a0 < 6 ? 1 + 0.35 * Math.exp(-a0 / 2) * Math.cos(a0 * 1.4) : 1;   // 着地でぎゅっと伸び縮み
+        const pose = mt < KM_CHG - 8 ? KMV.ready : firing && mt < KM_FIRE + 10 ? KMV.recoil : KMV.buster;
+        const rx = firing ? -Math.max(0, 10 - (mt - KM_FIRE)) * 2 : 0;
+        ctx.save(); ctx.translate(kx, ky); ctx.scale(1 / sq, sq); ctx.translate(-kx, -ky);
+        drawFigureAt(F, kx + rx, ky, ksc, pose, 1, t);
+        ctx.restore();
+        if (a0 < 10) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= 1 - a0 / 10; ctx.drawImage(glowSprite('rgba(150,240,255,.95)'), kx - 160, ky - 360, 320, 380); ctx.restore(); }
+        const bhx = kx + rx + 70 * CS * ksc, bhy = ky - 95 * CS * ksc;
+        if (firing || (mt >= KM_FIRE_END && mt < KM_FIRE_END + 6)) {
+          const bk = firing ? Math.min(1, (mt - KM_FIRE) / 3) : 1 - (mt - KM_FIRE_END) / 6;
+          kBeamAt(bhx, bhy, hx, hy, 150, bk, t);
+        }
+      }
+    } else {
+      // バスターのアップ：手を画面のまん中に置いて、腕に光をためる
+      const kx2 = chx - 70 * CS * csc, ky2 = chy + 95 * CS * csc;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= 0.35 + 0.3 * cq;
+      ctx.drawImage(glowSprite('rgba(70,210,255,.9)'), chx - 600, chy - 600, 1200, 1200); ctx.restore();
+      drawFigureAt(F, kx2 + Math.sin(mt * 2.7) * 2 * cq, ky2, csc, KMV.buster, 1, t);
+      kChargeAt(chx, chy, cq, t, 2.2);
+      if (cq > 0.85) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= (cq - 0.85) / 0.15; ctx.fillStyle = '#e6fcff'; ctx.fillRect(-60, -60, VW + 120, VH + 120); ctx.restore(); }
+    }
+    // ---- 大爆発：白い光・広がる輪・飛び散る電子部品 ----
+    if (boomQ >= 0) {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const fl = Math.exp(-boomQ / 6);
+      ctx.globalAlpha = Math.min(1, fl * 1.2); ctx.fillStyle = '#e6fcff'; ctx.fillRect(-60, -60, VW + 120, VH + 120);
+      ctx.globalAlpha = 1; const gr = 200 + boomQ * 30; ctx.drawImage(glowSprite('rgba(150,230,255,.95)'), hx - gr, hy - gr, gr * 2, gr * 2);
+      for (let j = 0; j < 4; j++) { const r = boomQ * (18 + j * 10); ctx.globalAlpha = Math.max(0, 1 - boomQ / 26) * (j % 2 ? 0.6 : 0.9); ctx.strokeStyle = j % 2 ? '#c9a0ff' : '#7fe8ff'; ctx.lineWidth = 10 - j * 2; ctx.beginPath(); ctx.arc(hx, hy, r, 0, TAU); ctx.stroke(); }
+      ctx.globalCompositeOperation = 'source-over';
+      for (let i = 0; i < 26; i++) {
+        const R = srand(i * 53 + 7), a = R() * TAU, d = boomQ * (10 + R() * 22);
+        ctx.save(); ctx.translate(hx + Math.cos(a) * d, hy + Math.sin(a) * d * 0.8); ctx.rotate(boomQ * (R() - 0.5) * 0.5);
+        ctx.globalAlpha *= Math.max(0, 1 - boomQ / 26); drawComp(i % 5, 1.6 + R()); ctx.restore();
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+  }
   function drawNagataMovie(S) {
     const F = S.F, T = S.T, mt = S.mt || 0, t = 1000 + mt;
     const zin = ease(clamp(mt / 8, 0, 1)), zout = mt > NG_END - 10 ? clamp((NG_END - mt) / 10, 0, 1) : 1;
@@ -11471,7 +11624,7 @@ SC_.battle = (o) => {
     ctx.restore();
   }
   // ---- こうたんご主人様の切り札ムービー：バーでの乱闘（画面座標で描く）----
-  const KMV = (() => ({
+  const KTV = (() => ({
     bar: mk({ by: 2, lean: 0.1, hd: 0.1, fa: A_(1.2, 1.3), ba: A_(1.0, 1.4), fl: G_(0.2, -0.1), bl: G_(-0.2, 0) }),
     press: mk({ by: 2, lean: 0.05, fa: A_(1.0, 1.6), ba: A_(1.1, 1.5), fl: G_(0.2, -0.1), bl: G_(-0.2, 0) }),
     glasses: mk({ by: 0, lean: -0.05, hd: -0.1, fa: A_(2.0, 2.4), ba: A_(0.2, 0.4), fl: G_(0.3, -0.1), bl: G_(-0.3, 0) }),
@@ -11493,56 +11646,56 @@ SC_.battle = (o) => {
   }))();
   function drawKotanMovie(S) {
     const F = S.F, T = S.T, mt = S.mt || 0, t = 1000 + mt;
-    const zin = ease(clamp(mt / 8, 0, 1)), zout = mt > KM_END - 10 ? clamp((KM_END - mt) / 10, 0, 1) : 1;
+    const zin = ease(clamp(mt / 8, 0, 1)), zout = mt > KT_END - 10 ? clamp((KT_END - mt) / 10, 0, 1) : 1;
     const GY = VH * 0.8, CT = GY - 110, DOORX = VW * 0.06, WINX = VW * 0.97;
     ctx.save(); ctx.globalAlpha = zin * zout;
     // ---- 場面ごとの位置・ポーズ ----
-    let kx = VW * 0.6, kd = 1, kp = KMV.bar, kum = 'closed', kfl = null, tx = VW * 0.24, ty = 0, td = 1, tp = MOV.caught, trot = 0, tsc = 2.0, tOnCounter = false;
+    let kx = VW * 0.6, kd = 1, kp = KTV.bar, kum = 'closed', kfl = null, tx = VW * 0.24, ty = 0, td = 1, tp = MOV.caught, trot = 0, tsc = 2.0, tOnCounter = false;
     let zoom = 1.0, zx = VW / 2, zy = GY - 170, cr = 0, slow = false;
     const hitK = h => mt >= h ? Math.exp(-(mt - h) / 3) : 0;
-    if (mt < KM_LOCK) { const k = mt / KM_LOCK; zoom = lerp(1.0, 1.35, ease(k)); zx = lerp(VW / 2, kx - 60, ease(k)); }   // 背中ごしにゆっくり寄る
-    else if (mt < KM_TURN) {   // 傘の柄のボタンで、ドアの鍵がかかる
-      if (mt < KM_LOCK + 7) { kp = KMV.press; zoom = 3.0; zx = kx + 60; zy = GY - 150; }
+    if (mt < KT_LOCK) { const k = mt / KT_LOCK; zoom = lerp(1.0, 1.35, ease(k)); zx = lerp(VW / 2, kx - 60, ease(k)); }   // 背中ごしにゆっくり寄る
+    else if (mt < KT_TURN) {   // 傘の柄のボタンで、ドアの鍵がかかる
+      if (mt < KT_LOCK + 7) { kp = KTV.press; zoom = 3.0; zx = kx + 60; zy = GY - 150; }
       else { zoom = 3.2; zx = DOORX + 40; zy = GY - 190; }
-    } else if (mt < KM_LUNGE) {   // メガネを押し上げて、ゆっくり振り向く
-      const k = (mt - KM_TURN) / (KM_LUNGE - KM_TURN); kp = k < 0.6 ? KMV.glasses : KMV.ready; kd = k < 0.6 ? 1 : -1;
+    } else if (mt < KT_LUNGE) {   // メガネを押し上げて、ゆっくり振り向く
+      const k = (mt - KT_TURN) / (KT_LUNGE - KT_TURN); kp = k < 0.6 ? KTV.glasses : KTV.ready; kd = k < 0.6 ? 1 : -1;
       zoom = lerp(2.6, 1.6, ease(clamp((k - 0.5) * 2, 0, 1))); zx = kx; zy = lerp(GY - 290, GY - 200, ease(k));
-    } else if (mt < KM_HITS[0] - 8) {   // 相手が殴りかかる（スロー）→ 受け流し
-      const k = (mt - KM_LUNGE) / (KM_HITS[0] - 8 - KM_LUNGE); slow = true; kd = -1; kx = VW * 0.5; kp = k < 0.5 ? KMV.ready : KMV.parry;
+    } else if (mt < KT_HITS[0] - 8) {   // 相手が殴りかかる（スロー）→ 受け流し
+      const k = (mt - KT_LUNGE) / (KT_HITS[0] - 8 - KT_LUNGE); slow = true; kd = -1; kx = VW * 0.5; kp = k < 0.5 ? KTV.ready : KTV.parry;
       tx = lerp(VW * 0.2, VW * 0.32, ease(k)); tp = MOV.grab; td = 1;
       zoom = 1.7; zx = (kx + tx) / 2; zy = GY - 190; cr = -0.04;
-    } else if (mt < KM_THROW - 8) {   // 連続攻撃：柄でアッパー → 回し蹴り → 足払い
+    } else if (mt < KT_THROW - 8) {   // 連続攻撃：柄でアッパー → 回し蹴り → 足払い
       kd = -1; kx = VW * 0.53; tx = VW * 0.3; td = 1;
-      const n = mt < KM_HITS[1] - 8 ? 0 : mt < KM_HITS[2] - 8 ? 1 : 2, h = KM_HITS[n], f = mt - h;
-      kp = [f < 0 ? KMV.upperW : KMV.upperH, f < 0 ? KMV.kickW : KMV.kickH, KMV.sweep][n];
+      const n = mt < KT_HITS[1] - 8 ? 0 : mt < KT_HITS[2] - 8 ? 1 : 2, h = KT_HITS[n], f = mt - h;
+      kp = [f < 0 ? KTV.upperW : KTV.upperH, f < 0 ? KTV.kickW : KTV.kickH, KTV.sweep][n];
       const hk = hitK(h);
       tp = f < 0 ? MOV.hurt : [MOV.hurtB, MOV.side, MOV.tumble][n]; tx -= hk * 18; ty = n === 0 && f >= 0 ? -Math.min(1, f / 6) * 40 * Math.exp(-Math.max(0, f - 6) / 6) : 0;
       if (n === 2 && f >= 0) { tp = MOV.lie; trot = 1.4 * Math.min(1, f / 5); }
       zoom = 1.9 + hk * 0.3; zx = lerp(kx, tx, 0.45) - n * 10; zy = GY - [210, 170, 120][n]; cr = [0.06, -0.08, 0.04][n] * (0.3 + hk);
-    } else if (mt < KM_BOTTLE) {   // えりをつかんで背負い投げ → カウンターの上をすべっていく
+    } else if (mt < KT_BOTTLE) {   // えりをつかんで背負い投げ → カウンターの上をすべっていく
       kd = -1; kx = VW * 0.5;
-      const f = mt - KM_THROW;
-      if (f < 0) { kp = KMV.grab; tx = VW * 0.4; tp = MOV.hurt; zoom = 1.8; zx = VW * 0.45; }
-      else if (f < 8) { const q = f / 8; kp = KMV.throwP; tx = lerp(VW * 0.4, VW * 0.62, q); ty = -Math.sin(q * Math.PI) * 220 - q * 110; tp = MOV.tumble; trot = -q * Math.PI; zoom = 1.5; zx = VW * 0.52; zy = GY - 260; cr = -0.05; }
-      else { const q = clamp((f - 8) / 12, 0, 1); kp = KMV.ready; kd = 1; tOnCounter = true; tx = lerp(VW * 0.62, VW * 0.82, ease(q)); ty = -110; tp = MOV.lie; trot = 1.5; zoom = 1.3; zx = lerp(VW * 0.55, VW * 0.7, q); zy = GY - 200; }
-    } else if (mt < KM_SHOTS[0] - 6) {   // 相手がビンを投げる → 傘を開いてはじく
-      const f = mt - KM_BOTTLE; kd = 1; kx = VW * 0.52; tx = VW * 0.8; td = -1; tp = f < 4 ? MOV.grab : MOV.wobble;
-      kp = f < 4 ? KMV.ready : KMV.shield; kum = f < 4 ? 'closed' : 'open';
+      const f = mt - KT_THROW;
+      if (f < 0) { kp = KTV.grab; tx = VW * 0.4; tp = MOV.hurt; zoom = 1.8; zx = VW * 0.45; }
+      else if (f < 8) { const q = f / 8; kp = KTV.throwP; tx = lerp(VW * 0.4, VW * 0.62, q); ty = -Math.sin(q * Math.PI) * 220 - q * 110; tp = MOV.tumble; trot = -q * Math.PI; zoom = 1.5; zx = VW * 0.52; zy = GY - 260; cr = -0.05; }
+      else { const q = clamp((f - 8) / 12, 0, 1); kp = KTV.ready; kd = 1; tOnCounter = true; tx = lerp(VW * 0.62, VW * 0.82, ease(q)); ty = -110; tp = MOV.lie; trot = 1.5; zoom = 1.3; zx = lerp(VW * 0.55, VW * 0.7, q); zy = GY - 200; }
+    } else if (mt < KT_SHOTS[0] - 6) {   // 相手がビンを投げる → 傘を開いてはじく
+      const f = mt - KT_BOTTLE; kd = 1; kx = VW * 0.52; tx = VW * 0.8; td = -1; tp = f < 4 ? MOV.grab : MOV.wobble;
+      kp = f < 4 ? KTV.ready : KTV.shield; kum = f < 4 ? 'closed' : 'open';
       zoom = 1.6; zx = VW * 0.64; zy = GY - 200;
-    } else if (mt < KM_FIN0) {   // 傘の先から2発
-      kd = 1; kx = VW * 0.52; tx = VW * 0.8; td = -1; kp = KMV.aim; kfl = KM_SHOTS.some(h => mt >= h && mt < h + 3) ? [0] : null;
-      const hk = Math.max(...KM_SHOTS.map(hitK)); tp = hk > 0.2 ? MOV.hurtB : MOV.wobble; tx += hk * 16;
-      zoom = 1.9 - hk * 0.1; zx = lerp(VW * 0.58, VW * 0.7, (mt - KM_SHOTS[0] + 6) / 20); zy = GY - 210; cr = 0.03;
-    } else if (mt < KM_AFTER) {   // とどめ：ふみこんで傘の一閃（スロー）→ 窓を割って外へ
-      const f = mt - KM_SLASH; kd = 1; tx = VW * 0.78; td = -1;
-      if (f < 0) { slow = mt > KM_SLASH - 22; const k = clamp((mt - KM_FIN0) / (KM_SLASH - KM_FIN0), 0, 1); kx = lerp(VW * 0.52, VW * 0.64, ease(k)); kp = k < 0.7 ? KMV.ready : KMV.finW; tp = MOV.wobble; zoom = lerp(1.6, 2.4, ease(k)); zx = lerp(VW * 0.64, VW * 0.72, k); zy = GY - 200; cr = -0.04 * k; }
-      else { kx = VW * 0.64; kp = KMV.finH; const q = f / (KM_AFTER - KM_SLASH); tx = lerp(VW * 0.78, WINX + 160, q * q * 0.6 + q * 0.4); ty = -q * 160; tp = MOV.tumble; trot = -q * 4; tsc = 2.0 - q * 0.6; zoom = lerp(2.4, 1.2, ease(clamp(f / 8, 0, 1))); zx = lerp(VW * 0.72, VW * 0.78, q); zy = GY - 200; }
+    } else if (mt < KT_FIN0) {   // 傘の先から2発
+      kd = 1; kx = VW * 0.52; tx = VW * 0.8; td = -1; kp = KTV.aim; kfl = KT_SHOTS.some(h => mt >= h && mt < h + 3) ? [0] : null;
+      const hk = Math.max(...KT_SHOTS.map(hitK)); tp = hk > 0.2 ? MOV.hurtB : MOV.wobble; tx += hk * 16;
+      zoom = 1.9 - hk * 0.1; zx = lerp(VW * 0.58, VW * 0.7, (mt - KT_SHOTS[0] + 6) / 20); zy = GY - 210; cr = 0.03;
+    } else if (mt < KT_AFTER) {   // とどめ：ふみこんで傘の一閃（スロー）→ 窓を割って外へ
+      const f = mt - KT_SLASH; kd = 1; tx = VW * 0.78; td = -1;
+      if (f < 0) { slow = mt > KT_SLASH - 22; const k = clamp((mt - KT_FIN0) / (KT_SLASH - KT_FIN0), 0, 1); kx = lerp(VW * 0.52, VW * 0.64, ease(k)); kp = k < 0.7 ? KTV.ready : KTV.finW; tp = MOV.wobble; zoom = lerp(1.6, 2.4, ease(k)); zx = lerp(VW * 0.64, VW * 0.72, k); zy = GY - 200; cr = -0.04 * k; }
+      else { kx = VW * 0.64; kp = KTV.finH; const q = f / (KT_AFTER - KT_SLASH); tx = lerp(VW * 0.78, WINX + 160, q * q * 0.6 + q * 0.4); ty = -q * 160; tp = MOV.tumble; trot = -q * 4; tsc = 2.0 - q * 0.6; zoom = lerp(2.4, 1.2, ease(clamp(f / 8, 0, 1))); zx = lerp(VW * 0.72, VW * 0.78, q); zy = GY - 200; }
     } else {   // ネクタイを直し、傘を閉じてグラスを取る
-      const f = mt - KM_AFTER; kx = VW * 0.64; kd = -1; kp = f < 22 ? KMV.tie : KMV.drink; tx = VW * 3;
+      const f = mt - KT_AFTER; kx = VW * 0.64; kd = -1; kp = f < 22 ? KTV.tie : KTV.drink; tx = VW * 3;
       zoom = lerp(1.4, 2.2, ease(clamp(f / 30, 0, 1))); zx = kx - 20; zy = GY - 260;
     }
     // ---- 背景：落ち着いたバー ----
-    const shk = Math.max(0, ...KM_HITS.map(h => hitK(h) * 12), hitK(KM_THROW + 8) * 18, ...KM_SHOTS.map(h => hitK(h) * 6), hitK(KM_SLASH) * 30, hitK(KM_BOTTLE + 9) * 8);
+    const shk = Math.max(0, ...KT_HITS.map(h => hitK(h) * 12), hitK(KT_THROW + 8) * 18, ...KT_SHOTS.map(h => hitK(h) * 6), hitK(KT_SLASH) * 30, hitK(KT_BOTTLE + 9) * 8);
     ctx.save(); ctx.translate(VW / 2 + rnd(-shk, shk), VH * 0.55 + rnd(-shk, shk)); ctx.rotate(cr); ctx.scale(zoom, zoom); ctx.translate(-zx, -(VH * 0.55 + (zy - (GY - 170))));
     const wall = ctx.createLinearGradient(0, 0, 0, GY); wall.addColorStop(0, '#1c120c'); wall.addColorStop(1, '#2e1d12');
     ctx.fillStyle = wall; ctx.fillRect(-VW, -VH, VW * 3, GY + VH);
@@ -11558,35 +11711,35 @@ SC_.battle = (o) => {
     ctx.restore();
     // ドア（左）と鍵
     ctx.fillStyle = '#2a170c'; ctx.fillRect(DOORX - 70, GY - 300, 140, 300); ctx.strokeStyle = '#140a04'; ctx.lineWidth = 6; ctx.strokeRect(DOORX - 70, GY - 300, 140, 300);
-    const locked = mt >= KM_LOCK + 9, bolt = locked ? 1 : mt >= KM_LOCK + 7 ? (mt - KM_LOCK - 7) / 2 : 0;
+    const locked = mt >= KT_LOCK + 9, bolt = locked ? 1 : mt >= KT_LOCK + 7 ? (mt - KT_LOCK - 7) / 2 : 0;
     ctx.fillStyle = '#c8a040'; ctx.fillRect(DOORX + 40, GY - 170, 20, 30); ctx.fillStyle = '#8a6a20'; ctx.fillRect(DOORX + 40 + 10 * bolt, GY - 160, 30, 8);
-    if (mt >= KM_LOCK + 9 && mt < KM_LOCK + 16) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= 1 - (mt - KM_LOCK - 9) / 7; ctx.drawImage(glowSprite('rgba(255,230,150,.9)'), DOORX, GY - 200, 100, 100); ctx.restore(); }
+    if (mt >= KT_LOCK + 9 && mt < KT_LOCK + 16) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= 1 - (mt - KT_LOCK - 9) / 7; ctx.drawImage(glowSprite('rgba(255,230,150,.9)'), DOORX, GY - 200, 100, 100); ctx.restore(); }
     // 窓（右）：とどめで割れる
-    const broke = mt >= KM_SLASH + 4;
+    const broke = mt >= KT_SLASH + 4;
     ctx.fillStyle = broke ? '#0a0f1a' : 'rgba(80,110,160,.35)'; ctx.fillRect(WINX - 60, GY - 330, 120, 220); ctx.strokeStyle = '#3a2416'; ctx.lineWidth = 8; ctx.strokeRect(WINX - 60, GY - 330, 120, 220);
-    if (broke) for (let i = 0; i < 24; i++) { const R = srand(i * 13 + 5), q = Math.min(1, (mt - KM_SLASH - 4) / 30), x = WINX + (R() - 0.3) * 120 + q * (80 + R() * 200), y = GY - 330 + R() * 220 + q * q * (120 + R() * 160); ctx.fillStyle = 'rgba(190,220,255,.8)'; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 8 + R() * 10, y + 4); ctx.lineTo(x + 3, y + 12 + R() * 8); ctx.fill(); }
+    if (broke) for (let i = 0; i < 24; i++) { const R = srand(i * 13 + 5), q = Math.min(1, (mt - KT_SLASH - 4) / 30), x = WINX + (R() - 0.3) * 120 + q * (80 + R() * 200), y = GY - 330 + R() * 220 + q * q * (120 + R() * 160); ctx.fillStyle = 'rgba(190,220,255,.8)'; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 8 + R() * 10, y + 4); ctx.lineTo(x + 3, y + 12 + R() * 8); ctx.fill(); }
     // カウンター
     ctx.fillStyle = '#4a2c18'; ctx.fillRect(VW * 0.55, CT, VW * 0.4, GY - CT); ctx.fillStyle = '#6a4024'; ctx.fillRect(VW * 0.55, CT - 10, VW * 0.4, 14); ctx.fillStyle = 'rgba(255,220,160,.15)'; ctx.fillRect(VW * 0.55, CT - 10, VW * 0.4, 3);
     // グラス
-    if (mt < KM_HITS[0] - 8 || mt >= KM_AFTER + 22) { const gx = mt >= KM_AFTER + 22 ? kx - 40 : VW * 0.68, gy = mt >= KM_AFTER + 22 ? GY - 250 : CT - 10; ctx.fillStyle = 'rgba(200,230,255,.5)'; ctx.fillRect(gx, gy - 36, 22, 36); ctx.fillStyle = 'rgba(210,140,40,.85)'; ctx.fillRect(gx + 2, gy - 18, 18, 16); }
+    if (mt < KT_HITS[0] - 8 || mt >= KT_AFTER + 22) { const gx = mt >= KT_AFTER + 22 ? kx - 40 : VW * 0.68, gy = mt >= KT_AFTER + 22 ? GY - 250 : CT - 10; ctx.fillStyle = 'rgba(200,230,255,.5)'; ctx.fillRect(gx, gy - 36, 22, 36); ctx.fillStyle = 'rgba(210,140,40,.85)'; ctx.fillRect(gx + 2, gy - 18, 18, 16); }
     // 床
     ctx.fillStyle = '#1a0f08'; ctx.fillRect(-VW, GY, VW * 3, VH); ctx.strokeStyle = 'rgba(255,200,140,.12)'; ctx.lineWidth = 2; for (let x = -VW; x < VW * 2; x += 120) line(x, GY, x - 60, VH);
     // ---- 人物 ----
-    if (T && tx < VW * 2 && !(mt >= KM_LOCK + 7 && mt < KM_TURN)) drawFigureAt(T, tx, tOnCounter ? CT - 4 : GY + ty, tsc, tp, td, t, trot);
+    if (T && tx < VW * 2 && !(mt >= KT_LOCK + 7 && mt < KT_TURN)) drawFigureAt(T, tx, tOnCounter ? CT - 4 : GY + ty, tsc, tp, td, t, trot);
     F._umb = kum; F._mvFlash = kfl;
     try { drawFigureAt(F, kx, GY, 2.0, kp, kd, t); } finally { F._umb = undefined; F._mvFlash = undefined; }
     // ビン：相手が投げて、傘ではじかれて割れる
-    if (mt >= KM_BOTTLE && mt < KM_BOTTLE + 9) { const q = (mt - KM_BOTTLE) / 9, bx = lerp(VW * 0.78, VW * 0.6, q), by = GY - 230 - Math.sin(q * Math.PI) * 60; ctx.save(); ctx.translate(bx, by); ctx.rotate(mt * 0.7); ctx.fillStyle = '#2e6a3a'; ctx.fillRect(-7, -22, 14, 32); ctx.fillRect(-3, -32, 6, 10); ctx.restore(); }
-    if (mt >= KM_BOTTLE + 9 && mt < KM_BOTTLE + 24) for (let i = 0; i < 14; i++) { const R = srand(i * 7 + 1), q = (mt - KM_BOTTLE - 9) / 15, a = R() * TAU, d = q * (60 + R() * 120); ctx.fillStyle = i % 3 ? 'rgba(80,160,100,.85)' : 'rgba(220,240,255,.8)'; ctx.fillRect(VW * 0.6 + Math.cos(a) * d, GY - 230 + Math.sin(a) * d + q * q * 80, 5, 5); }
+    if (mt >= KT_BOTTLE && mt < KT_BOTTLE + 9) { const q = (mt - KT_BOTTLE) / 9, bx = lerp(VW * 0.78, VW * 0.6, q), by = GY - 230 - Math.sin(q * Math.PI) * 60; ctx.save(); ctx.translate(bx, by); ctx.rotate(mt * 0.7); ctx.fillStyle = '#2e6a3a'; ctx.fillRect(-7, -22, 14, 32); ctx.fillRect(-3, -32, 6, 10); ctx.restore(); }
+    if (mt >= KT_BOTTLE + 9 && mt < KT_BOTTLE + 24) for (let i = 0; i < 14; i++) { const R = srand(i * 7 + 1), q = (mt - KT_BOTTLE - 9) / 15, a = R() * TAU, d = q * (60 + R() * 120); ctx.fillStyle = i % 3 ? 'rgba(80,160,100,.85)' : 'rgba(220,240,255,.8)'; ctx.fillRect(VW * 0.6 + Math.cos(a) * d, GY - 230 + Math.sin(a) * d + q * q * 80, 5, 5); }
     // 当たりの光と、傘の一閃
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
-    for (const h of [...KM_HITS, KM_THROW + 8]) { const k = hitK(h); if (k > 0.05) { const hx = h === KM_THROW + 8 ? VW * 0.62 : VW * 0.36, hy = GY - 190; ctx.globalAlpha = k; ctx.drawImage(glowSprite('rgba(255,255,255,.95)'), hx - 90, hy - 90, 180, 180); for (let j = 0; j < 8; j++) { const a = j / 8 * TAU; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; line(hx + Math.cos(a) * 30, hy + Math.sin(a) * 30, hx + Math.cos(a) * 110, hy + Math.sin(a) * 110); } } }
-    if (mt >= KM_SLASH && mt < KM_SLASH + 14) { const k = 1 - (mt - KM_SLASH) / 14, cx = VW * 0.74, cy = GY - 190; ctx.globalAlpha = k; ctx.strokeStyle = 'rgba(200,220,255,.9)'; ctx.lineWidth = 26 * k + 2; line(cx - 420, cy + 30, cx + 420, cy - 30); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 6 * k + 1; line(cx - 420, cy + 30, cx + 420, cy - 30); }
+    for (const h of [...KT_HITS, KT_THROW + 8]) { const k = hitK(h); if (k > 0.05) { const hx = h === KT_THROW + 8 ? VW * 0.62 : VW * 0.36, hy = GY - 190; ctx.globalAlpha = k; ctx.drawImage(glowSprite('rgba(255,255,255,.95)'), hx - 90, hy - 90, 180, 180); for (let j = 0; j < 8; j++) { const a = j / 8 * TAU; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; line(hx + Math.cos(a) * 30, hy + Math.sin(a) * 30, hx + Math.cos(a) * 110, hy + Math.sin(a) * 110); } } }
+    if (mt >= KT_SLASH && mt < KT_SLASH + 14) { const k = 1 - (mt - KT_SLASH) / 14, cx = VW * 0.74, cy = GY - 190; ctx.globalAlpha = k; ctx.strokeStyle = 'rgba(200,220,255,.9)'; ctx.lineWidth = 26 * k + 2; line(cx - 420, cy + 30, cx + 420, cy - 30); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 6 * k + 1; line(cx - 420, cy + 30, cx + 420, cy - 30); }
     ctx.restore();
     ctx.restore();
     // スローの間は色が少し抜ける
     if (slow) { ctx.save(); ctx.globalCompositeOperation = 'saturation'; ctx.globalAlpha *= 0.55; ctx.fillStyle = '#808080'; ctx.fillRect(0, 0, VW, VH); ctx.restore(); }
-    if (mt >= KM_SLASH && mt < KM_SLASH + 5) { ctx.fillStyle = `rgba(255,255,255,${0.85 * (1 - (mt - KM_SLASH) / 5)})`; ctx.fillRect(0, 0, VW, VH); }
+    if (mt >= KT_SLASH && mt < KT_SLASH + 5) { ctx.fillStyle = `rgba(255,255,255,${0.85 * (1 - (mt - KT_SLASH) / 5)})`; ctx.fillRect(0, 0, VW, VH); }
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, 60); ctx.fillRect(0, VH - 60, VW, 60);
     ctx.restore();
   }
@@ -12536,7 +12689,7 @@ SC_.battle = (o) => {
         if (B.timeUpT > 0) { B.timeUpT--; text('TIME UP!', VW / 2, VH / 2 - 60, 110, '#ffe680', 'center', '900', '#000', 14); }
       }
       if (B.mi) drawMiUI();
-      if (B.sup && B.sup.movie) (B.sup.kind === 'ichigo' ? drawIchigoMovie : B.sup.kind === 'bhenry' ? drawBHenryMovie : B.sup.kind === 'nagata' ? drawNagataMovie : B.sup.kind === 'unko' ? drawUnkoMovie : B.sup.kind === 'kotan' ? drawKotanMovie : drawSuperMovie)(B.sup);
+      if (B.sup && B.sup.movie) (B.sup.kind === 'ichigo' ? drawIchigoMovie : B.sup.kind === 'bhenry' ? drawBHenryMovie : B.sup.kind === 'nagata' ? drawNagataMovie : B.sup.kind === 'unko' ? drawUnkoMovie : B.sup.kind === 'kenshin' ? drawKenshinMovie : B.sup.kind === 'kotan' ? drawKotanMovie : drawSuperMovie)(B.sup);
       // 切り札ゲット！
       if (B.fsGetPop) {
         const P = fs.find(f => f.id === B.fsGetPop.id);
