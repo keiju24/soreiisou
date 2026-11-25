@@ -2541,7 +2541,7 @@ function bloodHitFx(B, x, y, dmg, A, T) {   // 重い一撃：太い斬り口が
           if (F.gsAt !== undefined && BT.t - F.gsAt < 120) { Snd.guillotine(); return; }   // まだ次の斬撃は出ない
           F.gsAt = BT.t;
           BT.proj.push({ type: 'gslash', x: F.x + F.dir * 80 * sc, y: F.y - 60 * sc, gy: g ? F.y : null, vx: 26 * F.dir, vy: 0, life: 52, max: 52, owner: F, r: 56, dir: F.dir, ground: g, pierce: true,
-            hb: { dmg: 19, ang: 42, base: 9, gr: 0.95 } });
+            hb: { dmg: 14, ang: 42, base: 8.5, gr: 0.9 } });
           if (g) BT.parts.push({ x: F.x + F.dir * 90, y: F.y, crack: 1, len: 70, life: 110, max: 110, seed: BT.t, dir: F.dir, big: 1 });
           Snd.gslash(); Snd.heavy(() => Snd.doom(0.7));
         }
@@ -2572,7 +2572,7 @@ function bloodHitFx(B, x, y, dmg, A, T) {   // 重い一撃：太い斬り口が
         // 巻きこみ：この技で当たった相手は剣といっしょに運ぶ（上昇中は頭上、降下中は足もと）
         if (f === 1) F.carry = [];
         if (f >= 3 && f < 120) {
-          for (const T of BT.fs) if (T !== F && T.alive && T.lastHitBy === F && T.state === 'hitstun' && !F.carry.includes(T.id) && !(T.ubImm > BT.t) && Math.abs(T.x - F.x) < 110 && Math.abs(T.y - F.y) < 190) { F.carry.push(T.id); T.ubImm = BT.t + 240; }   // 一度巻きこんだ相手はしばらく巻きこめない（はめ防止）
+          for (const T of BT.fs) if (T !== F && T.alive && T.lastHitBy === F && T.state === 'hitstun' && !F.carry.includes(T.id) && !(T.ubImm > BT.t) && Math.abs(T.x - F.x) < 150 && Math.abs(T.y - F.y) < 230) { F.carry.push(T.id); T.ubImm = BT.t + 240; }   // 一度巻きこんだ相手はしばらく巻きこめない（はめ防止）
           const sc = F.ch.scale;
           for (const id of F.carry) {
             const T = BT.fs.find(q => q.id === id); if (!T || !T.alive || T.state !== 'hitstun') continue;
@@ -2581,8 +2581,9 @@ function bloodHitFx(B, x, y, dmg, A, T) {   // 重い一撃：太い斬り口が
           }
         }
         if (f === 6) { F.vy = -15; F.ground = null; Snd.swingC(F.ch, 12); }
-        if (f > 6 && f < 28) { F.vx = c.hx * 2.4; if (f % 4 === 3) { F.hitIds.clear(); Snd.swingC(F.ch, 3); } }
-        if (f === 28) F.hitIds.clear();
+        // 連続ヒットは巻きこんだ相手だけ（横に動きながら何度も当てられないように）
+        if (f > 6 && f < 28) { F.vx = c.hx * 1.6; if (f % 4 === 3) { for (const id of F.carry) F.hitIds.delete(id); Snd.swingC(F.ch, 3); } }
+        if (f === 28) for (const id of F.carry) F.hitIds.delete(id);
         if (f >= 28 && f < 36) { F.vx *= 0.8; F.vy = 0; if (f === 30) Snd.smp('sheath', 0.7, 0.8); return false; }   // 空中で大剣をつかむ
         if (f >= 36) { F.vy = 21; F.vx = c.hx * 1.6; if (f % 2 === 0) BT.parts.push({ x: F.x, y: F.y - 60, vx: 0, vy: -2, life: 14, max: 14, col: 'rgba(200,20,30,.5)', size: 16, g: 0, smoke: 1 }); return false; }
       },
@@ -2624,7 +2625,7 @@ function bloodHitFx(B, x, y, dmg, A, T) {   // 重い一撃：太い斬り口が
         const at = f < 10 ? { x: F.x + F.dir * 54 * sc, y: F.y - lerp(10, 60, f / 10) * sc } : { x: F.x + F.dir * 70 * sc, y: F.ground ? F.y : F.y + 10 };
         if (f < 37) { V.x = lerp(V.x, at.x, 0.6); V.y = lerp(V.y, at.y, 0.6); V.vx = 0; V.vy = 0; V.hitstun = Math.max(V.hitstun, 10); if (V.state !== 'hitstun') { V.move = null; V.setState('hitstun'); } }
         if (f === 12) {   // たたき伏せる
-          BT.applyHit(F, V, { dmg: 5, ang: 270, base: 0, gr: 0, hs: 40 }, 1, F.dir, true, V.x, V.y - 30);
+          BT.applyHit(F, V, { dmg: 4, ang: 270, base: 0, gr: 0, hs: 40 }, 1, F.dir, true, V.x, V.y - 30);
           V.vx = 0; V.vy = 0; BT.shake = Math.max(BT.shake, 16); BT.dust(V.x, F.y, 16);
           BT.parts.push({ x: V.x, y: F.y, shock: 1, r: 14, vr: 12, life: 18, max: 18, col: '#ffffff', w: 10 });
           if (F.ground) BT.parts.push({ x: V.x, y: F.y, crack: 1, len: 90, life: 100, max: 100, seed: BT.t, big: 1 });
@@ -2632,7 +2633,7 @@ function bloodHitFx(B, x, y, dmg, A, T) {   // 重い一撃：太い斬り口が
         }
         if (f === 26) Snd.berserkCharge(10);
         if (f === 37) {   // 真上から突き刺す
-          BT.applyHit(F, V, { dmg: 13, ang: 78, base: 10, gr: 0.95 }, 1, F.dir, true, V.x, V.y - 20);
+          BT.applyHit(F, V, { dmg: 10, ang: 78, base: 9.5, gr: 0.9 }, 1, F.dir, true, V.x, V.y - 20);
           BT.shake = Math.max(BT.shake, 26); BT.flashScr = 10; BT.flashRGB = '180,0,20'; BT.zoomP = Math.max(BT.zoomP || 0, 0.1);
           if (F.ground) riftBurst(BT, V.x, F.y, F.ground);
           BT.parts.push({ x: V.x, y: F.y - 20, flare: 1, r: 160, life: 16, max: 16, col: '#ff1028', rot: 0, n: 9 });
@@ -2645,6 +2646,8 @@ function bloodHitFx(B, x, y, dmg, A, T) {   // 重い一撃：太い斬り口が
 for (const k in BHMOVES) BHMOVES[k].hb = BHMOVES[k].hb.map(h => ({ ...h, ox: Math.abs(h.ox) > 40 ? Math.sign(h.ox) * (Math.abs(h.ox) * 1.08 - 8) / 1.15 : h.ox * 1.08 / 1.15,
   oy: h.oy < -40 ? (h.oy * 1.08 + 26) / 1.15 : h.oy * 1.08 / 1.15, r: h.r * 1.08 / 1.15 }));
 for (const k in BHMOVES) BHMOVES[k].K = BHMOVES[k].keys.map(([f, o]) => [f, mk(o)]);
+// 火力が高すぎたので全体的に弱く
+for (const k in BHMOVES) BHMOVES[k].hb = BHMOVES[k].hb.map(h => ({ ...h, dmg: Math.max(1, Math.round(h.dmg * 0.75 * 10) / 10) }));
 // つかみ：左手で胸ぐらをつかみ、大剣で斬る
 { const H = { lean: 0.2, fa: A_(0.7, 0.5), ba: A_(1.5, 0.3), fl: G_(0.4, -0.4), bl: G_(-0.4, -0.3) };
   const blood = (T) => { if (BT && T) BT.parts.push({ x: T.x, y: T.y - 75 * T.ch.scale, slash: 1, rot: rnd(-1, -0.4), len: 120, life: 10, max: 10, col: '#ff1028' }); };
@@ -3052,6 +3055,14 @@ const CHARS = [
   TMOVES.sb.hb = TMOVES.sb.hb.map(h => ({ ...h, r: h.r * 1.1 }));
 }
 
+// 今井：触手で範囲が広いぶん、ワザのあとのスキを長く、ダメージとふっとばしを低く
+for (const k in TMOVES) {
+  const m = TMOVES[k];
+  if (!m.hb || !m.hb.length || /grab|hold|pum|throw/.test(k)) continue;
+  m.hb = m.hb.map(h => ({ ...h, dmg: Math.max(1, Math.round(h.dmg * 0.8 * 10) / 10), base: h.base * 0.92 }));
+  m.len = Math.round(m.len * 1.28);
+  if (m.landLag) m.landLag = Math.round(m.landLag * 1.35);
+}
 for (const ch of CHARS) markShared(ch);   // キャラとワザ表は保存のとき写さない
 // 復帰を強く：空中ジャンプを1回ふやし、高さも少し上げる
 for (const ch of CHARS) { ch.airJumps = (ch.airJumps || 1) + 1; ch.djv *= 1.12; }
