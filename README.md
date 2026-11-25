@@ -7,6 +7,7 @@
 | `soreiisou.html` | それ、言いそう！ | 3〜8人（オンライン） |
 | `shimarin-brawl.html` | 大乱交しまりんブラザーズ（Phaser 3） | CPU と最大8人・チーム戦 / オンライン最大8人 |
 | `chinta-legend.html` | 朕太の伝説 〜狂戦士の城〜（Three.js・3D。章ごとに公開、いまは第1章） | 1人 |
+| `fire-station-3d.html` | 消防署 3D（PlayCanvas。写真をもとにした建物の3Dモデル） | 1人 |
 
 ## オンラインのしくみ
 
@@ -27,3 +28,9 @@
 - 効果音は `se/` のものを使います。ES モジュールを使うので、ファイルを直接開くのではなく GitHub Pages かローカルサーバーで開いてください。
 - 通貨は「朕銭」と「響晶」。敵の落とし物は `DROPS`、アイテムは `ITEMS` で決めます。持ち物・クリア状況・開けた宝箱はブラウザの localStorage（`chinta3d`）に保存します。
 - 章は `CHAPTERS` に並んでいます。新しい章を出すときは `ready: true` にして、その章のマップと敵を足します。
+
+## 消防署 3D
+
+- `fire-station-3d.html` が本体です。PlayCanvas は `lib/playcanvas.min.mjs`（2.19.7）を import map で読みこみます。
+- 建物・車両はすべて箱や円柱の組み合わせで、コードの中で作っています。看板の文字は `SIGN_TEXT` で変えられます。
+- ES モジュールなので GitHub Pages かローカルサーバーで開いてください。
