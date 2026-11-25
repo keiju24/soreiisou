@@ -2967,7 +2967,7 @@ makeGrabs(NMOVES, { reach: 1, hv: [52, -8],
 // ---------------------------------------------------------------------
 const UC_FULL = 100;   // うんこキャノンを最大までためるフレーム数
 // 切り札ムービーのタイミング（生物が出はじめ・コテンパン・くそでかうんこが落ちる・着地・爆発・終わり）
-const UM_POP0 = 8, UM_BEAT0 = 50, UM_BEAT1 = 122, UM_DROP = 134, UM_LAND = 150, UM_BOOM = 196, UM_END = 228;
+const UM_POP0 = 20, UM_BURST = 16, UM_LINE = 88, UM_BEAT0 = 112, UM_BEAT1 = 184, UM_DROP = 200, UM_LAND = 252, UM_BOOM = 312, UM_END = 360;
 const UMOVES = {};
 for (const k in MOVES) UMOVES[k] = { ...MOVES[k], hb: MOVES[k].hb.map(h => ({ ...h })) };
 // うんこの散弾（水色のつぶ）
@@ -6027,20 +6027,40 @@ function drawPoopTiers(heat = 0, spin = 0) {
     ctx.drawImage(glowSprite('rgba(255,90,20,.9)'), -44, -44, 88, 80); ctx.restore();
   }
 }
-// 回転のエフェクト：まわりを走る渦の線と、外へはじける火花（sp：回転角、r：半径）
-function drawSpinFx(sp, r, heat) {
+// ドリルのように軸まわりに回るうんこ（ph：回転の位相、heat：焼け具合）。うんこの先が -y 方向
+function drawDrillPoop(heat, ph) {
+  ctx.save();
+  // 回転の残像（軸方向にのびる淡い光）
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= 0.35 + heat * 0.3;
+  ctx.drawImage(glowSprite(heat > 0.5 ? 'rgba(255,140,50,.9)' : 'rgba(126,232,230,.8)'), -34, -40, 68, 74); ctx.restore();
+  ctx.scale(1 + Math.sin(ph * 2) * 0.05, 1);   // 回るたびに幅がわずかに変わる
+  drawPoopTiers(heat, 0);
+  // らせんのみぞ（軸にそって流れていく斜めの線）
+  ctx.save();
+  ctx.beginPath(); ctx.ellipse(0, 8, 22, 10, 0, 0, TAU); ctx.ellipse(0, -0.5, 17, 8.5, 0, 0, TAU); ctx.ellipse(0, -8, 12, 6.5, 0, 0, TAU);
+  ctx.moveTo(-7, -11); ctx.quadraticCurveTo(-3, -22, 5, -20); ctx.quadraticCurveTo(9, -15, 7, -11); ctx.clip();
+  ctx.lineCap = 'round';
+  for (let i = -6; i <= 6; i++) {
+    const y0 = ((i * 7 + ph * 9) % 42 + 42) % 42 - 24;   // 下から先へ流れる
+    ctx.strokeStyle = heat > 0.6 ? 'rgba(90,10,0,.5)' : 'rgba(10,70,74,.45)'; ctx.lineWidth = 2.6;
+    ctx.beginPath(); ctx.moveTo(-24, y0 + 10); ctx.lineTo(24, y0 - 6); ctx.stroke();
+    ctx.strokeStyle = heat > 0.6 ? 'rgba(255,230,160,.55)' : 'rgba(255,255,255,.45)'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(-24, y0 + 12.5); ctx.lineTo(24, y0 - 3.5); ctx.stroke();
+  }
+  ctx.restore();
+  // 軸まわりを回る輪（ドリルの回転線）と、横へ飛ぶ火花
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
-  const col = heat > 0.5 ? '255,170,70' : '126,232,230';
-  for (let i = 0; i < 4; i++) {
-    const a0 = sp * 1.3 + i * Math.PI / 2;
-    ctx.strokeStyle = `rgba(${col},${0.55 - i * 0.08})`; ctx.lineWidth = 4 - i * 0.6;
-    ctx.beginPath(); ctx.arc(0, 0, r + i * 5, a0, a0 + 1.6); ctx.stroke();
+  const col = heat > 0.5 ? '255,180,80' : '150,240,236';
+  for (let i = 0; i < 3; i++) {
+    const q = ((ph * 0.35 + i / 3) % 1), y = 16 - q * 40, rx = 26 - q * 16;
+    ctx.strokeStyle = `rgba(${col},${0.7 * (1 - q)})`; ctx.lineWidth = 2.4;
+    ctx.beginPath(); ctx.ellipse(0, y, rx + 6, 4, 0, ph * 3 % TAU, ph * 3 % TAU + 2.4); ctx.stroke();
   }
-  ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 2;
-  for (let i = 0; i < 3; i++) { const a = sp * 1.3 + i * TAU / 3; ctx.beginPath(); ctx.arc(0, 0, r * 0.8, a, a + 0.6); ctx.stroke(); }
-  if (heat > 0.2) {   // 遠心力で飛ぶ火花
-    for (let i = 0; i < 6; i++) { const a = sp * 0.7 + i * TAU / 6, d = r + ((sp * 9 + i * 13) % 18); ctx.fillStyle = heat > 0.8 ? '#ffe680' : '#ff8a3a'; ctx.beginPath(); ctx.arc(Math.cos(a) * d, Math.sin(a) * d, 2 + heat * 1.5, 0, TAU); ctx.fill(); }
+  if (heat > 0.2) for (let i = 0; i < 5; i++) {
+    const q = ((ph * 0.5 + i / 5) % 1), side = i % 2 ? 1 : -1, y = 12 - i * 6;
+    ctx.fillStyle = heat > 0.8 ? '#ffe680' : '#ff8a3a'; ctx.beginPath(); ctx.arc(side * (22 + q * 26), y + q * 6, 1.8 + heat * 1.4, 0, TAU); ctx.fill();
   }
+  ctx.restore();
   ctx.restore();
 }
 function unkoHeat(F) {
@@ -6055,13 +6075,8 @@ function drawUnkoStick(J, P, F, t) {
     ctx.strokeStyle = '#6b4a24'; ctx.lineWidth = 6; line(-8, 0, 54, 0);   // 木の棒
     ctx.strokeStyle = '#e2c08a'; ctx.lineWidth = 3.6; line(-8, 0, 54, 0);
     ctx.save(); ctx.translate(66 + (big - 1) * 18, 0); ctx.rotate(Math.PI / 2); ctx.scale(big, big);
-    if (spin > 0 || F.ucStock) {
-      const sp = spin > 0 ? spin : (F.t || 0) * 0.5, rr2 = 30 + heat * 8;
-      drawSpinFx(sp, rr2, heat);
-      for (let gi = 2; gi >= 1; gi--) { ctx.save(); ctx.globalAlpha *= 0.22 / gi; ctx.rotate(sp - gi * 0.5); ctx.translate(0, -4); drawPoopTiers(heat, sp); ctx.restore(); }   // 残像
-      ctx.rotate(sp); ctx.translate(0, -4);
-    }
-    drawPoopTiers(heat, spin);
+    if (spin > 0 || F.ucStock) drawDrillPoop(heat, spin > 0 ? spin : (F.t || 0) * 0.6);   // ドリルのように軸まわりに回る
+    else drawPoopTiers(heat, 0);
     ctx.restore();
   });
 }
@@ -8355,7 +8370,7 @@ SC_.battle = (o) => {
       return false;
     }
     if (S.kind === 'unko') {
-      // ---- ゴッド・オブ・うんこ：ムービー（うんこ生物を全員呼ぶ → みんなでコテンパン → くそでかうんこを落とす → 少したって大爆発）----
+      // ---- ゴッド・オブ・うんこ：ムービー（ド派手な召喚 → けんかの煙でコテンパン → 天から降りるくそでかうんこ → 赤熱・サイレン → きのこ雲の大爆発）----
       if (u === 1) Snd.petPop();
       if (S.done) return u >= S.done + 20;
       if (!S.movie) {
@@ -8365,12 +8380,15 @@ SC_.battle = (o) => {
       }
       const mt = ++S.mt;
       T.x = S.tx; T.y = S.ty;
-      if (mt >= UM_POP0 && mt < UM_POP0 + PET_KINDS.length * 3 && (mt - UM_POP0) % 3 === 0) Snd.petPop();   // 次々に出てくる
-      if (mt >= UM_BEAT0 && mt < UM_BEAT1 && (mt - UM_BEAT0) % 4 === 0) { Snd.petBoing(); if ((mt - UM_BEAT0) % 8 === 0) { supHit(S, 1.4); Snd.hitC(F.ch, 5); } }   // みんなでぺしぺし
-      if (mt === UM_DROP) Snd.osc('sine', 900, 0.9, 0.08, 200);   // ひゅるるる…
-      if (mt === UM_LAND) { supHit(S, 6); Snd.squish(1.4, 0.3); Snd.heavy(() => Snd.doom(0.9)); }   // ずどーん
-      if (mt > UM_LAND + 8 && mt < UM_BOOM && (mt - UM_LAND) % 10 === 0) Snd.miTick();   // ピッ…ピッ…
-      if (mt === UM_BOOM) { supHit(S, 6); Snd.explode(1.8); Snd.koBoom(); Snd.heavy(() => Snd.doom(1.4)); }
+      if (mt === 4) Snd.petGrow();   // 魔法陣
+      for (let b = 0; b < 4; b++) if (mt === UM_POP0 + b * UM_BURST) { Snd.explode(0.6); Snd.petPop(); Snd.osc('sine', 300 + b * 120, 0.5, 0.08, 900 + b * 200); }   // 3匹ずつ噴き出す
+      if (mt === UM_LINE) { Snd.ucStock(); Snd.koBoom(); }   // 全員集合
+      if (mt >= UM_BEAT0 && mt < UM_BEAT1 && (mt - UM_BEAT0) % 4 === 0) { Snd.petBoing(); if ((mt - UM_BEAT0) % 8 === 0) { supHit(S, 1.3); Snd.hitC(F.ch, 6); } }   // けんかの煙
+      if (mt === UM_DROP) { for (const [n, d] of [[262, 0], [330, 0.05], [392, 0.1], [523, 0.15]]) Snd.osc('triangle', n, 1.6, 0.05, null, d); }   // 天から「あ〜〜」
+      if (mt === UM_LAND - 8) Snd.osc('sine', 900, 0.4, 0.08, 150);
+      if (mt === UM_LAND) { supHit(S, 6); Snd.squish(1.4, 0.3); Snd.explode(1); Snd.heavy(() => Snd.doom(1.1)); }   // ずどーん
+      if (mt > UM_LAND + 10 && mt < UM_BOOM && (mt - UM_LAND) % (mt > UM_BOOM - 24 ? 5 : 12) === 0) { Snd.miTick(); if (mt > UM_BOOM - 40) Snd.miWarn(); }   // ピッ…ピッ…ピピピ
+      if (mt === UM_BOOM) { supHit(S, 7); Snd.explode(2); Snd.koBoom(); Snd.heavy(() => { Snd.doom(1.6); Snd.osc('sine', 34, 1.6, 0.5, 20); }); }
       if (mt === UM_END) {   // バトルにもどって、ぶっ飛ばす
         S.movie = false; S.done = u;
         supLaunch(S, { dmg: 10, ang: 75, base: 20, gr: 1.5 }, S.dir);
@@ -9231,7 +9249,7 @@ SC_.battle = (o) => {
       if (p.type === 'grenade') p.rot = (p.rot || 0) + p.vx * 0.06;
       if (p.type === 'ucannon') {   // 回転しながら飛ぶ、焼けたうんこ
         p.spin += 0.7 + p.k * 1.1;
-        if (p.life % 2 === 0) { const a = p.spin; B.parts.push({ x: p.x + Math.cos(a) * p.r * 1.4, y: p.y + Math.sin(a) * p.r * 1.4, vx: -p.vx * 0.15 + Math.cos(a) * 2, vy: Math.sin(a) * 2, life: 12, max: 12, spark: 1, size: 2 + p.k * 2, g: 0, col: p.k > 0.5 ? '#ffb040' : '#7ee8e6' }); }   // らせんの火花
+        if (p.life % 2 === 0) { const a = p.spin; B.parts.push({ x: p.x - sgn(p.vx) * p.r * 0.6, y: p.y + Math.sin(a) * p.r * 1.2, vx: -p.vx * 0.25, vy: Math.cos(a) * 3, life: 12, max: 12, spark: 1, size: 2 + p.k * 2, g: 0, col: p.k > 0.5 ? '#ffb040' : '#7ee8e6' }); }   // らせんの火花
         if (p.k > 0.3) B.parts.push({ x: p.x - sgn(p.vx) * 14, y: p.y + rnd(-6, 6), vx: -sgn(p.vx) * rnd(1, 4), vy: rnd(-1.5, 1), life: 14, max: 14, spark: 1, size: rnd(2, 4), g: 0, col: p.k > 0.8 ? '#ffe680' : '#ff7a2a' });
         if (p.life % 2 === 0) B.parts.push({ x: p.x - sgn(p.vx) * 10, y: p.y, vx: 0, vy: -0.5, life: 16, max: 16, col: p.k > 0.5 ? 'rgba(90,70,60,.45)' : 'rgba(126,232,230,.4)', size: 10 + p.k * 10, g: -0.02, smoke: 1 });
       }
@@ -10485,97 +10503,199 @@ SC_.battle = (o) => {
     point: mk({ by: 0, lean: -0.2, hd: -0.45, fa: A_(2.7, 0), ba: A_(-0.6, 0.9), fl: G_(0.5, -0.1), bl: G_(-0.5, 0) }),
     cover: mk({ by: 26, lean: 0.4, hd: 0.3, fa: A_(2.6, 2.2), ba: A_(2.4, 2.3), fl: G_(1.3, -2.0), bl: G_(0.4, -2.2) }),
   }))();
+  // 漫画のけんかの煙（もくもくの雲＋はみ出す手足やしっぽ＋星＋擬音）
+  function ngFightCloud(cx, cy, mt, T, k) {
+    const R = srand((mt >> 1) * 7919 + 5), r0 = 130 * k;
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    // はみ出す手足・しっぽ（雲の下に描いて、根元を雲でかくす）
+    const OF = T.ch.outfit, tc = OF ? OF.main : T.col.main;
+    for (let i = 0; i < 6; i++) {
+      const a = R() * TAU, len = (70 + R() * 70) * k, x1 = cx + Math.cos(a) * r0 * 0.6, y1 = cy + Math.sin(a) * r0 * 0.5, x2 = cx + Math.cos(a) * (r0 + len), y2 = cy + Math.sin(a) * (r0 * 0.8 + len * 0.8);
+      if (i < 2) {   // 相手の腕・脚
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 20; line(x1, y1, x2, y2); ctx.strokeStyle = tc; ctx.lineWidth = 13; line(x1, y1, x2, y2);
+        ctx.fillStyle = T.ch.hand || '#f2cdb0'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x2, y2, 11, 0, TAU); ctx.fill(); ctx.stroke();
+      } else {   // うんこ生物のしっぽ
+        const K = PET_KINDS[(i * 3 + (mt >> 3)) % PET_KINDS.length];
+        ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.lineWidth = 16; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo((x1 + x2) / 2 + 20, (y1 + y2) / 2 - 20, x2, y2); ctx.stroke();
+        ctx.strokeStyle = K.tc[0]; ctx.lineWidth = 12; ctx.stroke();
+        ctx.fillStyle = K.tc[1]; ctx.beginPath(); ctx.arc(x2, y2, 8, 0, TAU); ctx.fill();
+      }
+    }
+    // もくもくの雲（黒いふち→白）
+    const puffs = [];
+    for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + R() * 0.3, d = r0 * (0.55 + R() * 0.35); puffs.push([cx + Math.cos(a) * d, cy + Math.sin(a) * d * 0.75, (44 + R() * 34) * k]); }
+    puffs.push([cx, cy, r0 * 0.8]);
+    ctx.fillStyle = '#1a1a1e'; for (const [x, y, r] of puffs) { ctx.beginPath(); ctx.arc(x, y, r + 5, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = '#f6f4ee'; for (const [x, y, r] of puffs) { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = 'rgba(0,0,0,.08)'; for (const [x, y, r] of puffs) { ctx.beginPath(); ctx.arc(x + r * 0.25, y + r * 0.3, r * 0.6, 0, TAU); ctx.fill(); }
+    ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 3; for (let i = 0; i < 5; i++) { const a = R() * TAU, d = r0 * 0.4 * R(); ctx.beginPath(); ctx.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, 14 + R() * 12, 0.4, 2.6); ctx.stroke(); }   // うずまき
+    // 星
+    for (let i = 0; i < 4; i++) {
+      const a = R() * TAU, d = r0 * (0.9 + R() * 0.5), x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d * 0.8, s = 12 + R() * 10;
+      ctx.fillStyle = i % 2 ? '#ffd34e' : '#ffffff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.beginPath();
+      for (let j = 0; j < 10; j++) { const aa = j / 10 * TAU - Math.PI / 2, rr2 = j % 2 ? s * 0.45 : s; ctx.lineTo(x + Math.cos(aa) * rr2, y + Math.sin(aa) * rr2); }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    // 擬音
+    const W = ['ボコッ', 'ペシッ', 'ドカッ', 'バキッ', 'ポカッ', 'ゲシッ'];
+    for (let i = 0; i < 2; i++) {
+      const a = R() * TAU, d = r0 * (0.9 + R() * 0.4), x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d * 0.7;
+      ctx.save(); ctx.translate(x, y); ctx.rotate((R() - 0.5) * 0.6); text(W[(R() * W.length) | 0], 0, 0, 44 + R() * 16, i ? '#ffd34e' : '#ff5a5a', 'center', '900', '#000', 9); ctx.restore();
+    }
+    ctx.restore();
+  }
+  function unkoTitle(q) {   // 爆発の後ろの大きなタイトル
+    const k = ease(clamp(q / 10, 0, 1)), sc = 1.2 - 0.12 * k - q * 0.0012;
+    ctx.save(); ctx.translate(VW / 2, VH * 0.42); ctx.scale(sc, sc); ctx.globalAlpha *= k; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (const [s2, y, sz] of [['GOD OF', -90, 130], ['UNKO', 66, 200]]) {
+      ctx.font = `900 ${sz}px Impact, 'Arial Black', ${FONT}`; ctx.lineJoin = 'miter'; ctx.lineWidth = 18; ctx.strokeStyle = '#000'; ctx.strokeText(s2, 0, y);
+      const g = ctx.createLinearGradient(0, y - sz / 2, 0, y + sz / 2); g.addColorStop(0, '#f6fffe'); g.addColorStop(0.45, '#7ee8e6'); g.addColorStop(0.5, '#1f8a8e'); g.addColorStop(0.8, '#9af2ee'); g.addColorStop(1, '#ffd34e');
+      ctx.fillStyle = g; ctx.fillText(s2, 0, y);
+    }
+    ctx.fillStyle = '#ffd34e'; ctx.fillRect(-380, -16, 760, 7);
+    ctx.restore();
+  }
   function drawUnkoMovie(S) {
     const F = S.F, T = S.T, mt = S.mt || 0, t = 1000 + mt, NP = PET_KINDS.length;
     const zin = ease(clamp(mt / 8, 0, 1)), zout = mt > UM_END - 10 ? clamp((UM_END - mt) / 10, 0, 1) : 1;
-    const GY = VH * 0.8, UX = VW * 0.17, TX = VW * 0.64;
+    const GY = VH * 0.8, UX = VW * 0.17, TX = VW * 0.66;
+    const landed = mt >= UM_LAND, boomed = mt >= UM_BOOM, heatK = landed ? clamp((mt - UM_LAND) / (UM_BOOM - UM_LAND), 0, 1) : 0;
+    const burstX = b => VW * (0.08 + b * 0.105), petHome = i => burstX(i / 3 | 0) + ((i % 3) - 1) * 44;
     ctx.save(); ctx.globalAlpha = zin * zout;
-    // ---- 背景：夜の公園っぽい、水色の光 ----
+    // ---- 背景 ----
     const bg = ctx.createLinearGradient(0, 0, 0, VH); bg.addColorStop(0, '#081418'); bg.addColorStop(0.7, '#0b2a2c'); bg.addColorStop(1, '#061214');
     ctx.fillStyle = bg; ctx.fillRect(0, 0, VW, VH);
-    const red = mt >= UM_LAND ? clamp((mt - UM_LAND) / (UM_BOOM - UM_LAND), 0, 1) : 0;
-    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= 0.5 + red * 0.3;
-    ctx.drawImage(glowSprite(red > 0.5 ? 'rgba(255,80,40,.7)' : 'rgba(80,230,220,.6)'), TX - 500, GY - 600, 1000, 800); ctx.restore();
-    for (let i = 0; i < 40; i++) { const R = srand(i * 97 + 1); ctx.fillStyle = `rgba(180,255,250,${0.25 + R() * 0.4})`; ctx.fillRect(R() * VW, R() * GY * 0.7, 2, 2); }
-    ctx.fillStyle = '#04100f'; ctx.fillRect(0, GY, VW, VH - GY); ctx.strokeStyle = 'rgba(126,232,230,.45)'; ctx.lineWidth = 2; line(0, GY, VW, GY);
+    for (let i = 0; i < 50; i++) { const R = srand(i * 97 + 1); ctx.fillStyle = `rgba(180,255,250,${0.25 + R() * 0.4})`; ctx.fillRect(R() * VW, R() * GY * 0.7, 2, 2); }
     // ---- カメラ ----
-    let zoom = 1, zx = VW / 2, zy = GY - 160;
-    if (mt >= UM_BEAT0 && mt < UM_BEAT1) { const k = ease(clamp((mt - UM_BEAT0) / 14, 0, 1)); zoom = 1 + 0.35 * k; zx = lerp(VW / 2, TX - 40, k); }
-    else if (mt >= UM_LAND && mt < UM_BOOM) { const k = (mt - UM_LAND) / (UM_BOOM - UM_LAND); zoom = 1.05 + 0.35 * k * k; zx = lerp(VW / 2, TX, k); zy = GY - 160 - 40 * k; }
-    const shk = (mt >= UM_BEAT0 && mt < UM_BEAT1 && (mt - UM_BEAT0) % 4 < 2 ? 6 : 0) + (mt >= UM_LAND && mt < UM_LAND + 16 ? 30 * Math.exp(-(mt - UM_LAND) / 4) : 0)
-      + (mt > UM_LAND + 16 && mt < UM_BOOM ? 1 + red * 6 : 0) + (mt >= UM_BOOM && mt < UM_BOOM + 24 ? 36 * Math.exp(-(mt - UM_BOOM) / 6) : 0);
-    ctx.save(); ctx.translate(VW / 2 + rnd(-shk, shk), VH * 0.55 + rnd(-shk, shk)); ctx.scale(zoom, zoom); ctx.translate(-zx, -(VH * 0.55 + (zy - (GY - 160))));
+    let zoom = 1, zx = VW / 2, zy = GY - 160, cr = 0;
+    if (mt < UM_POP0) { const k = ease(mt / UM_POP0); zoom = lerp(1.9, 1.6, k); zx = UX + 40; zy = GY - 170; }
+    else if (mt < UM_LINE) { const b = Math.min(3, (mt - UM_POP0) / UM_BURST | 0), f = mt - UM_POP0 - b * UM_BURST; zoom = 2.0 - f * 0.02; zx = burstX(b); zy = GY - 150 - f * 4; cr = (b % 2 ? 0.05 : -0.05) * Math.exp(-f / 5); }
+    else if (mt < UM_BEAT0) { const k = ease(clamp((mt - UM_LINE) / 16, 0, 1)); zoom = lerp(1.5, 1.0, k); zx = lerp(VW * 0.28, VW / 2, k); }
+    else if (mt < UM_BEAT1) { const k = ease(clamp((mt - UM_BEAT0) / 12, 0, 1)); zoom = 1 + 0.4 * k; zx = lerp(VW / 2, TX - 30, k); zy = GY - 150; cr = Math.sin(mt * 0.9) * 0.015 * k; }
+    else if (mt < UM_DROP) { zoom = 1.0; }
+    else if (mt < UM_LAND) { const k = (mt - UM_DROP) / (UM_LAND - UM_DROP); zoom = 0.92; zx = lerp(VW / 2, TX - 60, k); zy = lerp(GY - 420, GY - 200, ease(k)); }
+    else if (mt < UM_BOOM) { zoom = 1 + 0.5 * heatK * heatK; zx = lerp(TX - 60, TX, heatK); zy = GY - 190 - 30 * heatK; }
+    const shk = (mt >= UM_POP0 && mt < UM_LINE && (mt - UM_POP0) % UM_BURST < 6 ? 16 * Math.exp(-((mt - UM_POP0) % UM_BURST) / 3) : 0) + (mt >= UM_LINE && mt < UM_LINE + 8 ? 14 : 0)
+      + (mt >= UM_BEAT0 && mt < UM_BEAT1 ? 5 : 0) + (mt >= UM_LAND && mt < UM_LAND + 18 ? 40 * Math.exp(-(mt - UM_LAND) / 5) : 0)
+      + (landed && !boomed ? 1 + heatK * heatK * 10 : 0) + (boomed && mt < UM_BOOM + 30 ? 46 * Math.exp(-(mt - UM_BOOM) / 7) : 0);
+    // 天が暗くなる（くそでかうんこが降りてくる）
+    const dark = mt >= UM_DROP - 10 && !boomed ? clamp((mt - UM_DROP + 10) / 20, 0, 1) : boomed ? Math.max(0, 1 - (mt - UM_BOOM) / 10) : 0;
+    ctx.save(); ctx.translate(VW / 2 + rnd(-shk, shk), VH * 0.55 + rnd(-shk, shk)); ctx.rotate(cr); ctx.scale(zoom, zoom); ctx.translate(-zx, -(VH * 0.55 + (zy - (GY - 160))));
+    if (dark > 0) {
+      ctx.fillStyle = `rgba(4,0,10,${0.6 * dark})`; ctx.fillRect(-VW, -VH * 2, VW * 3, VH * 4);
+      // 渦まく雲と、真ん中から差しこむ光
+      ctx.save(); ctx.globalAlpha *= dark;
+      for (let i = 0; i < 18; i++) { const a = i / 18 * TAU + mt * 0.01, rr2 = 260 + (i % 3) * 70; ctx.fillStyle = i % 2 ? 'rgba(40,36,52,.9)' : 'rgba(64,58,80,.9)'; ctx.beginPath(); ctx.ellipse(TX + Math.cos(a) * rr2 * 1.6, -340 + Math.sin(a) * rr2 * 0.35, 120, 40, a, 0, TAU); ctx.fill(); }
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 7; i++) { const w = 30 + i * 22, a = (i - 3) * 0.12 + Math.sin(mt * 0.03 + i) * 0.04; ctx.fillStyle = `rgba(255,240,180,${0.07 + (i % 2) * 0.05})`; ctx.beginPath(); ctx.moveTo(TX - 40, -380); ctx.lineTo(TX + 40, -380); ctx.lineTo(TX + Math.sin(a) * 900 + w, GY); ctx.lineTo(TX + Math.sin(a) * 900 - w, GY); ctx.closePath(); ctx.fill(); }
+      ctx.drawImage(glowSprite('rgba(255,240,190,.9)'), TX - 220, -520, 440, 300);
+      ctx.restore();
+    }
+    // 地面
+    ctx.fillStyle = '#04100f'; ctx.fillRect(-VW, GY, VW * 3, VH); ctx.strokeStyle = 'rgba(126,232,230,.45)'; ctx.lineWidth = 2; line(-VW, GY, VW * 2, GY);
+    // 召喚の魔法陣（地面に水色の輪と文字のような模様）
+    if (mt < UM_BEAT0) {
+      const k = clamp(mt / 14, 0, 1) * (mt > UM_LINE + 10 ? Math.max(0, 1 - (mt - UM_LINE - 10) / 12) : 1);
+      ctx.save(); ctx.globalAlpha *= k; ctx.translate(VW * 0.24, GY); ctx.scale(1, 0.22);
+      ctx.strokeStyle = '#7ee8e6'; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(0, 0, 300 * k, 0, TAU); ctx.stroke();
+      ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, 250 * k, 0, TAU); ctx.stroke();
+      ctx.rotate(mt * 0.03); for (let i = 0; i < 12; i++) { ctx.rotate(TAU / 12); ctx.beginPath(); ctx.moveTo(250 * k, 0); ctx.lineTo(300 * k, 20); ctx.lineTo(300 * k, -20); ctx.closePath(); ctx.stroke(); }
+      ctx.restore();
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= 0.5 * k; ctx.drawImage(glowSprite('rgba(126,232,230,.85)'), VW * 0.24 - 340, GY - 60, 680, 120); ctx.restore();
+    }
     // ---- 相手 ----
-    const landed = mt >= UM_LAND, boomed = mt >= UM_BOOM;
-    if (T && !landed) {
-      let tp = MOV.caught, jx = 0, rot = 0;
-      if (mt >= UM_BEAT0 && mt < UM_BEAT1) { const k = (mt - UM_BEAT0) >> 2; tp = [MOV.hurtB, MOV.side, MOV.fold, MOV.hurt][k % 4]; jx = k % 2 ? 8 : -8; rot = (k % 3 - 1) * 0.08; }
-      else if (mt >= UM_BEAT1) { tp = MOV.lie; rot = 1.5; }
-      drawFigureAt(T, TX + jx, GY, 1.9, tp, -1, t, rot);
-    }
-    if (T && boomed && mt > UM_BOOM + 4) {   // 爆発で空へ吹き飛ぶ
-      const q = mt - UM_BOOM - 4; drawFigureAt(T, TX + q * 6, GY - 160 - q * 26 + q * q * 0.15, Math.max(0.5, 1.6 - q * 0.04), MOV.tumble, -1, t, -q * 0.5);
-    }
-    // ---- うんこ生物たち ----
-    const petAt = (i) => {   // i 番目の生物の位置・ポーズ
-      const K = PET_KINDS[i], home = VW * 0.05 + i * (VW * 0.5 / (NP - 1)) + (i % 2 ? 0 : 0), popT = UM_POP0 + i * 3;
+    if (T && mt < UM_BEAT0) { drawFigureAt(T, TX, GY, 1.9, mt < UM_LINE ? MOV.caught : MOV.hurt, -1, t, 0); }
+    if (T && mt >= UM_BEAT1 && !landed) drawFigureAt(T, TX, GY, 1.9, MOV.lie, -1, t, 1.5);   // のびている
+    if (T && boomed && mt > UM_BOOM + 4) { const q = mt - UM_BOOM - 4; drawFigureAt(T, TX + q * 6, GY - 200 - q * 26 + q * q * 0.12, Math.max(0.5, 1.6 - q * 0.04), MOV.tumble, -1, t, -q * 0.5); }
+    // ---- うんこ生物 ----
+    const petAt = (i) => {
+      const b = i / 3 | 0, popT = UM_POP0 + b * UM_BURST, K = PET_KINDS[i], home = petHome(i);
       if (mt < popT) return null;
-      let x = home, y = GY, s = 1.8, dir = 1, tail = Math.sin(t * 0.2 + i) * 0.15, sq = 1, em = Math.min(1, (mt - popT) / 10);
-      if (mt >= UM_POP0 + NP * 3 && mt < UM_BEAT0) { const k = ease(clamp((mt - (UM_POP0 + NP * 3)) / 10, 0, 1)); y = GY - Math.sin(k * Math.PI) * 30 * (i % 2 ? 1 : 0.6); }
-      if (mt >= UM_BEAT0 && mt < UM_BEAT1) {   // 相手のまわりに群がって、跳びかかってはしっぽでぺしっ
-        const side = i % 2 ? 1 : -1, ring = 90 + (i % 4) * 44, ph = ((mt - UM_BEAT0) + i * 5) % 20 / 20;
-        const bx = TX + side * ring, k = ease(clamp((mt - UM_BEAT0) / 10, 0, 1));
-        x = lerp(home, bx - side * Math.sin(ph * Math.PI) * (ring - 30), k); y = GY - Math.sin(ph * Math.PI) * (60 + (i % 3) * 30) * k - (i % 5 === 2 ? 150 * k : 0);
-        dir = -side; tail = ph > 0.45 && ph < 0.6 ? 1.1 : -0.3; sq = ph < 0.1 ? 0.85 : 1;
-      }
-      if (mt >= UM_BEAT1) {   // 散ってうんこ一瑚のうしろにかくれる
-        const k = ease(clamp((mt - UM_BEAT1) / 14, 0, 1)); x = lerp(TX + (i % 2 ? 1 : -1) * (90 + (i % 4) * 44), UX - 90 + i * 16 - (i % 3) * 24, k); y = GY - Math.sin(k * Math.PI) * 80;
-        dir = 1; if (mt > UM_LAND && mt < UM_BOOM) { x += Math.sin(mt * 2 + i) * 2; sq = 0.92; }   // ぶるぶる
-      }
-      return { K, x, y, s, dir, tail, sq, em };
+      const f = mt - popT;
+      let x = home, y = GY, s = 1.8, dir = 1, tail = Math.sin(t * 0.2 + i) * 0.15, sq = 1, hide = false;
+      if (f < 22) { const q = f / 22; y = GY - Math.sin(q * Math.PI) * (160 + (i % 3) * 40); x = home + ((i % 3) - 1) * 30 * q; sq = q > 0.9 ? 0.85 : 1.1; }   // 地面から噴き出して、くるっと着地
+      if (mt >= UM_LINE && mt < UM_LINE + 10) { y = GY - Math.sin((mt - UM_LINE) / 10 * Math.PI) * 40; }   // 全員そろってジャンプ
+      if (mt >= UM_BEAT0 - 8 && mt < UM_BEAT0) { const k = ease((mt - UM_BEAT0 + 8) / 8); x = lerp(home, TX, k); y = GY - Math.sin(k * Math.PI) * 100; }   // 相手へとびかかる
+      if (mt >= UM_BEAT0 && mt < UM_BEAT1) hide = true;   // けんかの煙の中
+      if (mt >= UM_BEAT1) { const k = ease(clamp((mt - UM_BEAT1) / 14, 0, 1)); x = lerp(TX, UX - 110 + i * 16 - (i % 3) * 24, k); y = GY - Math.sin(k * Math.PI) * 90; if (landed && !boomed) { x += Math.sin(mt * 2 + i) * 2; sq = 0.9; } }
+      return hide ? null : { K, x, y, s, dir, tail, sq, rot: f < 22 ? (f / 22) * TAU * (i % 2 ? 1 : -1) : 0 };
     };
     const pets = []; for (let i = 0; i < NP; i++) { const p = petAt(i); if (p) pets.push(p); }
-    const drawP = (p) => {
-      ctx.save(); ctx.beginPath(); ctx.rect(p.x - 200, p.y - 400, 400, 402); ctx.clip();
-      ctx.translate(p.x, p.y + (1 - p.em) * 90); ctx.scale(p.dir, 1); drawPet(ctx, 0, 0, p.K, { s: p.s, sq: p.sq, tail: p.tail }); ctx.restore();
-      if (p.em < 1) { ctx.fillStyle = 'rgba(90,74,58,.8)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, 44, 8, 0, 0, TAU); ctx.fill(); }   // 地面の穴
-    };
+    const drawP = p => { ctx.save(); ctx.translate(p.x, p.y); if (p.rot) { ctx.translate(0, -40); ctx.rotate(p.rot); ctx.translate(0, 40); } ctx.scale(p.dir, 1); drawPet(ctx, 0, 0, p.K, { s: p.s, sq: p.sq, tail: p.tail }); ctx.restore(); };
     // ---- うんこ一瑚 ----
     let up = UMV.summon;
     if (mt >= UM_BEAT0 && mt < UM_BEAT1) up = UMV.cond(mt * 0.4);
     else if (mt >= UM_BEAT1 && mt < UM_LAND) up = UMV.point;
     else if (mt >= UM_LAND) up = UMV.cover;
-    if (mt >= UM_BEAT1) pets.forEach(drawP);   // かくれるときは一瑚のうしろ
+    if (mt >= UM_BEAT1) pets.forEach(drawP);
     drawFigureAt(F, UX, GY, 1.9, up, 1, t);
     if (mt < UM_BEAT1) pets.forEach(drawP);
-    // 地面が水色に光って呼び出す
-    if (mt < UM_BEAT0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= 0.5; ctx.drawImage(glowSprite('rgba(126,232,230,.8)'), VW * 0.02, GY - 40, VW * 0.5, 80); ctx.restore(); }
-    // ぺしぺしの火花
-    if (mt >= UM_BEAT0 && mt < UM_BEAT1) {
-      ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      for (let j = 0; j < 3; j++) { const R = srand(mt * 31 + j), hx = TX + (R() - 0.5) * 90, hy = GY - 60 - R() * 140, r = 30 + R() * 30;
-        ctx.globalAlpha = 0.8; ctx.drawImage(glowSprite('rgba(255,255,255,.9)'), hx - r, hy - r, r * 2, r * 2);
-        ctx.strokeStyle = j % 2 ? '#7ee8e6' : '#ffd34e'; ctx.lineWidth = 3; for (let k = 0; k < 6; k++) { const a = k / 6 * TAU + R(); line(hx + Math.cos(a) * 10, hy + Math.sin(a) * 10, hx + Math.cos(a) * r, hy + Math.sin(a) * r); } }
+    // 噴き出す光の柱と土
+    for (let b = 0; b < 4; b++) {
+      const f = mt - (UM_POP0 + b * UM_BURST); if (f < 0 || f > 18) continue;
+      const k = 1 - f / 18, x = burstX(b);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= k;
+      const g = ctx.createLinearGradient(0, GY - 600, 0, GY); g.addColorStop(0, 'rgba(126,232,230,0)'); g.addColorStop(1, 'rgba(160,255,250,.9)');
+      ctx.fillStyle = g; ctx.fillRect(x - 70 * (0.6 + k), GY - 600, 140 * (0.6 + k), 600);
+      ctx.drawImage(glowSprite('rgba(255,255,255,.95)'), x - 140, GY - 120, 280, 160);
+      for (let i = 0; i < 10; i++) { const R = srand(b * 31 + i), a = -Math.PI / 2 + (R() - 0.5) * 1.6, d = f * (8 + R() * 10); ctx.fillStyle = i % 2 ? '#ffffff' : '#ffd34e'; ctx.beginPath(); ctx.arc(x + Math.cos(a) * d, GY + Math.sin(a) * d + f * f * 0.3, 3 + R() * 3, 0, TAU); ctx.fill(); }
       ctx.restore();
+      for (let i = 0; i < 8; i++) { const R = srand(b * 57 + i), a = -Math.PI / 2 + (R() - 0.5) * 2, d = f * (9 + R() * 8); ctx.fillStyle = '#5a4a3a'; ctx.beginPath(); ctx.arc(x + Math.cos(a) * d, GY + Math.sin(a) * d + f * f * 0.45, 5 + R() * 6, 0, TAU); ctx.fill(); }
     }
-    // ---- くそでかうんこ：落ちてくる → 着地 → だんだん赤く → 大爆発 ----
+    if (mt >= UM_LINE && mt < UM_LINE + 8) { ctx.fillStyle = `rgba(220,255,252,${0.7 * (1 - (mt - UM_LINE) / 8)})`; ctx.fillRect(-VW, -VH, VW * 3, VH * 3); }
+    // ---- けんかの煙 ----
+    if (mt >= UM_BEAT0 && mt < UM_BEAT1 + 6) {
+      const k = mt < UM_BEAT0 + 6 ? ease((mt - UM_BEAT0) / 6) : mt >= UM_BEAT1 ? 1 - (mt - UM_BEAT1) / 6 : 1;
+      ngFightCloud(TX + Math.sin(mt * 0.7) * 14, GY - 130 + Math.cos(mt * 0.9) * 8, mt, T, Math.max(0.01, k) * 1.15);
+    }
+    // ---- くそでかうんこ：天から降りる → 着地 → 赤熱・ひび・湯気 → 大爆発 ----
     if (mt >= UM_DROP && !boomed) {
-      const q = clamp((mt - UM_DROP) / (UM_LAND - UM_DROP), 0, 1), gy = landed ? GY : lerp(-400, GY, q * q);
-      if (!landed) { ctx.save(); ctx.globalAlpha *= 0.5 * q; ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(TX, GY + 4, 220 * q, 26 * q, 0, 0, TAU); ctx.fill(); ctx.restore(); }
-      const lk = landed ? mt - UM_LAND : 0, sq = landed ? 1 + 0.22 * Math.exp(-lk / 5) * Math.cos(lk * 0.8) : 0.92;
-      const tr = landed ? Math.sin(mt * (1.5 + red * 2)) * red * 6 : 0;
-      ctx.save(); ctx.translate(TX + tr, gy); ctx.scale(11 * sq, 11 / sq); ctx.translate(0, -18); drawPoopTiers(red, mt * 0.05); ctx.restore();
-      if (landed && lk < 14) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const k = 1 - lk / 14; ctx.globalAlpha *= k; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 10 * k + 2; ctx.beginPath(); ctx.ellipse(TX, GY, 120 + lk * 30, 20 + lk * 4, 0, 0, TAU); ctx.stroke(); ctx.restore(); }
-      if (landed && mt > UM_LAND + 16) {   // 「…」→「！」
-        const k = (mt - UM_LAND - 16) / (UM_BOOM - UM_LAND - 16), mark = k < 0.7 ? '・・・' : '！';
-        text(mark, TX + 190, GY - 330 + Math.sin(mt * 0.3) * 4, k < 0.7 ? 70 : 110, k < 0.7 ? '#ffffff' : '#ff4030', 'center', '900', '#000', 10);
+      const k = clamp((mt - UM_DROP) / (UM_LAND - UM_DROP), 0, 1);
+      const gy = landed ? GY : k < 0.8 ? lerp(-460, GY - 300, ease(k / 0.8)) : lerp(GY - 300, GY, ((k - 0.8) / 0.2) ** 2);   // ゆっくり降りて、最後に一気に落ちる
+      const lk = landed ? mt - UM_LAND : 0, sq = landed ? 1 + 0.24 * Math.exp(-lk / 5) * Math.cos(lk * 0.8) : 0.95;
+      const tr = landed ? Math.sin(mt * (1.5 + heatK * 3)) * heatK * 8 : 0;
+      if (!landed) {   // 影と、うんこのまわりの後光
+        ctx.save(); ctx.globalAlpha *= 0.5 * k; ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(TX, GY + 4, 240 * k, 28 * k, 0, 0, TAU); ctx.fill(); ctx.restore();
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= 0.8; ctx.drawImage(glowSprite('rgba(255,240,180,.9)'), TX - 300, gy - 420, 600, 520);
+        ctx.strokeStyle = '#ffe680'; ctx.lineWidth = 8; ctx.beginPath(); ctx.ellipse(TX, gy - 300, 110, 26, 0, 0, TAU); ctx.stroke(); ctx.restore();   // 天使の輪
+      }
+      ctx.save(); ctx.translate(TX + tr, gy); ctx.scale(12 * sq, 12 / sq); ctx.translate(0, -18); drawPoopTiers(heatK, 0);
+      if (heatK > 0.15) {   // 赤く光るひび
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(255,230,140,${heatK})`; ctx.lineWidth = 0.8; ctx.lineCap = 'round';
+        for (let i = 0; i < 9; i++) { const R = srand(i * 13 + 7); let x = (R() - 0.5) * 30, y = 10 - R() * 24; ctx.beginPath(); ctx.moveTo(x, y); for (let j = 0; j < 3; j++) { x += (R() - 0.5) * 8; y -= R() * 5; ctx.lineTo(x, y); } ctx.stroke(); }
+        ctx.restore();
+      }
+      ctx.restore();
+      if (landed) {
+        if (lk < 16) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const q = 1 - lk / 16; ctx.globalAlpha *= q; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 12 * q + 2; ctx.beginPath(); ctx.ellipse(TX, GY, 140 + lk * 40, 22 + lk * 4, 0, 0, TAU); ctx.stroke(); ctx.restore(); }
+        ctx.save(); ctx.strokeStyle = heatK > 0.3 ? `rgba(255,120,40,${0.5 + heatK * 0.5})` : 'rgba(0,0,0,.7)'; ctx.lineWidth = 4;   // 地面の割れ目
+        for (let i = 0; i < 8; i++) { const R = srand(i * 41 + 3), sd = i % 2 ? 1 : -1; let x = TX + sd * 150, y = GY + 2; ctx.beginPath(); ctx.moveTo(x, y); for (let j = 0; j < 4; j++) { x += sd * (30 + R() * 40); y += (R() - 0.3) * 8; ctx.lineTo(x, y); } ctx.stroke(); }
+        ctx.restore();
+        if (heatK > 0.25) { ctx.save(); for (let i = 0; i < 6; i++) { const R = srand(i * 23 + (mt >> 2)), sd = i % 2 ? 1 : -1, q = ((mt * 0.04 + i / 6) % 1); ctx.globalAlpha *= 1; ctx.globalAlpha = (1 - q) * 0.6 * heatK; const s2 = 30 + q * 80; ctx.drawImage(glowSprite('rgba(235,235,240,.9)'), TX + sd * (120 + q * 120) - s2, GY - 140 - q * 200 - s2, s2 * 2, s2 * 2); } ctx.restore(); }   // 湯気
+        if (lk > 16) { const q = (mt - UM_LAND - 16) / (UM_BOOM - UM_LAND - 16), mark = q < 0.6 ? '・・・' : '！！'; text(mark, TX + 230, GY - 380 + Math.sin(mt * 0.3) * 4, q < 0.6 ? 70 : 120, q < 0.6 ? '#ffffff' : '#ff4030', 'center', '900', '#000', 10); }
       }
     }
-    if (boomed) { ngBoom(TX, GY - 160, mt - UM_BOOM, true); if (mt - UM_BOOM < 6) { ctx.fillStyle = `rgba(255,255,255,${1 - (mt - UM_BOOM) / 6})`; ctx.fillRect(-VW, -VH, VW * 3, VH * 3); } }
+    // ---- 大爆発：きのこ雲 ----
+    if (boomed) {
+      const q = mt - UM_BOOM;
+      if (q > 4) {   // きのこ雲（柱とかさ）
+        const h = Math.min(520, q * 26), cw = 120 + Math.min(260, q * 10);
+        ctx.save(); ctx.globalAlpha *= Math.max(0, 1 - (q - 30) / 20);
+        const g = ctx.createLinearGradient(0, GY - h, 0, GY); g.addColorStop(0, '#5a3020'); g.addColorStop(0.5, '#d86a20'); g.addColorStop(1, '#ffd070');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(TX - 50, GY); ctx.quadraticCurveTo(TX - 30, GY - h * 0.5, TX - 40, GY - h); ctx.lineTo(TX + 40, GY - h); ctx.quadraticCurveTo(TX + 30, GY - h * 0.5, TX + 50, GY); ctx.closePath(); ctx.fill();
+        for (let i = 0; i < 12; i++) { const R = srand(i * 17 + 1), a = i / 12 * TAU, x = TX + Math.cos(a) * cw * 0.7, y = GY - h + Math.sin(a) * cw * 0.25, r = cw * (0.35 + R() * 0.2); ctx.drawImage(glowSprite(i % 3 ? 'rgba(90,50,34,.95)' : 'rgba(230,120,40,.95)'), x - r, y - r, r * 2, r * 2); }
+        ctx.restore();
+      }
+      ngBoom(TX, GY - 160, q, true);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= Math.max(0, 1 - q / 24); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 14; ctx.beginPath(); ctx.ellipse(TX, GY, q * 60, q * 8, 0, 0, TAU); ctx.stroke(); ctx.restore();   // 地面を走る衝撃波
+    }
     ctx.restore();
-    // シネマスコープの黒帯とタイトル
+    // サイレンの赤い明滅（爆発まで）
+    if (landed && !boomed && heatK > 0.4) { const p = Math.max(0, Math.sin(mt * (0.3 + heatK * 0.3))); const vg = ctx.createRadialGradient(VW / 2, VH / 2, VH * 0.3, VW / 2, VH / 2, VH * 0.9); vg.addColorStop(0, 'rgba(255,0,0,0)'); vg.addColorStop(1, `rgba(255,20,20,${0.45 * p * heatK})`); ctx.fillStyle = vg; ctx.fillRect(0, 0, VW, VH); }
+    if (boomed && mt - UM_BOOM < 8) { ctx.fillStyle = `rgba(255,255,255,${1 - (mt - UM_BOOM) / 8})`; ctx.fillRect(0, 0, VW, VH); }
+    if (boomed && mt - UM_BOOM >= 4) unkoTitle(mt - UM_BOOM - 4);
+    // シネマスコープの黒帯
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, 60); ctx.fillRect(0, VH - 60, VW, 60);
-    if (mt >= UM_BOOM + 6 && mt < UM_END - 4) { ctx.globalAlpha = zout * Math.min(1, (mt - UM_BOOM - 6) / 6); text('GOD OF UNKO', VW * 0.06, VH - 100, 60, '#7ee8e6', 'left', '900', '#000', 10); }
     ctx.restore();
   }
   function drawIchigoMovie(S) {
@@ -10915,7 +11035,7 @@ SC_.battle = (o) => {
       if (p.type === 'ucannon') {   // 回転する焼けたうんこ
         ctx.save(); ctx.translate(p.x, p.y);
         if (p.k > 0.2) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.4 + p.k * 0.5; const gr = p.r * 3.4; ctx.drawImage(glowSprite('rgba(255,110,30,.9)'), -gr, -gr, gr * 2, gr * 2); ctx.restore(); }
-        const sc2 = p.r / 13; ctx.scale(sc2, sc2); drawSpinFx(p.spin, 30, p.k); ctx.rotate(p.spin); ctx.translate(0, -4); drawPoopTiers(Math.min(1, p.k * 1.15), p.spin); ctx.restore(); continue;
+        ctx.rotate(Math.atan2(p.vy, p.vx) + Math.PI / 2); const sc2 = p.r / 13; ctx.scale(sc2, sc2); drawDrillPoop(Math.min(1, p.k * 1.15), p.spin); ctx.restore(); continue;
       }
       if (p.type === 'uslick') {   // 床に残った水色の跡
         const a = Math.min(1, p.life / 40);
