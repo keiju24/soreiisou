@@ -21,7 +21,8 @@
 
 ## 朕太の伝説（3D）
 
-- `chinta-legend.html` が本体です。Three.js は `lib/three.module.min.js`（r170）を使います。
+- `chinta-legend.html` が本体です。Three.js は `lib/three.module.min.js`（r170）、ブルームなどの後処理は `lib/addons/`（Three.js 付属のもの）を使います。
+- メニューで「高画質／軽量」を切り替えられます（スマホは最初から軽量）。
 - 顔画像と朕太の声は、しまりんブラザーズと同じものを `chinta-assets.js` にまとめています。
 - 効果音は `se/` のものを使います。ES モジュールを使うので、ファイルを直接開くのではなく GitHub Pages かローカルサーバーで開いてください。
 - 通貨は「朕銭」と「響晶」。敵の落とし物は `DROPS`、アイテムは `ITEMS` で決めます。持ち物・クリア状況・開けた宝箱はブラウザの localStorage（`chinta3d`）に保存します。
