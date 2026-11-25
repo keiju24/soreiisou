@@ -2567,12 +2567,12 @@ function bloodHitFx(B, x, y, dmg, A, T) {   // 重い一撃：太い斬り口が
         [6, { by: -4, fa: A_(3.05, 0), ba: A_(2.9, 0.1), fl: G_(0.2, -0.4), bl: G_(-0.2, -0.3) }], [26, { by: -4, fa: A_(3.05, 0), ba: A_(2.9, 0.1), fl: G_(0.2, -0.4), bl: G_(-0.2, -0.3) }],
         [31, { lean: 0.1, fa: A_(3.15, 0), ba: A_(3.0, 0.1), fl: G_(0.9, -1.7), bl: G_(0.7, -1.5) }],
         [36, { fa: A_(0.04, 0), ba: A_(0.2, 0.3), fl: G_(0.2, -0.3), bl: G_(-0.1, -0.2) }], [120, { fa: A_(0.04, 0), ba: A_(0.2, 0.3), fl: G_(0.2, -0.3), bl: G_(-0.1, -0.2) }]],
-      hb: [HB(3, 8, 55, -70, 62, 3, 85, 3, 0, { auto: 1, hs: 20 }), HB(7, 27, 10, -140, 80, 2, 88, 3, 0, { auto: 1, hs: 14 }), HB(36, 120, 4, 26, 44, 7, -75, 6, 0.65)],
+      hb: [HB(3, 8, 50, -70, 44, 3, 85, 3, 0, { auto: 1, hs: 20 }), HB(7, 27, 10, -140, 52, 2, 88, 3, 0, { auto: 1, hs: 14 }), HB(36, 120, 4, 26, 40, 7, -75, 6, 0.65)],
       upd(F, f, c) {
         // 巻きこみ：この技で当たった相手は剣といっしょに運ぶ（上昇中は頭上、降下中は足もと）
         if (f === 1) F.carry = [];
         if (f >= 3 && f < 120) {
-          for (const T of BT.fs) if (T !== F && T.alive && T.lastHitBy === F && T.state === 'hitstun' && !F.carry.includes(T.id) && Math.abs(T.x - F.x) < 200 && Math.abs(T.y - F.y) < 260) F.carry.push(T.id);
+          for (const T of BT.fs) if (T !== F && T.alive && T.lastHitBy === F && T.state === 'hitstun' && !F.carry.includes(T.id) && !(T.ubImm > BT.t) && Math.abs(T.x - F.x) < 110 && Math.abs(T.y - F.y) < 190) { F.carry.push(T.id); T.ubImm = BT.t + 240; }   // 一度巻きこんだ相手はしばらく巻きこめない（はめ防止）
           const sc = F.ch.scale;
           for (const id of F.carry) {
             const T = BT.fs.find(q => q.id === id); if (!T || !T.alive || T.state !== 'hitstun') continue;
@@ -2595,7 +2595,7 @@ function bloodHitFx(B, x, y, dmg, A, T) {   // 重い一撃：太い斬り口が
         if (F.ground) riftBurst(BT, F.x + F.dir * 8, F.y, F.ground);
       } },
     ubl: { len: 26, keys: [[0, { by: 26, lean: 0.45, fa: A_(0.04, 0), ba: A_(0.3, 0.3), fl: G_(1.0, -2.0), bl: G_(-0.6, -1.5) }], [26, S0]],
-      hb: [HB(1, 5, 30, -40, 56, 9, 70, 7, 0.8), HB(1, 5, 90, -26, 50, 9, 70, 7, 0.75, { auto: 1 }), HB(1, 5, -90, -26, 50, 9, 70, 7, 0.75, { auto: 1 })] },
+      hb: [HB(1, 5, 30, -40, 56, 9, 62, 9, 0.85), HB(1, 5, 90, -26, 50, 9, 62, 9, 0.8, { auto: 1 }), HB(1, 5, -90, -26, 50, 9, 62, 9, 0.8, { auto: 1 })] },
     // 下必殺：処刑台（大剣を盾のように構えて受け止め、攻撃してきた相手をつかんでたたき伏せ、真上から突き刺す）
     db: { len: 46, keys: [[0, S0], [5, { by: 8, lean: -0.1, hd: -0.1, fa: A_(1.05, 1.75), ba: A_(1.15, 1.45), fl: G_(0.5, -0.6), bl: G_(-0.4, -0.3) }],
         [30, { by: 8, lean: -0.1, hd: -0.1, fa: A_(1.05, 1.75), ba: A_(1.15, 1.45), fl: G_(0.5, -0.6), bl: G_(-0.4, -0.3) }], [46, S0]],
@@ -2790,7 +2790,7 @@ for (const k in MOVES) NMOVES[k] = { ...MOVES[k], hb: MOVES[k].hb.map(h => ({ ..
         F.vx *= 0.85;
         if (f >= 8 && f <= 47 && f % 3 === 0) {
           const last = f >= 45, s = alt(f);
-          nShot(F, (s ? 0.035 : -0.035) * ((f / 6 | 0) % 2 ? 1 : -1), { dmg: last ? 4 : 1.4, life: 22, side: s, kang: 30, base: last ? 5 : 1.4, gr: last ? 0.45 : 0.03, quiet: !last && f % 6 === 3 });
+          nShot(F, (s ? 0.035 : -0.035) * ((f / 6 | 0) % 2 ? 1 : -1), { dmg: last ? 4 : 0.5, life: 22, side: s, kang: last ? 40 : 30, base: last ? 7.5 : 1.2, gr: last ? 0.6 : 0.02, big: last, quiet: !last && f % 6 === 3 });
         }
       } },
     // 横必殺：ロケットランチャー（重い弾が加速して飛び、当たると大爆発。撃ったあとしばらく装填）
@@ -2901,7 +2901,7 @@ function nKnifeArc(F, ang, len = 160, x = 58, y = 80) {
   NMOVES.nb.gun = 'mp5'; NMOVES.ub.gun = 'mp5';
 }
 // 切り札ムービーのタイミング（斬りつけ・蹴り・ロケット発射・爆発・終わり）
-const NG_SLASH = [56, 66, 76, 86, 98], NG_KICK = 116, NG_FIRE = 146, NG_BOOM = 158, NG_END = 192;
+const NG_SLASH = [56, 66, 76, 86, 98], NG_KICK = 118, NG_FIRE = 164, NG_BOOM = 176, NG_END = 214;
 // ---- NA・GATA：つかんで銃口を押しつける・蹴り飛ばして撃つ ----
 { const H = { lean: 0.1, fa: A_(1.45, 1.9), ba: A_(1.6, 0.1), fl: G_(0.45, -0.2), bl: G_(-0.4, -0.1) };
   const GUN_T = { lean: 0.05, fa: A_(1.57, 0), ba: A_(1.5, 0.1), fl: G_(0.5, -0.2), bl: G_(-0.5, -0.05) };
@@ -7930,11 +7930,11 @@ SC_.battle = (o) => {
       }
       const mt = ++S.mt;
       T.x = S.tx; T.y = S.ty; F.x = S.tx - dir * 140; F.y = S.ty;
-      if (mt <= 44 && mt % 3 === 0) { Snd.gun(mt % 6 ? 0.6 : 0.9); if (mt % 6 === 0) supHit(S, 1.3); }   // 撃ちまくって接近
+      if (mt <= 44 && mt % 2 === 0) { Snd.gun(mt % 4 ? 0.6 : 0.9); if (mt % 6 === 0) supHit(S, 1.3); }   // 撃ちまくって接近
       if (mt === 50) Snd.swingC(F.ch, 10);
       for (const h of NG_SLASH) if (mt === h) { supHit(S, 2.6); Snd.hitC(F.ch, 9); Snd.swingC(F.ch, 12); }   // ナイフで斬りつけ
       if (mt === NG_KICK) { supHit(S, 4); Snd.hitC(F.ch, 16); Snd.heavy(() => Snd.doom(0.5)); }   // 蹴り飛ばし
-      if (mt === 128) Snd.gunCock();
+      if (mt === NG_FIRE - 14) Snd.gunCock();
       if (mt === NG_FIRE) Snd.rocket();
       if (mt === NG_BOOM) { supHit(S, 6); Snd.explode(1.6); Snd.heavy(() => Snd.doom(1.3)); Snd.koBoom(); }
       if (mt === NG_END) {   // バトルにもどって、ぶっ飛ばす
@@ -8405,7 +8405,7 @@ SC_.battle = (o) => {
   //  今井の召喚オーク：いちばん近い相手に歩いて行って棍棒でなぐる
   //  一定時間たつか、ダメージを受けすぎると消える（オンラインでも全員同じ動きになるよう乱数は使わない）
   // =================================================================
-  const ORC_LIFE = 540, ORC_HP = 40, ORC_CD = 240, ORC_HB = { dmg: 11, ang: 45, base: 7, gr: 0.9 };
+  const ORC_LIFE = 330, ORC_HP = 24, ORC_CD = 420, ORC_HB = { dmg: 7, ang: 45, base: 5.5, gr: 0.62 };
   B.orcs = []; B.orcId = 0;
   const orcRect = O => ({ x: O.x - 34, y: O.y - 150, w: 68, h: 150 });
   function orcPoof(O) { B.burst(O.x, O.y - 70, '#8bd46a', 18); B.dust(O.x, O.y, 14); Snd.squelch(); }
@@ -8457,23 +8457,23 @@ SC_.battle = (o) => {
       else if (O.t > 24) {   // 出てくる演出が終わってから動く
         if (O.swing > 0) {
           O.swing++; O.vx *= 0.7;
-          if (O.swing === 16) { Snd.swingC(O.owner.ch, 11); B.shake = Math.max(B.shake, 4); }
-          if (O.swing >= 16 && O.swing <= 22) {
+          if (O.swing === 22) { Snd.swingC(O.owner.ch, 11); B.shake = Math.max(B.shake, 4); }
+          if (O.swing >= 22 && O.swing <= 27) {
             const hx = O.x + O.dir * 78, hy = O.y - 70;
             for (const T of fs) {
               if (!isFoe(O.owner, T) || !T.alive || O.hit.has(T.id)) continue;
               if (circRect(hx, hy, 52, T.hurt()) && B.applyHit(O.owner, T, ORC_HB, 1, O.dir, true, hx, hy)) O.hit.add(T.id);
             }
-            if (O.swing === 20 && O.ground) B.dust(hx, O.ground.y, 8);
+            if (O.swing === 25 && O.ground) B.dust(hx, O.ground.y, 8);
           }
-          if (O.swing >= 42) { O.swing = 0; O.cd = 50; }
+          if (O.swing >= 50) { O.swing = 0; O.cd = 90; }
         } else if (tg && O.ground) {
           const dx = tg.x - O.x;
           if (Math.abs(dx) > 8) O.dir = sgn(dx);
           if (Math.abs(dx) < 105 && Math.abs(tg.y - O.y) < 140 && O.cd <= 0) { O.swing = 1; O.hit.clear(); O.vx = 0; }
           else if (Math.abs(dx) > 70) {
             const nx = O.x + O.dir * 14;   // 足場の端では止まる
-            O.vx = nx > O.ground.x1 + 10 && nx < O.ground.x2 - 10 ? O.dir * 2.6 : 0;
+            O.vx = nx > O.ground.x1 + 10 && nx < O.ground.x2 - 10 ? O.dir * 2.0 : 0;
           } else O.vx *= 0.7;
         } else if (O.ground) O.vx *= 0.7;
       }
@@ -9695,125 +9695,215 @@ SC_.battle = (o) => {
       air,
     };
   })();
+  // 正面を向いた相手（一人称視点で飛んでいく姿）
+  function ngFrontFig(T, x, y, s, rot, t) {
+    const OF = T.ch.outfit, main = OF ? OF.main : T.col.main, dark = OF ? OF.dark : T.col.dark || '#222', hand = T.ch.hand || '#f2cdb0';
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(s, s);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const w = Math.sin(t * 0.7), limb = (x1, y1, x2, y2, x3, y3, c) => {
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 20; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.lineTo(x3, y3); ctx.stroke();
+      ctx.strokeStyle = c; ctx.lineWidth = 13; ctx.stroke();
+      ctx.fillStyle = hand; ctx.beginPath(); ctx.arc(x3, y3, 8, 0, TAU); ctx.fill();
+    };
+    limb(-14, 30, -30, 70 + w * 6, -42, 108, dark); limb(14, 30, 32, 72 - w * 6, 40, 110, dark);                       // 脚
+    limb(-26, -36, -62, -62 - w * 10, -88, -96 - w * 8, main); limb(26, -36, 64, -58 + w * 10, 92, -88 + w * 8, main);   // 腕（ばたつく）
+    ctx.fillStyle = main; ctx.strokeStyle = '#000'; ctx.lineWidth = 5; rr(-30, -50, 60, 86, 16); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = T.col.main; ctx.fillRect(-30, 10, 60, 8);
+    drawFace(0, -86, 82, Math.sin(t * 0.9) * 0.12, 0, t, T.ch);
+    ctx.restore();
+  }
+  // 一人称視点の路地（奥へのびる道）
+  function ngFpvBg(mt, VPx, VPy, speed) {
+    const bg = ctx.createLinearGradient(0, 0, 0, VH); bg.addColorStop(0, '#05050a'); bg.addColorStop(0.45, '#1a0a12'); bg.addColorStop(1, '#040406');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, VW, VH);
+    ctx.fillStyle = '#08080c';
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(VPx - 120, VPy - 160); ctx.lineTo(VPx - 120, VPy + 30); ctx.lineTo(0, VH); ctx.fill();   // 左のビル
+    ctx.beginPath(); ctx.moveTo(VW, 0); ctx.lineTo(VPx + 120, VPy - 160); ctx.lineTo(VPx + 120, VPy + 30); ctx.lineTo(VW, VH); ctx.fill();   // 右のビル
+    ctx.fillStyle = '#040406'; ctx.beginPath(); ctx.moveTo(0, VH); ctx.lineTo(VPx - 120, VPy + 30); ctx.lineTo(VPx + 120, VPy + 30); ctx.lineTo(VW, VH); ctx.fill();   // 地面
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 8; i++) {   // 流れていく窓のネオン
+      const q = ((i / 8 + mt * 0.02 * speed) % 1), z = q * q;
+      for (const sd of [-1, 1]) {
+        const x0 = lerp(VPx + sd * 120, sd > 0 ? VW : 0, z), y0 = lerp(VPy - 120, -VH * 0.2, z) , h = lerp(10, 220, z);
+        ctx.fillStyle = `rgba(255,${40 + i * 10},70,${0.15 + z * 0.4})`; ctx.fillRect(x0 - sd * 10 * (1 + z * 6), y0 + h, 8 + z * 50, h * 0.6);
+      }
+    }
+    ctx.strokeStyle = 'rgba(255,60,90,.45)'; ctx.lineWidth = 2;
+    for (const sd of [-1, 1]) { line(VPx + sd * 120, VPy + 30, sd > 0 ? VW : 0, VH); line(VPx + sd * 120, VPy - 60, sd > 0 ? VW : 0, VH * 0.25); }
+    if (speed > 0) {   // 奥へ吸いこまれる集中線
+      ctx.strokeStyle = 'rgba(255,255,255,.35)';
+      for (let i = 0; i < 40; i++) { const R = srand(i * 7919 + (mt >> 1) * 104729 + 1); R(); R(); const a = i / 40 * TAU + R() * 0.12, r0 = 120 + R() * 200, r1 = r0 + 200 + R() * 500; ctx.lineWidth = 1 + R() * 3 * speed; line(VPx + Math.cos(a) * r0, VPy + Math.sin(a) * r0, VPx + Math.cos(a) * r1, VPy + Math.sin(a) * r1); }
+    }
+    ctx.restore();
+  }
+  function ngBoom(cx, cy, q, big) {   // 爆発（画面座標）
+    const R = (big ? 160 : 90) + q * (big ? 34 : 20);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = Math.max(0, 1 - q / 34); ctx.drawImage(glowSprite('rgba(255,130,30,.95)'), cx - R * 1.6, cy - R * 1.6, R * 3.2, R * 3.2);
+    ctx.globalAlpha = Math.max(0, 1 - q / 16); ctx.drawImage(glowSprite('rgba(255,250,220,1)'), cx - R, cy - R, R * 2, R * 2);
+    for (let j = 0; j < 3; j++) { const p = (q + j * 4) / 28; if (p > 1 || p < 0) continue; ctx.globalAlpha = 1 - p; ctx.strokeStyle = j === 1 ? '#ffffff' : '#ff8a1a'; ctx.lineWidth = 20 * (1 - p) + 2; ctx.beginPath(); ctx.arc(cx, cy, 60 + p * 800, 0, TAU); ctx.stroke(); }
+    for (let i = 0; i < 18; i++) { const Rr = srand(i * 37 + 5), a = Rr() * TAU, d = q * (14 + Rr() * 20); ctx.globalAlpha = Math.max(0, 1 - q / 26); ctx.fillStyle = i % 2 ? '#ffd34e' : '#ff7a1a'; ctx.beginPath(); ctx.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d + q * q * 0.2, 4 + Rr() * 4, 0, TAU); ctx.fill(); }
+    ctx.restore();
+    ctx.save(); ctx.globalAlpha = Math.min(0.85, q / 18) * Math.max(0, 1 - (q - 24) / 30);
+    for (let i = 0; i < 14; i++) { const Rr = srand(i * 53 + 9), a = Rr() * TAU, d = (40 + Rr() * 160) * Math.min(1, q / 16), s = 90 + Rr() * 90 + q * 3, px = cx + Math.cos(a) * d, py = cy + Math.sin(a) * d - q * 1.5; ctx.drawImage(glowSprite(i % 3 ? 'rgba(34,30,30,.9)' : 'rgba(110,50,20,.8)'), px - s, py - s, s * 2, s * 2); }
+    ctx.restore();
+  }
   function drawNagataMovie(S) {
     const F = S.F, T = S.T, mt = S.mt || 0, t = 1000 + mt;
     const zin = ease(clamp(mt / 8, 0, 1)), zout = mt > NG_END - 10 ? clamp((NG_END - mt) / 10, 0, 1) : 1;
-    const GY = VH * 0.8, T0 = VW * 0.72;
+    const GY = VH * 0.8, T0 = VW * 0.72, FPV0 = NG_KICK + 10;
     ctx.save(); ctx.globalAlpha = zin * zout;
-    // ---- 夜の路地：赤いネオンと雨 ----
-    const bg = ctx.createLinearGradient(0, 0, 0, VH); bg.addColorStop(0, '#06060a'); bg.addColorStop(0.65, '#160a10'); bg.addColorStop(1, '#050507');
-    ctx.fillStyle = bg; ctx.fillRect(0, 0, VW, VH);
-    for (let i = 0; i < 9; i++) {   // ビルの影
-      const R = srand(i * 977 + 5), bx = i * VW / 8 - 40 + R() * 40, bw = 110 + R() * 90, bh = 220 + R() * 260;
-      ctx.fillStyle = '#0b0b12'; ctx.fillRect(bx, GY - bh, bw, bh);
-      ctx.fillStyle = 'rgba(255,60,80,.12)'; for (let w = 0; w < 6; w++) if (R() < 0.5) ctx.fillRect(bx + 14 + (w % 3) * 30, GY - bh + 30 + (w / 3 | 0) * 50, 14, 22);
-    }
-    ctx.save(); ctx.globalCompositeOperation = 'lighter';
-    for (const [y, c] of [[GY - 300, 'rgba(255,30,60,.55)'], [GY - 180, 'rgba(255,90,40,.35)']]) { ctx.fillStyle = c; ctx.fillRect(0, y, VW, 3); ctx.drawImage(glowSprite(c), -100, y - 30, VW + 200, 60); }
-    ctx.strokeStyle = 'rgba(170,190,230,.25)'; ctx.lineWidth = 1.2;
-    for (let i = 0; i < 70; i++) { const R = srand(i * 131 + 3), x = (R() * VW + mt * 6) % VW, y = (R() * VH + mt * 28) % VH; line(x, y, x - 6, y + 26); }
-    ctx.restore();
-    ctx.fillStyle = '#040406'; ctx.fillRect(0, GY, VW, VH - GY);
-    ctx.strokeStyle = 'rgba(255,60,80,.4)'; ctx.lineWidth = 2; line(0, GY, VW, GY);
-    // ---- 場面ごとの位置とポーズ ----
-    let nx, np, ngm = 'mp5', fl = null, tx = T0, ty = 0, tp = MOV.caught, trot = 0, tsc = 2.0, zoom = 1, zx = VW / 2, zy = GY - 150;
-    if (mt < 46) {   // MP5 を撃ちながら接近
-      const q = mt / 46; nx = lerp(VW * 0.08, VW * 0.44, ease(q)); np = mt < 40 ? NGM.run(mt * 0.55) : NGM.aim;
-      fl = mt % 3 === 0 ? [0] : mt % 3 === 1 ? [1] : null;
-      const k = mt % 6; tp = k < 3 ? MOV.hurt : MOV.hurtB; tx = T0 + (k < 3 ? 4 : -4) + q * 20;
-      zoom = 1 + q * 0.15; zx = lerp(VW * 0.4, VW * 0.58, q);
-    } else if (mt < NG_KICK - 6) {   // ナイフで斬りつけ
-      ngm = 'knife'; nx = lerp(VW * 0.44, VW * 0.54, ease(clamp((mt - 46) / 6, 0, 1))); tx = T0 + 20;
-      let n = 0; for (let i = 0; i < NG_SLASH.length; i++) if (mt >= NG_SLASH[i] - 4) n = i;
-      const f = mt - (NG_SLASH[n] - 4);
-      np = f < 4 ? lp(n ? NGM.H[n - 1] : NGM.aim, NGM.W[n], ease(clamp(f / 4, 0, 1))) : NGM.H[n];
-      if (f >= 4 && f < 8) { tp = [MOV.hurtB, MOV.side, MOV.fold, MOV.hurtB, MOV.side][n]; tx += 10 * (1 - (f - 4) / 4); trot = (n % 2 ? 0.1 : -0.1); }
-      else tp = MOV.hurt;
-      zoom = 1.3; zx = (nx + tx) / 2; zy = GY - 160;
-    } else if (mt < 128) {   // 蹴り飛ばし
-      ngm = 'knife'; nx = VW * 0.54;
-      const q = mt - NG_KICK;
-      np = q < 0 ? lp(NGM.H[4], NGM.kickW, ease(clamp((q + 6) / 6, 0, 1))) : NGM.kick;
-      if (q < 0) { tp = MOV.hurt; tx = T0 + 20; }
-      else { tp = MOV.tumble; tx = T0 + 20 + q * 34; ty = -q * 14 + q * q * 0.1; trot = -q * 0.4; tsc = Math.max(1.1, 2.0 - q * 0.03); }
-      zoom = q < 0 ? 1.35 : lerp(1.35, 1.0, clamp(q / 10, 0, 1)); zx = lerp((nx + T0) / 2, VW / 2, clamp(q / 10, 0, 1));
-    } else {   // ロケットランチャーでフィニッシュ
-      ngm = 'rpg'; nx = VW * 0.28;
-      np = mt < NG_FIRE ? lp(NGM.after, NGM.rpg, ease(clamp((mt - 128) / 8, 0, 1))) : mt < NG_FIRE + 10 ? NGM.rpgK : lp(NGM.rpgK, NGM.rpg, clamp((mt - NG_FIRE - 10) / 10, 0, 1));
-      if (mt > NG_BOOM + 18) { ngm = null; np = lp(NGM.rpg, NGM.after, ease(clamp((mt - NG_BOOM - 18) / 10, 0, 1))); }
-      tx = VW * 0.82; ty = -GY * 0.38 + Math.sin(mt * 0.2) * 6; tp = MOV.tumble; trot = -mt * 0.25; tsc = 1.2;
-      zoom = 1; zx = VW / 2;
-    }
-    // ---- カメラ（寄り）----
-    const shk = (mt >= NG_BOOM && mt < NG_BOOM + 24 ? 30 * Math.exp(-(mt - NG_BOOM) / 6) : 0) + (NG_SLASH.some(h => mt >= h && mt < h + 4) ? 8 : 0) + (mt >= NG_KICK && mt < NG_KICK + 6 ? 18 : 0);
-    ctx.save();
-    ctx.translate(VW / 2 + rnd(-shk, shk), VH * 0.55 + rnd(-shk, shk)); ctx.scale(zoom, zoom); ctx.translate(-zx, -(VH * 0.55 + (zy - (GY - 150))));
-    // 相手
-    if (T && !(mt >= NG_BOOM && mt < NG_BOOM + 4)) { const tf = T.flash; T.flash = NG_SLASH.some(h => mt >= h && mt < h + 3) || mt === NG_KICK ? 3 : 0; try { drawFigureAt(T, tx, GY + ty, tsc, tp, -1, t, trot); } finally { T.flash = tf; } }
-    // ナイフの斬撃の線
-    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
-    NG_SLASH.forEach((h, i) => {
-      if (mt < h || mt > h + 10) return;
-      const k = 1 - (mt - h) / 10, a = [0.5, -0.6, 0.15, -1.1, 0.9][i], cx = T0 + 20, cy = GY - 150, L = 260;
-      ctx.globalAlpha = k; ctx.strokeStyle = 'rgba(200,220,255,.9)'; ctx.lineWidth = 16 * k + 2; line(cx - Math.cos(a) * L, cy - Math.sin(a) * L, cx + Math.cos(a) * L, cy + Math.sin(a) * L);
-      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4 * k + 1; line(cx - Math.cos(a) * L, cy - Math.sin(a) * L, cx + Math.cos(a) * L, cy + Math.sin(a) * L);
-      ctx.strokeStyle = 'rgba(255,40,60,.8)'; ctx.lineWidth = 3; const o = 9; line(cx - Math.cos(a) * L * 0.8, cy - Math.sin(a) * L * 0.8 + o, cx + Math.cos(a) * L * 0.8, cy + Math.sin(a) * L * 0.8 + o);
-      ctx.drawImage(glowSprite('rgba(255,255,255,.9)'), cx - 60 * k, cy - 60 * k, 120 * k, 120 * k);
-    });
-    // 曳光弾
-    if (mt < 46 && fl) {
-      const gx = nx + 70 * 2.1, gy = GY - 92 * 2.1 + (fl[0] ? 14 : 0), hx = tx - 20, hy = GY - 150 + (mt % 4) * 10 - 15;
-      ctx.strokeStyle = 'rgba(255,190,60,.7)'; ctx.lineWidth = 7; line(gx, gy, hx, hy); ctx.strokeStyle = '#fff4c0'; ctx.lineWidth = 2.5; line(gx, gy, hx, hy);
-      ctx.drawImage(glowSprite('rgba(255,200,80,.9)'), hx - 40, hy - 40, 80, 80);
-    }
-    // 蹴りの衝撃
-    if (mt >= NG_KICK && mt < NG_KICK + 10) {
-      const k = 1 - (mt - NG_KICK) / 10, cx = T0 + 30, cy = GY - 140;
-      ctx.globalAlpha = k; ctx.drawImage(glowSprite('rgba(255,255,255,.95)'), cx - 160, cy - 160, 320, 320);
-      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 10 * k; ctx.beginPath(); ctx.arc(cx, cy, 40 + (1 - k) * 220, 0, TAU); ctx.stroke();
-      ctx.globalAlpha = 1;
-    }
-    ctx.restore();
-    // NA・GATA
-    F._gm = ngm; F._mvFlash = fl;
-    try { drawFigureAt(F, nx, GY, 2.1, np, 1, t); } finally { F._gm = undefined; F._mvFlash = undefined; }
-    // 薬きょう
-    if (mt < 46) for (let i = 0; i < 8; i++) {
-      const s0 = mt - i * 3; if (s0 < 0) continue; const q = (mt - s0), R = srand(s0 * 17 + 1);
-      ctx.fillStyle = '#e8b84a'; ctx.save(); ctx.translate(nx + 30 * 2.1 - q * (3 + R() * 2), GY - 200 + (-8 + q * 0.6) * q); ctx.rotate(q * 0.6); ctx.fillRect(-4, -2, 8, 4); ctx.restore();
-    }
-    // ロケット・後方噴射・大爆発
-    if (mt >= NG_FIRE && mt < NG_BOOM) {
-      const q = (mt - NG_FIRE) / (NG_BOOM - NG_FIRE), sx = nx + 150, sy = GY - 236, ex = tx, ey = GY + ty - 150 * tsc / 2;
-      const rx = lerp(sx, ex, q * q), ry = lerp(sy, ey, q * q), a = Math.atan2(ey - sy, ex - sx);
-      ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < 10; i++) { const p = Math.max(0, q * q - i * 0.04); ctx.globalAlpha = 0.5 - i * 0.04; const px = lerp(sx, ex, p), py = lerp(sy, ey, p); ctx.drawImage(glowSprite('rgba(180,170,160,.6)'), px - 30 - i * 3, py - 30 - i * 3, 60 + i * 6, 60 + i * 6); }
-      ctx.globalAlpha = 1; ctx.drawImage(glowSprite('rgba(255,160,40,.95)'), rx - 80, ry - 80, 160, 160);
-      ctx.restore();
-      ctx.save(); ctx.translate(rx, ry); ctx.rotate(a); ctx.scale(2, 2);
-      ctx.fillStyle = '#2a2d30'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(-26, -6); ctx.lineTo(8, -6); ctx.lineTo(10, -10); ctx.quadraticCurveTo(34, 0, 10, 10); ctx.lineTo(8, 6); ctx.lineTo(-26, 6); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#c8102e'; ctx.fillRect(2, -7, 4, 14); ctx.restore();
-      if (mt < NG_FIRE + 8) {   // 後ろへの噴射
-        const k = 1 - (mt - NG_FIRE) / 8; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = k;
-        ctx.drawImage(glowSprite('rgba(255,170,60,.95)'), nx - 260, GY - 320, 220, 160); ctx.drawImage(glowSprite('rgba(255,240,200,.9)'), nx + 110, GY - 290, 120, 100); ctx.restore();
+    const fpv = mt >= FPV0 && mt < NG_BOOM + 22;
+    if (fpv) {
+      // ======== 一人称視点：蹴り飛ばした相手が奥へ飛んでいく → ロケットでとどめ ========
+      const VPx = VW * 0.5, VPy = VH * 0.42, q = clamp((mt - FPV0) / 22, 0, 1), boomQ = mt - NG_BOOM;
+      const shk = (mt < FPV0 + 6 ? 18 * (1 - (mt - FPV0) / 6) : 0) + (boomQ >= 0 ? 34 * Math.exp(-boomQ / 6) : 0) + (mt >= NG_FIRE && mt < NG_FIRE + 6 ? 14 : 0);
+      ctx.save(); ctx.translate(rnd(-shk, shk), rnd(-shk, shk));
+      ngFpvBg(mt, VPx, VPy, mt < FPV0 + 24 ? 1.4 * (1 - q * 0.6) : 0.1);
+      // 飛んでいく相手（正面向き）
+      const s = lerp(2.4, 0.26, 1 - Math.pow(1 - q, 2.4)), fx = lerp(VPx, VPx + 40, q) + Math.sin(mt * 0.3) * 6 * (1 - q), fy = lerp(VH * 0.62, VPy - 30, ease(q)), rot = Math.sin(mt * 0.25) * 0.35 + q * 0.8;
+      if (T && boomQ < 3) ngFrontFig(T, fx, fy, s, rot, t);
+      // 足（蹴りぬいた右足が手前から引いていく）
+      if (mt < FPV0 + 10) {
+        const k = (mt - FPV0) / 10, by = VH * 0.78 + k * k * 380;
+        ctx.save(); ctx.translate(VW * 0.47, by); ctx.rotate(-0.12); ctx.scale(2.6, 2.6);
+        ctx.fillStyle = '#121216'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(-30, 200); ctx.lineTo(-26, 40); ctx.lineTo(26, 40); ctx.lineTo(30, 200); ctx.closePath(); ctx.fill(); ctx.stroke();   // すね（黒いコートのすそ）
+        ctx.beginPath(); ctx.ellipse(0, 0, 34, 50, 0, 0, TAU); ctx.fill(); ctx.stroke();   // ブーツの靴底（こちらに向いている）
+        ctx.fillStyle = '#26262e'; ctx.beginPath(); ctx.ellipse(0, -8, 26, 30, 0, 0, TAU); ctx.fill();
+        ctx.strokeStyle = '#3a3a46'; ctx.lineWidth = 3; for (let i = -30; i <= 30; i += 9) line(-20, i - 8, 20, i - 8);   // 靴底のみぞ
+        ctx.fillStyle = '#1a1a20'; ctx.beginPath(); ctx.ellipse(0, 36, 22, 12, 0, 0, TAU); ctx.fill();   // かかと
+        ctx.fillStyle = '#c8102e'; ctx.fillRect(-28, 70, 56, 5);
+        ctx.restore();
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1 - k; ctx.drawImage(glowSprite('rgba(255,255,255,.95)'), VW * 0.5 - 300, VH * 0.6 - 300, 600, 600); ctx.restore();
       }
-    }
-    if (mt >= NG_BOOM) {
-      const q = mt - NG_BOOM, cx = tx, cy = GY + ty - 150 * tsc / 2, R = 120 + q * 26;
+      // ロケットランチャー（右下から構える）＋照準
+      if (mt >= NG_FIRE - 14) {
+        const k = ease(clamp((mt - (NG_FIRE - 14)) / 8, 0, 1)), kick = mt >= NG_FIRE && mt < NG_FIRE + 10 ? Math.exp(-(mt - NG_FIRE) / 3) : 0;
+        const bx = lerp(VW + 260, VW * 0.66, k) + kick * 50, by = lerp(VH + 300, VH * 0.8, k) + kick * 36, a = Math.atan2(fy - by, fx - bx);
+        if (k > 0.8 && mt < NG_BOOM) {   // 照準
+          ctx.save(); ctx.strokeStyle = 'rgba(255,40,60,.9)'; ctx.lineWidth = 2.5; const r = 34 + Math.sin(mt * 0.6) * 4;
+          ctx.beginPath(); ctx.arc(fx, fy, r, 0, TAU); ctx.stroke(); line(fx - r - 16, fy, fx - r + 8, fy); line(fx + r - 8, fy, fx + r + 16, fy); line(fx, fy - r - 16, fx, fy - r + 8); line(fx, fy + r - 8, fx, fy + r + 16);
+          ctx.restore();
+        }
+        ctx.save(); ctx.fillStyle = '#0e0e12'; ctx.strokeStyle = '#000'; ctx.lineWidth = 4;   // 手前の腕（黒いコートの袖と手袋）
+        ctx.beginPath(); ctx.moveTo(VW + 40, VH + 40); ctx.lineTo(bx + 30, by + 60); ctx.lineTo(bx + 90, by + 110); ctx.lineTo(VW + 60, VH - 60); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(bx + 50, by + 70, 34, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore();
+        ctx.save(); ctx.translate(bx, by); ctx.rotate(a); ctx.scale(3.6, 3.6);
+        ctx.fillStyle = '#121216'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+        rr(-110, -16, 175, 32, 10); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = 'rgba(160,160,180,.45)'; ctx.lineWidth = 2; line(-105, -12, 60, -12);
+        ctx.fillStyle = '#c8102e'; ctx.fillRect(-60, -16, 6, 32); ctx.fillRect(10, -16, 6, 32);
+        ctx.fillStyle = '#2a2a33'; ctx.fillRect(-30, -26, 22, 10);
+        if (mt < NG_FIRE) { ctx.fillStyle = '#3c3f44'; ctx.strokeStyle = '#000'; ctx.beginPath(); ctx.moveTo(65, -13); ctx.lineTo(77, -20); ctx.quadraticCurveTo(109, 0, 77, 20); ctx.lineTo(65, 13); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+        ctx.restore();
+        if (mt >= NG_FIRE && mt < NG_FIRE + 8) {   // 発射の閃光と煙
+          const g = 1 - (mt - NG_FIRE) / 8, mx = bx + Math.cos(a) * 250, my = by + Math.sin(a) * 250;
+          ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = g; ctx.drawImage(glowSprite('rgba(255,200,90,.95)'), mx - 200, my - 200, 400, 400); ctx.restore();
+        }
+        if (mt >= NG_FIRE) { ctx.save(); ctx.globalAlpha = Math.min(0.7, (mt - NG_FIRE) / 6) * Math.max(0, 1 - (mt - NG_FIRE - 10) / 30); for (let i = 0; i < 6; i++) { const R = srand(i * 19 + 3), s2 = 140 + R() * 120 + (mt - NG_FIRE) * 4; ctx.drawImage(glowSprite('rgba(70,66,64,.9)'), VW * 0.78 + R() * 200 - s2, VH * 0.85 - R() * 100 - s2, s2 * 2, s2 * 2); } ctx.restore(); }
+        if (mt >= NG_FIRE && mt < NG_BOOM) {   // 奥へ飛んでいくロケット
+          const p = (mt - NG_FIRE) / (NG_BOOM - NG_FIRE), sx = bx + Math.cos(a) * 260, sy = by + Math.sin(a) * 260, rx = lerp(sx, fx, 1 - Math.pow(1 - p, 2)), ry = lerp(sy, fy, 1 - Math.pow(1 - p, 2)), rs = lerp(3.2, 0.35, p);
+          ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(glowSprite('rgba(255,160,40,.95)'), rx - 60 * rs, ry - 60 * rs, 120 * rs, 120 * rs); ctx.restore();
+          ctx.save(); ctx.translate(rx, ry); ctx.rotate(a); ctx.scale(rs, rs); ctx.fillStyle = '#2a2d30'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(-26, -6); ctx.lineTo(8, -6); ctx.lineTo(10, -10); ctx.quadraticCurveTo(34, 0, 10, 10); ctx.lineTo(8, 6); ctx.lineTo(-26, 6); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+        }
+      }
+      if (boomQ >= 0) { ngBoom(fx, fy, boomQ, true); if (boomQ < 6) { ctx.fillStyle = `rgba(255,255,255,${1 - boomQ / 6})`; ctx.fillRect(0, 0, VW, VH); } }
+      ctx.restore();
+    } else {
+      // ======== 横からの場面：MP5 で接近 → ナイフ → 回し蹴り ／ 最後のポーズ ========
+      const bg = ctx.createLinearGradient(0, 0, 0, VH); bg.addColorStop(0, '#06060a'); bg.addColorStop(0.65, '#160a10'); bg.addColorStop(1, '#050507');
+      ctx.fillStyle = bg; ctx.fillRect(0, 0, VW, VH);
+      let nx, np, ngm = 'mp5', fl = null, tx = T0, ty = 0, tp = MOV.caught, trot = 0, tsc = 2.0, zoom = 1, zx = VW / 2, zy = GY - 150, cr = 0, hide = false;
+      const end = mt >= NG_BOOM + 22;
+      if (mt < 15) {   // カット1：銃口のアップ（二丁を交互に連射）
+        nx = VW * 0.22 + mt * 2; np = NGM.aim; fl = [mt % 2]; zoom = 2.5; zx = nx + 90; zy = GY - 190; cr = -0.08 + mt * 0.004;
+        tp = MOV.hurt; tx = T0 + 80;
+      } else if (mt < 32) {   // カット2：走りながら撃ちまくる（引きのカメラ）
+        const q = (mt - 15) / 17; nx = lerp(VW * 0.06, VW * 0.4, q); np = NGM.run(mt * 0.6); fl = [mt % 2];
+        const k = mt % 6; tp = k < 3 ? MOV.hurt : MOV.hurtB; tx = T0 + (k < 3 ? 4 : -4);
+        zoom = 1.05; zx = lerp(VW * 0.4, VW * 0.55, q); cr = 0.03;
+      } else if (mt < 46) {   // カット3：撃たれる相手のアップ
+        const q = (mt - 32) / 14; nx = lerp(VW * 0.36, VW * 0.44, q); np = NGM.aim; fl = [mt % 2];
+        const k = mt % 4; tp = k < 2 ? MOV.hurt : MOV.hurtB; tx = T0 + (k < 2 ? 6 : -6); trot = k < 2 ? 0.04 : -0.04;
+        zoom = 2.1 - q * 0.6; zx = lerp(T0 - 30, (VW * 0.44 + T0) / 2, ease(q)); zy = GY - 170; cr = 0.05 * (1 - q);
+      } else if (mt < NG_KICK - 8) {   // ナイフで斬りつけ（当たるたびにぐっと寄る）
+        ngm = 'knife'; nx = lerp(VW * 0.44, VW * 0.54, ease(clamp((mt - 46) / 6, 0, 1))); tx = T0 + 20;
+        let n = 0; for (let i = 0; i < NG_SLASH.length; i++) if (mt >= NG_SLASH[i] - 4) n = i;
+        const f = mt - (NG_SLASH[n] - 4);
+        np = f < 4 ? lp(n ? NGM.H[n - 1] : NGM.aim, NGM.W[n], ease(clamp(f / 4, 0, 1))) : NGM.H[n];
+        if (f >= 4 && f < 8) { tp = [MOV.hurtB, MOV.side, MOV.fold, MOV.hurtB, MOV.side][n]; tx += 10 * (1 - (f - 4) / 4); trot = (n % 2 ? 0.1 : -0.1); }
+        else tp = MOV.hurt;
+        const pk = f >= 4 ? Math.exp(-(f - 4) / 3) : 0;
+        zoom = 1.35 + pk * 0.35; zx = lerp((nx + tx) / 2, tx, pk * 0.5); zy = GY - 160; cr = (n % 2 ? 0.05 : -0.05) * pk;
+      } else if (mt < FPV0) {   // 回し蹴り：相手のおなかへぐっと寄って、重い一撃で時が止まる
+        ngm = 'knife'; nx = VW * 0.54; tx = T0 + 20;
+        const q = mt - NG_KICK, belly = GY - 112;
+        if (q < 0) { const k = (q + 8) / 8; np = lp(NGM.H[4], NGM.kickW, ease(k)); tp = MOV.hurt; zoom = lerp(1.4, 2.4, ease(k)); zx = lerp((nx + tx) / 2, tx - 40, ease(k)); zy = lerp(GY - 160, belly, ease(k)); cr = -0.06 * k; }
+        else { np = NGM.kick; tp = MOV.fold; tx = T0 + 20 + Math.min(q, 2) * 6; zoom = 3.0 - q * 0.02; zx = tx - 30; zy = belly; cr = 0.04; }
+      } else {   // 最後のポーズ：ロケットランチャーを肩に、後ろで大爆発
+        hide = true; ngm = 'rpg'; nx = VW * 0.36;
+        const q = mt - (NG_BOOM + 22);
+        np = lp(NGM.rpg, NGM.after, ease(clamp(q / 12, 0, 1))); if (q > 10) ngm = null;
+        zoom = lerp(1.6, 1.3, ease(clamp(q / 16, 0, 1))); zx = nx + 60; zy = GY - 170;
+      }
+      // 背景：ビルと赤いネオンと雨
+      ctx.save(); ctx.translate(VW / 2, VH * 0.55); ctx.rotate(cr * 0.5); ctx.translate(-VW / 2 - (zx - VW / 2) * 0.15, -VH * 0.55);
+      for (let i = 0; i < 9; i++) { const R = srand(i * 977 + 5), bx = i * VW / 8 - 40 + R() * 40, bw = 110 + R() * 90, bh = 220 + R() * 260; ctx.fillStyle = '#0b0b12'; ctx.fillRect(bx, GY - bh, bw, bh); ctx.fillStyle = 'rgba(255,60,80,.12)'; for (let w = 0; w < 6; w++) if (R() < 0.5) ctx.fillRect(bx + 14 + (w % 3) * 30, GY - bh + 30 + (w / 3 | 0) * 50, 14, 22); }
+      ctx.restore();
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = Math.max(0, 1 - q / 30); ctx.drawImage(glowSprite('rgba(255,140,30,.95)'), cx - R * 1.6, cy - R * 1.6, R * 3.2, R * 3.2);
-      ctx.globalAlpha = Math.max(0, 1 - q / 14); ctx.drawImage(glowSprite('rgba(255,250,220,1)'), cx - R, cy - R, R * 2, R * 2);
-      for (let j = 0; j < 3; j++) { const p = (q + j * 4) / 26; if (p > 1) continue; ctx.globalAlpha = 1 - p; ctx.strokeStyle = j === 1 ? '#ffffff' : '#ff8a1a'; ctx.lineWidth = 18 * (1 - p) + 2; ctx.beginPath(); ctx.arc(cx, cy, 60 + p * 700, 0, TAU); ctx.stroke(); }
+      for (const [y, c] of [[GY - 300, 'rgba(255,30,60,.55)'], [GY - 180, 'rgba(255,90,40,.35)']]) { ctx.fillStyle = c; ctx.fillRect(0, y, VW, 3); ctx.drawImage(glowSprite(c), -100, y - 30, VW + 200, 60); }
+      if (end) { const q = mt - NG_BOOM - 22; ctx.globalAlpha = Math.max(0.3, 1 - q / 30); ctx.drawImage(glowSprite('rgba(255,120,30,.9)'), VW * 0.55, -100, VW * 0.7, VH); }
+      ctx.strokeStyle = 'rgba(170,190,230,.25)'; ctx.lineWidth = 1.2;
+      for (let i = 0; i < 70; i++) { const R = srand(i * 131 + 3), x = (R() * VW + mt * 6) % VW, y = (R() * VH + mt * 28) % VH; line(x, y, x - 6, y + 26); }
       ctx.restore();
-      ctx.save(); ctx.globalAlpha = Math.min(0.85, q / 20) * Math.max(0, 1 - (q - 20) / 30);   // 煙
-      for (let i = 0; i < 14; i++) { const Rr = srand(i * 53 + 9), a = Rr() * TAU, d = (40 + Rr() * 140) * Math.min(1, q / 16), s = 90 + Rr() * 80 + q * 3, px = cx + Math.cos(a) * d, py = cy + Math.sin(a) * d - q * 1.5; ctx.drawImage(glowSprite(i % 3 ? 'rgba(34,30,30,.9)' : 'rgba(110,50,20,.8)'), px - s, py - s, s * 2, s * 2); }
+      const shk = (NG_SLASH.some(h => mt >= h && mt < h + 4) ? 10 : 0) + (mt >= NG_KICK && mt < FPV0 ? 26 * Math.exp(-(mt - NG_KICK) / 5) : 0) + (mt < 46 && fl ? 3 : 0);
+      ctx.save();
+      ctx.translate(VW / 2 + rnd(-shk, shk), VH * 0.55 + rnd(-shk, shk)); ctx.rotate(cr); ctx.scale(zoom, zoom); ctx.translate(-zx, -zy);
+      ctx.fillStyle = '#040406'; ctx.fillRect(-VW, GY, VW * 3, VH);
+      ctx.strokeStyle = 'rgba(255,60,80,.4)'; ctx.lineWidth = 2; line(-VW, GY, VW * 2, GY);
+      if (T && !hide) { const tf = T.flash; T.flash = NG_SLASH.some(h => mt >= h && mt < h + 3) || (mt >= NG_KICK && mt < NG_KICK + 3) ? 3 : 0; try { drawFigureAt(T, tx, GY + ty, tsc, tp, -1, t, trot); } finally { T.flash = tf; } }
+      F._gm = ngm; F._mvFlash = fl;
+      try { drawFigureAt(F, nx, GY, 2.1, np, 1, t); } finally { F._gm = undefined; F._mvFlash = undefined; }
+      if (mt < 46) for (let i = 0; i < 10; i++) {   // 薬きょう
+        const s0 = mt - i * 2; if (s0 < 0) continue; const q = mt - s0, R = srand(s0 * 17 + 1);
+        ctx.fillStyle = '#e8b84a'; ctx.save(); ctx.translate(nx + 40 * 2.1 - q * (3 + R() * 3), GY - 200 + (-9 + q * 0.7) * q); ctx.rotate(q * 0.6); ctx.fillRect(-4, -2, 8, 4); ctx.restore();
+      }
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+      NG_SLASH.forEach((h, i) => {   // ナイフの斬撃の線
+        if (mt < h || mt > h + 10) return;
+        const k = 1 - (mt - h) / 10, a = [0.5, -0.6, 0.15, -1.1, 0.9][i], cx = T0 + 20, cy = GY - 150, L = 260;
+        ctx.globalAlpha = k; ctx.strokeStyle = 'rgba(200,220,255,.9)'; ctx.lineWidth = 16 * k + 2; line(cx - Math.cos(a) * L, cy - Math.sin(a) * L, cx + Math.cos(a) * L, cy + Math.sin(a) * L);
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4 * k + 1; line(cx - Math.cos(a) * L, cy - Math.sin(a) * L, cx + Math.cos(a) * L, cy + Math.sin(a) * L);
+        ctx.strokeStyle = 'rgba(255,40,60,.8)'; ctx.lineWidth = 3; line(cx - Math.cos(a) * L * 0.8, cy - Math.sin(a) * L * 0.8 + 9, cx + Math.cos(a) * L * 0.8, cy + Math.sin(a) * L * 0.8 + 9);
+        ctx.drawImage(glowSprite('rgba(255,255,255,.9)'), cx - 60 * k, cy - 60 * k, 120 * k, 120 * k);
+      });
+      if (mt < 46 && fl) {   // 曳光弾（何本も）と着弾の火花
+        for (let j = 0; j < 3; j++) {
+          const R = srand(mt * 7 + j), gx = nx + 140 + R() * 20, gy = GY - 196 + (fl[0] ? 20 : 0), hx = tx - 20 + R() * 30, hy = GY - 180 + R() * 70;
+          const p0 = R() * 0.5, p1 = p0 + 0.35;
+          ctx.strokeStyle = 'rgba(255,190,60,.7)'; ctx.lineWidth = 6; line(lerp(gx, hx, p0), lerp(gy, hy, p0), lerp(gx, hx, p1), lerp(gy, hy, p1));
+          ctx.strokeStyle = '#fff4c0'; ctx.lineWidth = 2; line(lerp(gx, hx, p0), lerp(gy, hy, p0), lerp(gx, hx, p1), lerp(gy, hy, p1));
+          ctx.drawImage(glowSprite('rgba(255,200,80,.9)'), hx - 26, hy - 26, 52, 52);
+          ctx.fillStyle = '#ffd34e'; for (let k = 0; k < 4; k++) { const a = R() * TAU, d = 10 + R() * 30; ctx.fillRect(hx + Math.cos(a) * d, hy + Math.sin(a) * d, 3, 3); }
+        }
+      }
+      if (mt >= NG_KICK && mt < FPV0) {   // 蹴りの衝撃：おなかを中心に輪と放射線
+        const k = 1 - (mt - NG_KICK) / (FPV0 - NG_KICK), cx = T0 + 10, cy = GY - 112;
+        ctx.globalAlpha = k; ctx.drawImage(glowSprite('rgba(255,255,255,.95)'), cx - 140, cy - 140, 280, 280);
+        for (let j = 0; j < 2; j++) { ctx.strokeStyle = j ? '#ff3040' : '#ffffff'; ctx.lineWidth = 8 * k + 2; ctx.beginPath(); ctx.arc(cx, cy, 30 + (1 - k) * (160 + j * 60), 0, TAU); ctx.stroke(); }
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3;
+        for (let i = 0; i < 16; i++) { const a = i / 16 * TAU, r0 = 50 + (1 - k) * 40; line(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0, cx + Math.cos(a) * (r0 + 140), cy + Math.sin(a) * (r0 + 140)); }
+        ctx.globalAlpha = 1;
+      }
       ctx.restore();
-      if (q < 6) { ctx.fillStyle = `rgba(255,255,255,${1 - q / 6})`; ctx.fillRect(0, 0, VW, VH); }
+      ctx.restore();
+      if (mt >= NG_KICK && mt < NG_KICK + 3) { ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fillRect(0, 0, VW, VH); }
     }
     // シネマスコープの黒帯と文字
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, 60); ctx.fillRect(0, VH - 60, VW, 60);
-    if (mt >= NG_BOOM + 6 && mt < NG_END - 4) { ctx.globalAlpha = zout * Math.min(1, (mt - NG_BOOM - 6) / 6); text('DEADLY FULL BURST', VW * 0.06, VH - 100, 54, '#ffd34e', 'left', '900', '#000', 10); }
+    if (mt >= NG_BOOM + 22 && mt < NG_END - 4) { ctx.globalAlpha = zout * Math.min(1, (mt - NG_BOOM - 22) / 6); text('DEADLY FULL BURST', VW * 0.06, VH - 100, 54, '#ffd34e', 'left', '900', '#000', 10); }
     ctx.restore();
   }
   function drawIchigoMovie(S) {
