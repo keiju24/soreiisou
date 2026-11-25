@@ -3081,15 +3081,16 @@ function uArc(F, ang, len = 170, x = 70, y = 86, col = '#7ee8e6') {
     dair: { len: 38, air: true, drift: true, landLag: 14, sfx: 8, keys: [[0, {}], [6, { by: -8, lean: -0.2, fa: A_(2.6, 0.4), ba: A_(1.2, 0.5), fl: G_(1.1, -1.9), bl: G_(0.8, -1.7) }],
         [10, { by: 6, lean: 0.15, fa: A_(0.05, 0), ba: A_(0.4, 0.5), fl: G_(0.8, -1.6), bl: G_(0.5, -1.4) }], [22, { by: 6, lean: 0.15, fa: A_(0.05, 0), ba: A_(0.4, 0.5), fl: G_(0.8, -1.6), bl: G_(0.5, -1.4) }], [38, {}]],
       hb: [HB(10, 16, 10, 34, 40, 10, -75, 5, 0.65)], upd(F, f) { if (f === 10) { uArc(F, 1.57, 160, 10, 20); Snd.squish(0.8, 0.8); } } },
-    // 必殺：うんこキャノン（必殺ボタンを押しつづけると、うんこが回転してどんどん赤く焼ける。ためきるとストック）
+    // 必殺：うんこキャノン（必殺ボタンを1回押すとため始め、もう1回押すと発射。うんこが回転してどんどん赤く焼ける。ためきるとストック）
     nb: { len: 100000, noCancel: true, keys: [[0, {}], [6, { by: 10, lean: -0.1, fa: A_(1.6, 0.1), ba: A_(1.4, 0.5), fl: G_(0.75, -0.5), bl: G_(-0.8, -0.1) }], [100000, { by: 10, lean: -0.1, fa: A_(1.6, 0.1), ba: A_(1.4, 0.5), fl: G_(0.75, -0.5), bl: G_(-0.8, -0.1) }]], hb: [],
       upd(F, f, c) {
-        if (f === 1) F.ucT = 0;
+        if (f === 1) { F.ucT = F.ucSave || 0; F.ucSave = 0; }   // 前に中断したため具合から再開
         if (!F.ground) F.vy = Math.min(F.vy, 1);
         F.vx *= 0.8;
         const end = () => { F.move = null; F.setState(F.ground ? 'idle' : 'air'); };
-        if (c && c.p.shield) { F.ucT = 0; end(); return; }   // ガードで中断
-        if (c && c.h.special && F.ucT < UC_FULL) {
+        if (c && (c.p.shield || c.p.jump)) { F.ucSave = F.ucT; F.ucT = 0; end(); return; }   // ガード・ジャンプで中断（ため具合は残す）
+        if (f >= 6 && c && c.p.special) { F.ucK = (F.ucT || 0) / UC_FULL; F.ucT = 0; F.startMove('nbf'); return; }   // もう1回押したら発射
+        if (F.ucT < UC_FULL) {
           F.ucT++;
           const k = F.ucT / UC_FULL, sc = F.ch.scale, px = F.x + F.dir * 96 * sc, py = F.y - 88 * sc;
           if (F.ucT % 8 === 1) Snd.ucCharge(k);
@@ -3102,7 +3103,6 @@ function uArc(F, ang, len = 170, x = 70, y = 86, col = '#7ee8e6') {
           }
           return;
         }
-        if (f >= 6) { F.ucK = (F.ucT || 0) / UC_FULL; F.ucT = 0; F.startMove('nbf'); }   // ボタンをはなしたら発射
       } },
     // うんこキャノン発射
     nbf: { len: 34, keys: [[0, { by: 10, lean: -0.1, fa: A_(1.6, 0.1), ba: A_(1.4, 0.5), fl: G_(0.75, -0.5), bl: G_(-0.8, -0.1) }],
@@ -3415,7 +3415,7 @@ const CHARS = [
     kbTake: 1.02, swords: false, unko: true, hand: '#f0cdb4', legs: ['#5d5642', '#423d2e'], moves: UMOVES,
     outfit: { main: '#7a1830', dark: '#43091a', light: '#a83a52', pants: '#4b4636', shoe: '#141418' },
     fsName: 'ゴッド・オブ・うんこ', fsDesc: 'うんこ生物を全員呼んでコテンパンにし、くそでかうんこを落として、少したったら大爆発',
-    specials: [['うんこキャノン', '必殺', '押しつづけるとうんこが回転して赤く焼けていく。ためきるとストック（次はすぐ最大で撃てる）'], ['うんこスライディング', '横＋必殺', 'すべりこみながら水色の跡を残す。跡を踏んだ相手はつるっと転ぶ'],
+    specials: [['うんこキャノン', '必殺', '1回押すとため始め、うんこがドリルのように回転して赤く焼けていく。もう1回押すと発射。ためきるとストック（次はすぐ最大で撃てる）'], ['うんこスライディング', '横＋必殺', 'すべりこみながら水色の跡を残す。跡を踏んだ相手はつるっと転ぶ'],
       ['うんこロケット', '上＋必殺', 'うんこからガスを噴射して上昇（復帰用）。真下の相手にも当たる'], ['うんこ生物', '下＋必殺', '地面から12種類のうんこ生物のどれかを呼ぶ（1体まで・3発でやられる）。うんこキャノンを当てると巨大化']] },
   { key: 'kenshin', name: 'Kenshin', kana: 'ENGINEER', img: KENSHIN, ar: KENSHIN_AR, eyes: false, scale: 1.04, run: 6.2, airs: 5.2, jv: -14.2, shv: -9.8, djv: -13,
     kbTake: 0.9, swords: false, mech: true, hand: '#4a5260', moves: KMOVES,
@@ -11212,8 +11212,8 @@ SC_.battle = (o) => {
         ctx.strokeStyle = '#ffe680'; ctx.lineWidth = 8; ctx.beginPath(); ctx.ellipse(TX, gy - 300, 110, 26, 0, 0, TAU); ctx.stroke(); ctx.restore();   // 天使の輪
       }
       const wob = landed ? 1.2 + 2.2 * Math.exp(-lk / 18) + heatK * 1.5 : 1.4;   // めっちゃ揺れる
-      ctx.save(); ctx.translate(TX + tr, gy); ctx.scale(12 * sq, 12 / sq); ctx.translate(0, -18); drawJellyPoop(heatK, mt * (1 + heatK), wob);
-      if (heatK > 0.15) {   // 赤く光るひび
+      ctx.save(); ctx.translate(TX + tr, gy); ctx.scale(12 * sq, 12 / sq); ctx.translate(0, -18); drawJellyPoop(0, mt * (1 + heatK), wob);   // 色は最初の水色のまま（赤くならない）
+      if (false) {   // （赤く光るひびはなし）
         ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(255,230,140,${heatK})`; ctx.lineWidth = 0.8; ctx.lineCap = 'round';
         for (let i = 0; i < 9; i++) { const R = srand(i * 13 + 7); let x = (R() - 0.5) * 30, y = 10 - R() * 24; ctx.beginPath(); ctx.moveTo(x, y); for (let j = 0; j < 3; j++) { x += (R() - 0.5) * 8; y -= R() * 5; ctx.lineTo(x, y); } ctx.stroke(); }
         ctx.restore();
