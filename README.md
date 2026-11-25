@@ -24,4 +24,5 @@
 - `chinta-legend.html` が本体です。Three.js は `lib/three.module.min.js`（r170）を使います。
 - 顔画像と朕太の声は、しまりんブラザーズと同じものを `chinta-assets.js` にまとめています。
 - 効果音は `se/` のものを使います。ES モジュールを使うので、ファイルを直接開くのではなく GitHub Pages かローカルサーバーで開いてください。
+- 通貨は「朕銭」と「響晶」。敵の落とし物は `DROPS`、アイテムは `ITEMS` で決めます。持ち物・クリア状況・開けた宝箱はブラウザの localStorage（`chinta3d`）に保存します。
 - 章は `CHAPTERS` に並んでいます。新しい章を出すときは `ready: true` にして、その章のマップと敵を足します。
