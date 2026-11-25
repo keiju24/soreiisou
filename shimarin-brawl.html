@@ -768,9 +768,14 @@ const Snd = {
   // ---------- こうたんご主人様（傘と体術の紳士スパイ）----------
   umbOpen() { this.nz(0.22, 0.2, 'bandpass', 900, 1.2, 0, 2400); this.osc('triangle', 300, 0.08, 0.05, 160); this.nz(0.06, 0.1, 'highpass', 4000, 0.7, 0.16); },   // 傘が開く「バサッ」
   umbShot() { this.nz(0.05, 0.22, 'highpass', 2600, 0.8); this.osc('sine', 180, 0.12, 0.2, 60); this.nz(0.1, 0.12, 'lowpass', 900, 1, 0, 200); },   // 傘の銃「パンッ」
-  gentHit(d) {   // 上品で鋭い打撃「バシッ」
-    this.nz(0.05, 0.18 + d * 0.01, 'bandpass', 2400, 1.4); this.osc('sine', this.vary(140), 0.12 + d * 0.01, 0.2, 60);
-    if (d >= 10) this.osc('sine', 80, 0.3, 0.3, 36);
+  gentHit(d) {   // 手ごたえのある打撃「ドゴッ！」：録音のパンチ＋肉の音＋腹に響く低音＋はじけるアタック
+    const v = Math.min(1, 0.5 + d * 0.04);
+    this.smp('punch', v, 0.82 + Math.random() * 0.16);
+    this.smp('flesh', v * 0.75, 0.9 + Math.random() * 0.1, 0.008);
+    this.osc('sine', this.vary(135), 0.2 + d * 0.012, 0.38 * v, 40);
+    this.nz(0.035, 0.32 * v, 'highpass', 3600, 0.7);
+    this.nz(0.2, 0.26 * v, 'lowpass', 650, 1, 0, 110, 4);
+    if (d >= 10) { this.smp('boom', 0.35 * v, 1.45); this.osc('sine', 68, 0.45, 0.36 * v, 28); }
   },
   lockClick() { this.osc('square', 1800, 0.02, 0.06); this.osc('square', 1200, 0.03, 0.06, null, 0.07); this.nz(0.05, 0.1, 'bandpass', 3000, 3, 0.07); },   // 鍵「カチャ」
   clockTick() { this.osc('square', 2400, 0.015, 0.03); },
@@ -11670,10 +11675,20 @@ SC_.battle = (o) => {
     drink: mk({ by: 0, lean: 0.0, hd: -0.2, fa: A_(1.6, 2.0), ba: A_(0.15, 0.5), fl: G_(0.3, -0.1), bl: G_(-0.3, 0) }),
   }))();
   // キーフレーム：[時間, 位置x(画面の割合), ポーズ, …]。前後のキーをイーズでなめらかにつなぐ
+  // 数値（またはポーズのような入れ子の数値）を、前後のキーも見てなめらかにつなぐ
+  function hermite(v0, v1, v2, v3, t0, t1, t2, t3, u) {
+    if (typeof v1 === 'number') {
+      const dt = t2 - t1, m1 = (v2 - v0) / Math.max(1e-6, t2 - t0) * dt, m2 = (v3 - v1) / Math.max(1e-6, t3 - t1) * dt, u2 = u * u, u3 = u2 * u;
+      return (2 * u3 - 3 * u2 + 1) * v1 + (u3 - 2 * u2 + u) * m1 + (-2 * u3 + 3 * u2) * v2 + (u3 - u2) * m2;
+    }
+    if (!v1 || typeof v1 !== 'object') return v1;
+    const o = {}; for (const k in v1) o[k] = hermite(v0 ? v0[k] : v1[k], v1[k], v2 ? v2[k] : v1[k], v3 ? v3[k] : (v2 ? v2[k] : v1[k]), t0, t1, t2, t3, u); return o;
+  }
   function ktTrack(tr, t) {
     let i = 0; while (i < tr.length - 2 && t >= tr[i + 1][0]) i++;
-    const A = tr[i], Bk = tr[i + 1], k = ease(clamp((t - A[0]) / (Bk[0] - A[0]), 0, 1));
-    return { x: lerp(A[1], Bk[1], k), y: lerp(A[2], Bk[2], k), p: A[3] && Bk[3] ? lp(A[3], Bk[3], k) : A[3], r: lerp(A[4] || 0, Bk[4] || 0, k), z: lerp(A[5] || 1, Bk[5] || 1, k) };
+    const P0 = tr[Math.max(0, i - 1)], A = tr[i], Bk = tr[i + 1], P3 = tr[Math.min(tr.length - 1, i + 2)], u = clamp((t - A[0]) / (Bk[0] - A[0]), 0, 1);
+    const H = j => hermite(P0[j], A[j], Bk[j], P3[j], P0[0] === A[0] ? A[0] - 1 : P0[0], A[0], Bk[0], P3[0] === Bk[0] ? Bk[0] + 1 : P3[0], u);
+    return { x: H(1), y: H(2), p: A[3] && Bk[3] ? H(3) : A[3], r: H(4) || 0, z: H(5) || 1 };
   }
   const KTP = (() => ({   // 相手の動き
     punchW: mk({ by: 8, lean: -0.25, fa: A_(-0.6, 1.6), ba: A_(1.2, 1.4), fl: G_(0.6, -0.4), bl: G_(-0.6, 0) }),
@@ -11697,6 +11712,7 @@ SC_.battle = (o) => {
     const tp = [MOV.caught, KTP.punchW, KTP.punch, KTP.punch, MOV.hurt, MOV.hurtB, MOV.hurtB, KTP.hookW, KTP.hook, MOV.side, MOV.wobble, MOV.tumble, MOV.lie, MOV.wobble, MOV.hurt];
     KT_KTR.forEach((k, i) => k[3] = kp[i]); KT_TTR.forEach((k, i) => k[3] = tp[i]);
   }
+  const KTS = { mt: -9 };   // ムービーの表示をなめらかにするための前のフレームの状態（見た目だけ）
   function drawKotanMovie(S) {
     const F = S.F, T = S.T, mt = S.mt || 0, t = 1000 + mt;
     const zin = ease(clamp(mt / 8, 0, 1)), zout = mt > KT_END - 10 ? clamp((KT_END - mt) / 10, 0, 1) : 1;
@@ -11741,6 +11757,14 @@ SC_.battle = (o) => {
     } else {   // ネクタイを直し、傘を閉じてグラスを取る
       const f = mt - KT_AFTER; kx = VW * 0.64; kd = -1; kp = f < 22 ? KTV.tie : KTV.drink; tx = VW * 3;
       zoom = lerp(1.4, 2.2, ease(clamp(f / 30, 0, 1))); zx = kx - 20; zy = GY - 260;
+    }
+    // ---- ぬるぬる：ポーズ・位置・カメラを前のフレームから追いかける（カットの切りかわりだけは一気に）----
+    {
+      const cut = mt < KTS.mt || mt - KTS.mt > 3 || [KT_LOCK, KT_LOCK + 7, KT_TURN].includes(mt), a = cut ? 1 : 0.42, ac = cut ? 1 : 0.28;
+      KTS.kp = cut || !KTS.kp ? kp : lp(KTS.kp, kp, a); KTS.tp = cut || !KTS.tp ? tp : lp(KTS.tp, tp, a);
+      for (const [k2, v2, al] of [['kx', kx, a], ['tx', tx, a], ['ty', ty, a], ['trot', trot, a], ['tsc', tsc, a], ['zoom', zoom, ac], ['zx', zx, ac], ['zy', zy, ac], ['cr', cr, ac]]) KTS[k2] = cut || KTS[k2] === undefined || Math.abs(v2 - KTS[k2]) > (k2 === 'tx' || k2 === 'kx' ? 400 : 1e9) ? v2 : lerp(KTS[k2], v2, al);
+      KTS.mt = mt;
+      kp = KTS.kp; tp = KTS.tp; kx = KTS.kx; tx = KTS.tx; ty = KTS.ty; trot = KTS.trot; tsc = KTS.tsc; zoom = KTS.zoom; zx = KTS.zx; zy = KTS.zy; cr = KTS.cr;
     }
     // ---- 背景：落ち着いたバー ----
     const shk = Math.max(0, ...KT_HITS.map(h => hitK(h) * 12), hitK(KT_THROW + 8) * 18, ...KT_SHOTS.map(h => hitK(h) * 6), hitK(KT_SLASH) * 30, hitK(KT_BOTTLE + 9) * 8);
