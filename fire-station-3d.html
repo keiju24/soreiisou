@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>消防署 3D</title>
+<title>消防署さんぽ</title>
 <style>
   :root { --ink:#1f2433; --chip:rgba(255,255,255,.88); --red:#d7262e; }
   html, body { margin:0; height:100%; overflow:hidden; background:linear-gradient(#5e9be0 0%, #a9cdf2 55%, #e6f0f8 100%); }
@@ -17,15 +17,27 @@
   #bar button { font:inherit; font-size:14px; font-weight:700; border:0; border-radius:999px; padding:10px 16px; background:var(--chip); color:var(--ink); box-shadow:0 2px 8px rgba(0,0,0,.18); cursor:pointer; }
   #bar button.on { background:var(--red); color:#fff; }
   #hint { position:fixed; right:16px; top:16px; font-size:12px; background:var(--chip); padding:6px 10px; border-radius:8px; transition:opacity .6s; }
+  body.walk #bFront, body.walk #bSpin { display:none; }
+  #joy, #jump { display:none; }
+  #joy { position:fixed; left:22px; bottom:26px; width:130px; height:130px; border-radius:50%; background:rgba(255,255,255,.28); border:2px solid rgba(255,255,255,.7); touch-action:none; }
+  #knob { position:absolute; left:50%; top:50%; width:58px; height:58px; margin:-29px 0 0 -29px; border-radius:50%; background:rgba(255,255,255,.92); box-shadow:0 2px 8px rgba(0,0,0,.25); pointer-events:none; }
+  #jump { position:fixed; right:24px; bottom:40px; width:92px; height:92px; border-radius:50%; border:0; font:inherit; font-weight:800; font-size:15px; background:rgba(255,255,255,.9); color:var(--ink); box-shadow:0 2px 8px rgba(0,0,0,.25); touch-action:none; }
+  @media (pointer:coarse) {
+    body.walk #joy, body.walk #jump { display:block; }
+    #bar { top:62px; bottom:auto; }
+  }
   @media (max-width:600px) { #hint { display:none; } #hud h1 { font-size:16px; } }
 </style>
 <script type="importmap">{ "imports": { "playcanvas": "./lib/playcanvas.min.mjs" } }</script>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="hud"><a href="index.html">◀ もどる</a><h1>消防署 3D</h1></div>
+<div id="hud"><a href="index.html">◀ もどる</a><h1>消防署さんぽ</h1></div>
 <div id="hint">ドラッグで回転・ホイール／ピンチで拡大</div>
+<div id="joy"><div id="knob"></div></div>
+<button id="jump">ジャンプ</button>
 <div id="bar">
+  <button id="bMode">ながめる</button>
   <button id="bFront">正面</button>
   <button id="bSpin">自動回転</button>
   <button id="bNight">夜にする</button>
@@ -37,7 +49,8 @@ import {
   Application, Entity, Color, Vec3, StandardMaterial, Texture,
   FILLMODE_FILL_WINDOW, RESOLUTION_AUTO, BLEND_NORMAL, PIXELFORMAT_SRGBA8,
   FILTER_LINEAR, FILTER_LINEAR_MIPMAP_LINEAR, ADDRESS_CLAMP_TO_EDGE,
-  TONEMAP_ACES, GAMMA_SRGB, SHADOW_PCF3_32F
+  TONEMAP_ACES, GAMMA_SRGB, SHADOW_PCF3_32F,
+  Mesh, MeshInstance, TorusGeometry, CULLFACE_FRONT
 } from 'playcanvas';
 
 // 看板の文字（必要ならここを書きかえる）
@@ -108,7 +121,17 @@ const M = {
 
 // ---------- 形を置く道具 ----------
 // box: x0..x1, y0..y1, z0..z1 の範囲を埋める箱
+// 当たり判定：足もとの高さにある箱は通れない（低い箱には乗れる）。大きな箱にはカメラもめりこまない
+const colliders = [], occluders = [];
+function addCollider(x0, x1, z0, z1, y0 = 0, y1 = 3) {
+  colliders.push({ x0: Math.min(x0, x1), x1: Math.max(x0, x1), z0: Math.min(z0, z1), z1: Math.max(z0, z1), y0, y1 });
+}
 function box(m, x0, x1, y0, y1, z0, z1, parent = world, dyn = false) {
+  if (parent === world) {
+    const b = { x0: Math.min(x0, x1), x1: Math.max(x0, x1), y0: Math.min(y0, y1), y1: Math.max(y0, y1), z0: Math.min(z0, z1), z1: Math.max(z0, z1) };
+    if (b.y1 > 0 && b.y0 < 1.2) colliders.push(b);
+    if (b.x1 - b.x0 >= 0.5 && b.z1 - b.z0 >= 0.5 && b.y1 - b.y0 >= 1) occluders.push(b);
+  }
   const e = new Entity();
   e.addComponent('render', { type: 'box', material: m, batchGroupId: dyn ? -1 : batch.id });
   e.setLocalPosition((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
@@ -349,14 +372,18 @@ windowSet(3.4, 8.4, 6.7, 7.8, 4, -3, false);
 
 // ---------- ホース乾燥塔 ----------
 {
-  const cx = 9.8, cz = -5.5, H = 13.0;
+  const cx = 9.8, cz = -11.8, H = 13.0;
   const b0 = 1.4, b1 = 1.0;
   const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
   const at = (y, k) => {
     const s = b0 + (b1 - b0) * (y / H);
     return V(cx + corners[k][0] * s, y, cz + corners[k][1] * s);
   };
-  for (let k = 0; k < 4; k++) bar(M.tower, at(0, k), at(H, k), 0.16);
+  for (let k = 0; k < 4; k++) {
+    bar(M.tower, at(0, k), at(H, k), 0.16);
+    const p = at(0, k);
+    addCollider(p.x - 0.15, p.x + 0.15, p.z - 0.15, p.z + 0.15);
+  }
   for (let y = 1.5; y <= H; y += 1.6) {
     for (let k = 0; k < 4; k++) bar(M.tower, at(y, k), at(y, (k + 1) % 4), 0.1);
   }
@@ -467,6 +494,7 @@ box(M.neighbor, -8.1, -0.3, 10.8, 11.2, -12.1, 0.1);
 // 右の小屋と木
 box(M.wall2, 27.2, 29.5, 0, 3.2, -6, -1.5);
 cyl(M.beam, 28.5, 1.0, 1.2, 0.15, 2.0);
+addCollider(28.3, 28.7, 1.0, 1.4);
 cyl(M.grass, 28.5, 2.6, 1.2, 1.1, 1, 'y', world, 'sphere').setLocalScale(2.2, 2.0, 2.2);
 // 紺の乗用車
 {
@@ -522,10 +550,118 @@ function applyTime() {
 }
 applyTime();
 
+// ---------- 主人公（もじゃもじゃ頭とメガネ、むらさきの H） ----------
+const CM = {
+  skin:   mat('#fff4e8'),
+  ink:    mat('#161616', { gloss: 0.3 }),
+  purple: mat('#7a2ccc', { spec: 0.08, gloss: 0.45 }),
+  hw:     mat('#ffffff'),
+};
+// 手描きの線っぽく見せるための黒いふち（裏返した一回り大きい形）
+const outline = new StandardMaterial();
+outline.diffuse = new Color(0, 0, 0);
+outline.useLighting = false;
+outline.cull = CULLFACE_FRONT;
+outline.update();
+
+const meshCache = {};
+function torusMesh(ring, tube) {
+  const key = ring + '_' + tube;
+  return meshCache[key] ??= Mesh.fromGeometry(app.graphicsDevice,
+    new TorusGeometry({ ringRadius: ring, tubeRadius: tube, segments: 24, sides: 8 }));
+}
+function piece(parent, kind, m, pos, scale, rot) {
+  const e = new Entity();
+  if (typeof kind === 'string') e.addComponent('render', { type: kind, material: m });
+  else e.addComponent('render', { meshInstances: [new MeshInstance(kind, m)] });
+  e.setLocalPosition(...pos);
+  if (scale) e.setLocalScale(...scale);
+  if (rot) e.setLocalEulerAngles(...rot);
+  parent.addChild(e);
+  return e;
+}
+function inked(parent, kind, m, pos, scale, rot, w = 0.03) {
+  const e = piece(parent, kind, m, pos, scale, rot);
+  const o = piece(parent, kind, outline, pos, scale.map(v => v + w * 2), rot);
+  o.render.castShadows = false;
+  return e;
+}
+// 棒の手足：ピボット（関節）から下へのびる
+function limb(parent, pos, len, r = 0.03) {
+  const pivot = new Entity();
+  pivot.setLocalPosition(...pos);
+  parent.addChild(pivot);
+  piece(pivot, 'cylinder', CM.ink, [0, -len / 2, 0], [r * 2, len, r * 2]);
+  return pivot;
+}
+
+const hero = new Entity('hero');
+const heroBody = new Entity('heroBody');
+hero.addChild(heroBody);
+app.root.addChild(hero);
+hero.setLocalScale(0.85, 0.85, 0.85);
+{
+  const B = heroBody;
+  // 胴体と H
+  inked(B, 'sphere', CM.purple, [0, 0.98, 0], [0.86, 0.92, 0.62]);
+  for (const [p, sc] of [[[-0.1, 0.98, 0.29], [0.065, 0.34, 0.05]], [[0.1, 0.98, 0.29], [0.065, 0.34, 0.05]], [[0, 0.98, 0.305], [0.2, 0.065, 0.05]]]) {
+    inked(B, 'box', CM.hw, p, sc, null, 0.015);
+  }
+  // 頭
+  const HY = 1.74;
+  inked(B, 'sphere', CM.skin, [0, HY, 0], [0.7, 0.64, 0.62]);
+  // 目とメガネ
+  for (const s of [-1, 1]) {
+    piece(B, 'sphere', CM.ink, [s * 0.12, HY + 0.01, 0.288], [0.05, 0.05, 0.03]);
+    piece(B, torusMesh(0.085, 0.013), CM.ink, [s * 0.12, HY + 0.01, 0.3], null, [90, 0, 0]);
+    piece(B, 'box', CM.ink, [s * 0.235, HY + 0.02, 0.13], [0.02, 0.02, 0.3]);
+  }
+  piece(B, 'box', CM.ink, [0, HY + 0.025, 0.318], [0.07, 0.02, 0.02]);
+  // にっこり口
+  for (let a = -55; a <= 55; a += 11) {
+    const r = a * Math.PI / 180;
+    const x = 0.1 * Math.sin(r), y = HY - 0.08 - 0.06 * Math.cos(r);
+    const z = 0.31 * Math.sqrt(Math.max(0, 1 - (x / 0.35) ** 2 - ((y - HY) / 0.32) ** 2)) - 0.004;
+    piece(B, 'sphere', CM.ink, [x, y, z], [0.028, 0.028, 0.028]);
+  }
+  // もじゃもじゃの髪：黒い土台 + くるくるの輪をたくさん
+  const hc = [0, HY + 0.15, -0.06], hr = [0.4, 0.29, 0.35];
+  piece(B, 'sphere', CM.ink, hc, hr.map(v => v * 2));
+  let seed = 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 90; i++) {
+    const polar = Math.acos(1 - rnd() * 1.15);          // 上半分〜少し下まで
+    const az = rnd() * Math.PI * 2;
+    const nx = Math.sin(polar) * Math.sin(az), ny = Math.cos(polar), nz = Math.sin(polar) * Math.cos(az);
+    if (nz > 0.25 && polar > 0.75) continue;              // 顔の前はあける
+    const k = 1.02 + rnd() * 0.08;
+    const ring = 0.055 + rnd() * 0.035;
+    piece(B, torusMesh(ring, 0.017), CM.ink,
+      [hc[0] + nx * hr[0] * k, hc[1] + ny * hr[1] * k, hc[2] + nz * hr[2] * k], null,
+      [rnd() * 180, rnd() * 180, rnd() * 180]);
+  }
+}
+// 手足
+const legs = [-1, 1].map(s => limb(heroBody, [s * 0.12, 0.62, 0], 0.6));
+legs.forEach((l, i) => piece(l, 'box', CM.ink, [(i ? 1 : -1) * 0.03, -0.6, 0.06], [0.05, 0.035, 0.18], [0, (i ? 1 : -1) * 20, 0]));
+const arms = [-1, 1].map(s => limb(heroBody, [s * 0.4, 1.12, 0], 0.55));
+arms.forEach(a => {
+  for (const f of [-30, 0, 30]) {
+    const fe = piece(a, 'box', CM.ink, [0, -0.6, 0], [0.025, 0.12, 0.025], [0, 0, f]);
+    fe.setLocalPosition(Math.sin(f * Math.PI / 180) * -0.05, -0.6, 0);
+  }
+});
+
+// 主人公の状態
+const player = { pos: new Vec3(13.5, 0, 8), vy: 0, face: Math.PI, phase: 0, walk: 0, grounded: true };
+hero.setLocalPosition(player.pos);
+
 // ---------- カメラ操作 ----------
 const TARGET0 = new Vec3(13.4, 4.4, -3);
-const cam = { yaw: 0, pitch: 9, dist: 36, target: TARGET0.clone() };
-const goal = { yaw: 0, pitch: 9, dist: 36, target: TARGET0.clone() };
+const cam = { yaw: 0, pitch: 12, dist: 7, target: new Vec3(13.5, 1.4, 8) };
+const goal = { yaw: 0, pitch: 12, dist: 7, target: cam.target.clone() };
+let camDist = 7;
+const isTouch = matchMedia('(pointer: coarse)').matches;
 function fitDist() {
   const aspect = canvas.clientWidth / Math.max(1, canvas.clientHeight);
   return aspect >= 1.35 ? 36 : 36 * 1.35 / Math.max(aspect, 0.45);
@@ -533,8 +669,12 @@ function fitDist() {
 function frontView() {
   goal.yaw = 0; goal.pitch = 9; goal.dist = fitDist(); goal.target.copy(TARGET0);
 }
-frontView();
-cam.dist = goal.dist;
+function behindHero() {
+  goal.yaw = player.face * 180 / Math.PI + 180;
+  while (goal.yaw - cam.yaw > 180) goal.yaw -= 360;
+  while (goal.yaw - cam.yaw < -180) goal.yaw += 360;
+  goal.pitch = 18; goal.dist = isTouch ? 8.5 : 7.5;
+}
 
 const pointers = new Map();
 let pinch0 = 0, dist0 = 0, mid0 = null, target0 = null;
@@ -544,7 +684,6 @@ canvas.addEventListener('pointerdown', (e) => {
   canvas.setPointerCapture(e.pointerId);
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, button: e.button });
   stopSpin();
-  hint.style.opacity = 0;
   if (pointers.size === 2) {
     const [a, b] = [...pointers.values()];
     pinch0 = Math.hypot(a.x - b.x, a.y - b.y); dist0 = goal.dist;
@@ -552,11 +691,14 @@ canvas.addEventListener('pointerdown', (e) => {
   }
 });
 function panBy(dx, dy, from) {
+  if (state.mode === 'walk') return;
   const s = goal.dist * 0.0015;
   const right = camera.right.clone(), up = camera.up.clone();
   goal.target.copy(from).add(right.mulScalar(-dx * s)).add(up.mulScalar(dy * s));
   goal.target.y = Math.max(0.5, Math.min(14, goal.target.y));
 }
+const maxDist = () => state.mode === 'walk' ? 20 : 90;
+const minDist = () => state.mode === 'walk' ? 2.5 : 8;
 canvas.addEventListener('pointermove', (e) => {
   const p = pointers.get(e.pointerId);
   if (!p) return;
@@ -564,11 +706,11 @@ canvas.addEventListener('pointermove', (e) => {
   p.x = e.clientX; p.y = e.clientY;
   if (pointers.size === 1) {
     if (p.button === 2 || e.shiftKey) panBy(dx, dy, goal.target.clone());
-    else { goal.yaw -= dx * 0.3; goal.pitch = Math.max(1, Math.min(80, goal.pitch + dy * 0.25)); }
+    else { goal.yaw -= dx * 0.3; goal.pitch = Math.max(-5, Math.min(80, goal.pitch + dy * 0.25)); }
   } else if (pointers.size === 2) {
     const [a, b] = [...pointers.values()];
     const d = Math.hypot(a.x - b.x, a.y - b.y);
-    goal.dist = Math.max(8, Math.min(90, dist0 * pinch0 / Math.max(d, 1)));
+    goal.dist = Math.max(minDist(), Math.min(maxDist(), dist0 * pinch0 / Math.max(d, 1)));
     panBy((a.x + b.x) / 2 - mid0.x, (a.y + b.y) / 2 - mid0.y, target0);
   }
 });
@@ -578,31 +720,182 @@ canvas.addEventListener('pointercancel', endPointer);
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 canvas.addEventListener('wheel', (e) => {
   e.preventDefault();
-  goal.dist = Math.max(8, Math.min(90, goal.dist * Math.exp(e.deltaY * 0.001)));
+  goal.dist = Math.max(minDist(), Math.min(maxDist(), goal.dist * Math.exp(e.deltaY * 0.001)));
 }, { passive: false });
 
+// ---------- キーボードとスティック ----------
+const keys = new Set();
+window.addEventListener('keydown', (e) => {
+  keys.add(e.code);
+  if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+  if (e.code === 'Space') jump();
+});
+window.addEventListener('keyup', (e) => keys.delete(e.code));
+window.addEventListener('blur', () => keys.clear());
+
+const joy = { x: 0, y: 0, id: null };
+const joyEl = document.getElementById('joy'), knob = document.getElementById('knob');
+joyEl.addEventListener('pointerdown', (e) => { joy.id = e.pointerId; joyEl.setPointerCapture(e.pointerId); moveJoy(e); });
+joyEl.addEventListener('pointermove', (e) => { if (e.pointerId === joy.id) moveJoy(e); });
+const endJoy = (e) => { if (e.pointerId !== joy.id) return; joy.id = null; joy.x = joy.y = 0; knob.style.transform = ''; };
+joyEl.addEventListener('pointerup', endJoy);
+joyEl.addEventListener('pointercancel', endJoy);
+function moveJoy(e) {
+  const r = joyEl.getBoundingClientRect();
+  const R = r.width / 2;
+  let dx = (e.clientX - r.left - R) / R, dy = (e.clientY - r.top - R) / R;
+  const l = Math.hypot(dx, dy);
+  if (l > 1) { dx /= l; dy /= l; }
+  joy.x = dx; joy.y = -dy;
+  knob.style.transform = `translate(${dx * R * 0.6}px, ${dy * R * 0.6}px)`;
+}
+document.getElementById('jump').addEventListener('pointerdown', (e) => { e.preventDefault(); jump(); });
+
+function jump() {
+  if (state.mode === 'walk' && player.grounded) { player.vy = 6.5; player.grounded = false; }
+}
+
 // ---------- ボタン ----------
+function applyMode() {
+  const walk = state.mode === 'walk';
+  document.body.classList.toggle('walk', walk);
+  document.getElementById('bMode').textContent = walk ? 'ながめる' : '歩く';
+  hint.textContent = walk
+    ? 'WASD／矢印で移動・Shiftで走る・スペースでジャンプ・ドラッグで視点'
+    : 'ドラッグで回転・ホイール／ピンチで拡大';
+  if (walk) { stopSpin(); behindHero(); } else frontView();
+}
+document.getElementById('bMode').onclick = () => { state.mode = state.mode === 'walk' ? 'view' : 'walk'; applyMode(); };
 document.getElementById('bFront').onclick = () => { stopSpin(); frontView(); };
 document.getElementById('bSpin').onclick = (e) => { state.spin = !state.spin; e.currentTarget.classList.toggle('on', state.spin); };
 document.getElementById('bNight').onclick = () => { state.night = !state.night; applyTime(); };
 document.getElementById('bSiren').onclick = (e) => { state.siren = !state.siren; e.currentTarget.classList.toggle('on', state.siren); };
+state.mode = 'walk';
+applyMode();
+cam.yaw = goal.yaw; cam.dist = goal.dist; camDist = goal.dist;
+
+// ---------- 当たり判定 ----------
+const R = 0.32, HEIGHT = 1.7, STEP = 0.35;
+function resolve(p) {
+  for (let it = 0; it < 3; it++) {
+    for (const b of colliders) {
+      if (b.y1 <= p.y + STEP || b.y0 >= p.y + HEIGHT) continue;
+      const cx = Math.max(b.x0, Math.min(p.x, b.x1));
+      const cz = Math.max(b.z0, Math.min(p.z, b.z1));
+      let dx = p.x - cx, dz = p.z - cz;
+      const d = Math.hypot(dx, dz);
+      if (d >= R) continue;
+      if (d > 1e-5) { p.x += dx / d * (R - d); p.z += dz / d * (R - d); }
+      else {
+        const pen = [p.x - b.x0, b.x1 - p.x, p.z - b.z0, b.z1 - p.z];
+        const m = Math.min(...pen), k = pen.indexOf(m);
+        if (k === 0) p.x = b.x0 - R; else if (k === 1) p.x = b.x1 + R;
+        else if (k === 2) p.z = b.z0 - R; else p.z = b.z1 + R;
+      }
+    }
+  }
+  p.x = Math.max(-60, Math.min(80, p.x));
+  p.z = Math.max(-60, Math.min(60, p.z));
+}
+function groundAt(p) {
+  let g = 0;
+  for (const b of colliders) {
+    if (b.y1 > p.y + STEP || b.y1 <= g) continue;
+    if (p.x + R * 0.5 < b.x0 || p.x - R * 0.5 > b.x1 || p.z + R * 0.5 < b.z0 || p.z - R * 0.5 > b.z1) continue;
+    g = b.y1;
+  }
+  return g;
+}
+// カメラが建物にめりこまないよう、主人公から外へ少しずつ進めて止める
+function clearDistance(from, dir, want) {
+  const pt = new Vec3();
+  for (let d = 0.6; d <= want; d += 0.25) {
+    pt.copy(dir).mulScalar(d).add(from);
+    for (const b of occluders) {
+      if (pt.x > b.x0 - 0.2 && pt.x < b.x1 + 0.2 && pt.y > b.y0 - 0.2 && pt.y < b.y1 + 0.2 && pt.z > b.z0 - 0.2 && pt.z < b.z1 + 0.2) {
+        return Math.max(1.2, d - 0.3);
+      }
+    }
+  }
+  return want;
+}
 
 // ---------- 毎フレーム ----------
 let t = 0;
+const angleTo = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
 app.on('update', (dt) => {
   t += dt;
+  const walkMode = state.mode === 'walk';
+
+  // 主人公を動かす
+  let ix = 0, iy = 0;
+  if (walkMode) {
+    if (keys.has('KeyD') || keys.has('ArrowRight')) ix += 1;
+    if (keys.has('KeyA') || keys.has('ArrowLeft')) ix -= 1;
+    if (keys.has('KeyW') || keys.has('ArrowUp')) iy += 1;
+    if (keys.has('KeyS') || keys.has('ArrowDown')) iy -= 1;
+    ix += joy.x; iy += joy.y;
+  }
+  const yr0 = cam.yaw * Math.PI / 180;
+  let mx = -Math.sin(yr0) * iy + Math.cos(yr0) * ix;
+  let mz = -Math.cos(yr0) * iy - Math.sin(yr0) * ix;
+  const ml = Math.hypot(mx, mz);
+  if (ml > 1) { mx /= ml; mz /= ml; }
+  const run = keys.has('ShiftLeft') || keys.has('ShiftRight') || Math.hypot(joy.x, joy.y) > 0.92;
+  const speed = run ? 7 : 3.8;
+  const moving = ml > 0.05;
+  if (moving) {
+    player.pos.x += mx * speed * dt;
+    player.pos.z += mz * speed * dt;
+    const want = Math.atan2(mx, mz);
+    player.face += angleTo(player.face, want) * Math.min(1, dt * 12);
+  }
+  resolve(player.pos);
+  // ジャンプと着地
+  const g = groundAt(player.pos);
+  player.vy -= 20 * dt;
+  player.pos.y += player.vy * dt;
+  if (player.pos.y <= g) { player.pos.y = g; player.vy = 0; player.grounded = true; }
+  else if (player.pos.y > g + 0.05) player.grounded = false;
+  hero.setLocalPosition(player.pos);
+  hero.setLocalEulerAngles(0, player.face * 180 / Math.PI, 0);
+
+  // 歩きのアニメーション
+  const amt = moving ? Math.min(1, ml) : 0;
+  player.walk += (amt - player.walk) * Math.min(1, dt * 10);
+  player.phase += dt * (run ? 13 : 9) * (moving ? 1 : 0);
+  const sw = Math.sin(player.phase) * player.walk;
+  if (player.grounded) {
+    legs[0].setLocalEulerAngles(sw * 38, 0, 0);
+    legs[1].setLocalEulerAngles(-sw * 38, 0, 0);
+    arms[0].setLocalEulerAngles(-sw * 34, 0, -28 - player.walk * 4);
+    arms[1].setLocalEulerAngles(sw * 34, 0, 28 + player.walk * 4);
+    heroBody.setLocalPosition(0, Math.abs(Math.sin(player.phase)) * 0.06 * player.walk + Math.sin(t * 2.4) * 0.008, 0);
+  } else {
+    legs[0].setLocalEulerAngles(25, 0, -8);
+    legs[1].setLocalEulerAngles(-15, 0, 8);
+    arms[0].setLocalEulerAngles(0, 0, -130);
+    arms[1].setLocalEulerAngles(0, 0, 130);
+    heroBody.setLocalPosition(0, 0, 0);
+  }
+
+  // カメラ
+  if (walkMode) {
+    goal.target.set(player.pos.x, player.pos.y + 1.35, player.pos.z);
+  }
   if (state.spin) goal.yaw += dt * 8;
   const k = 1 - Math.exp(-dt * 10);
   cam.yaw += (goal.yaw - cam.yaw) * k;
   cam.pitch += (goal.pitch - cam.pitch) * k;
   cam.dist += (goal.dist - cam.dist) * k;
-  cam.target.lerp(cam.target, goal.target, k);
+  cam.target.lerp(cam.target, goal.target, walkMode ? 1 - Math.exp(-dt * 14) : k);
   const yr = cam.yaw * Math.PI / 180, pr = cam.pitch * Math.PI / 180;
-  camera.setPosition(
-    cam.target.x + cam.dist * Math.cos(pr) * Math.sin(yr),
-    cam.target.y + cam.dist * Math.sin(pr),
-    cam.target.z + cam.dist * Math.cos(pr) * Math.cos(yr)
-  );
+  const dir = new Vec3(Math.cos(pr) * Math.sin(yr), Math.sin(pr), Math.cos(pr) * Math.cos(yr));
+  const want = walkMode ? clearDistance(cam.target, dir, cam.dist) : cam.dist;
+  camDist = want < camDist ? want : camDist + (want - camDist) * Math.min(1, dt * 4);
+  const cp = dir.clone().mulScalar(camDist).add(cam.target);
+  cp.y = Math.max(0.3, cp.y);
+  camera.setPosition(cp);
   camera.lookAt(cam.target);
 
   // 赤色灯：左右交互に点滅
