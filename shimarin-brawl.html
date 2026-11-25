@@ -3545,7 +3545,7 @@ KTMOVES.gpum.zap = [4, 9];
 KTMOVES.fthrow.item = 'pen'; KTMOVES.fthrow.itemAt = [4, 26]; KTMOVES.fthrow.litAt = [10, 20];
 KTMOVES.dthrow.item = 'pistol'; KTMOVES.dthrow.itemAt = [14, 40];
 // 切り札ムービー（雨の夜のパブ）：当たり [時間, ダメージ, 音の強さ（0 は傘の銃）] と、終わり
-const KX = { END: 640, HITS: [[168, 3.5, 12], [202, 4, 14], [222, 2, 'c'], [352, 2, 'z'], [364, 1, 'z'], [376, 1, 'z'], [388, 1, 'z'], [400, 1, 'z'], [528, 7, 'b']] };
+const KX = { END: 336, HITS: [[48, 5, 14], [62, 2, 'c'], [186, 2, 'z'], [196, 1, 'z'], [206, 1, 'z'], [216, 1, 'z'], [226, 1, 'z'], [290, 7, 'b']] };
 const CHARS = [
   { key: 'shimarin', name: 'しまりん', kana: 'PSYCHIC', img: FACE, ar: FACE_AR, eyes: true, scale: 1, run: 7.0, airs: 5.8, jv: -14.6, shv: -10, djv: -13.4, airJumps: 2,
     kbTake: 0.95, swords: false, arms4: true, psychic: true, hand: '#c9c3f2', moves: SMOVES,
@@ -9358,35 +9358,26 @@ SC_.battle = (o) => {
       }
       const mt = ++S.mt;
       T.x = S.tx; T.y = S.ty;
-      if (mt === 20) Snd.osc('square', 2200, 0.03, 0.04);
-      if (mt === 28) Snd.lockClick();
-      if (mt === 66) Snd.kCloth();
-      if (mt === 86) { Snd.osc('sine', 1800, 0.06, 0.05); Snd.osc('sine', 2400, 0.06, 0.04, null, 0.07); }
-      if (mt === 112) Snd.kBrass();
-      if (mt === 136) Snd.kWhoosh(1.2, true);
-      if (mt === 146) Snd.kStep();
-      if (mt === 162) Snd.kWhoosh(1);
-      if (mt === 196) Snd.kWhoosh(1.4, true);
-      if (mt === 222) { Snd.heavy(() => Snd.doom(0.9)); Snd.nz(0.6, 0.35, 'lowpass', 600, 1, 0, 90); Snd.shatter(); }   // カウンターが砕ける
-      if (mt === 232) Snd.shatter();
-      if (mt === 296) Snd.kStep();
-      if (mt === 302) Snd.gunCock();
-      if (mt === 302 + 6) Snd.osc('sine', 1800, 0.05, 0.04);
-      if (mt === 310) Snd.osc('square', 2600, 0.02, 0.05);   // 引き金
-      if (mt === 312) { Snd.nz(0.1, 0.22, 'highpass', 2600, 0.8); Snd.kWhoosh(1.1, true); Snd.nz(1.2, 0.05, 'bandpass', 400, 2, 0.05, 200); }   // 「パシュッ」→ 時間がのびる
-      if (mt >= 352 && mt < 410 && (mt - 352) % 6 === 0) Snd.kZap(mt === 352 ? 1.2 : 0.55);
-      if (mt === 358) Snd.nz(1.0, 0.12, 'bandpass', 120, 2, 0, 60);
-      if (mt === 412) Snd.osc('square', 1500, 0.03, 0.04, 900);
-      if (mt >= 444 && mt < 520 && (mt - 444) % 18 === 0) Snd.kStep();   // こちらへ歩く革靴
-      if (mt === 462) { Snd.osc('square', 2600, 0.02, 0.05); Snd.nz(0.22, 0.08, 'bandpass', 2600, 1, 0.03, 900); }
-      if (mt === 486) Snd.kWhoosh(0.5);
-      if (mt === 512) Snd.clink();
-      if (mt === 528) { Snd.explode(1.4); Snd.heavy(() => Snd.doom(1.2)); Snd.koBoom(); }
-      if (mt === 528 + 20) Snd.shatter();
-      if (mt >= 536 && mt < 620 && (mt - 536) % 18 === 0) Snd.kStep();
-      if (mt === 574) Snd.kCloth();
+      if (mt === 10) Snd.osc('square', 2200, 0.03, 0.04);   // 鍵を差しこむ
+      if (mt === 18) Snd.lockClick();   // 「カチャ」
+      if (mt === 30) Snd.kWhoosh(0.8);   // 相手が殴りかかる
+      if (mt === 40) Snd.kWhoosh(1.4, true);   // 回し蹴り
+      if (mt === 62) { Snd.heavy(() => Snd.doom(0.9)); Snd.nz(0.6, 0.35, 'lowpass', 600, 1, 0, 90); Snd.shatter(); }   // カウンターが砕ける
+      if (mt === 70) Snd.shatter();
+      if (mt === 118) { Snd.gunCock(); Snd.osc('sine', 1800, 0.05, 0.04, null, 0.08); }   // 傘を向けて照準「ピッ」
+      if (mt === 134) Snd.osc('square', 2600, 0.02, 0.05);   // 引き金
+      if (mt === 138) { Snd.nz(0.1, 0.22, 'highpass', 2600, 0.8); Snd.kWhoosh(1.1, true); Snd.nz(1.0, 0.05, 'bandpass', 400, 2, 0.05, 200); }   // 「パシュッ」→ 時間がのびる
+      if (mt >= 186 && mt < 240 && (mt - 186) % 6 === 0) Snd.kZap(mt === 186 ? 1.2 : 0.55);   // 「バチバチッ」
+      if (mt === 192) Snd.nz(0.8, 0.12, 'bandpass', 120, 2, 0, 60);   // 照明が落ちる
+      if (mt >= 242 && mt < 330 && (mt - 242) % 16 === 0) Snd.kStep();   // こちらへ歩く革靴
+      if (mt === 248) { Snd.osc('square', 2600, 0.02, 0.05); Snd.nz(0.22, 0.08, 'bandpass', 2600, 1, 0.03, 900); }   // ライター「カチッ、シュボッ」
+      if (mt === 262) Snd.kWhoosh(0.5);
+      if (mt === 280) Snd.clink();
+      if (mt === 290) { Snd.explode(1.4); Snd.heavy(() => Snd.doom(1.2)); Snd.koBoom(); }
+      if (mt === 308) Snd.shatter();
+      if (mt === 302) Snd.kCloth();   // ネクタイを直す
       for (const [h, d, s] of KX.HITS) if (mt === h) { supHit(S, d); if (typeof s === 'number') Snd.gentHit(s); }
-      if (mt === 202) Snd.heavy(() => Snd.doom(0.5));
+      if (mt === 48) Snd.heavy(() => Snd.doom(0.5));
       if (mt === KX.END) {
         S.movie = false; S.done = u;
         supLaunch(S, { dmg: 8, ang: 42, base: 20, gr: 1.5 }, S.dir);
@@ -12045,30 +12036,23 @@ function pubNoise() {   // フィルムの粒子
     const calm = mk({ by: 2, lean: 0.02, hd: 0.0, fa: A_(0.35, 0.3), ...pock, fl: G_(0.25, -0.1), bl: G_(-0.25, 0) });
     const aimP = mk({ by: 2, lean: 0.0, hd: 0.0, fa: A_(1.57, 0), ...pock, fl: G_(0.25, -0.1), bl: G_(-0.25, 0) });
     const aimTilt = mk({ by: 2, lean: -0.02, hd: 0.28, fa: A_(1.55, 0), ...pock, fl: G_(0.25, -0.1), bl: G_(-0.25, 0) });   // 首を少しかしげる
-    const K = [[0, 385, 0, reach, 0], [40, 385, 0, reach, 0], [52, 392, 0, V.bar, 0], [62, 398, 0, V.glasses, 0], [100, 400, 0, V.glasses, 0], [112, 405, 0, V.ready, 0],
-      [134, 420, 0, V.ready, 0], [142, 412, 0, V2.leanBack, 0], [160, 405, 0, V2.leanBack, 0], [164, 430, 0, V.upperW, 0], [168, 475, 0, V.upperH, 0], [178, 478, 0, V.upperH, 0], [186, 480, 0, V.ready, 0],
-      [192, 540, 0, V.kickW, 0], [196, 580, 0, V.kickW, 0],
-      [262, 625, 0, calm, 0], [292, 625, 0, calm, 0], [302, 622, 0, aimP, 0], [352, 622, 0, aimP, 0], [372, 622, 0, aimP, 0], [384, 622, 0, aimTilt, 0], [404, 622, 0, aimTilt, 0], [414, 622, 0, aimP, 0], [426, 624, 0, calm, 0], [440, 624, 0, calm, 0]];
-    const KD = [[0, -1], [54, 1]];
+    const K = [[0, 385, 0, reach, 0], [22, 385, 0, reach, 0], [28, 392, 0, V.bar, 0], [34, 400, 0, V.ready, 0], [38, 420, 0, V.kickW, 0], [42, 440, 0, V.kickW, 0],
+      [96, 620, 0, calm, 0], [116, 620, 0, calm, 0], [124, 622, 0, aimP, 0], [200, 622, 0, aimP, 0], [214, 622, 0, aimTilt, 0], [240, 622, 0, aimTilt, 0]];
+    const KD = [[0, -1], [26, 1]];
     const KW = [];
-    const Tk = [[0, 820, 0, M.stand, 0], [104, 820, 0, M.stand, 0], [116, 820, 0, M.roar, 0], [128, 815, 0, M.roar, 0],
-      [134, 770, 0, P.punchW, 0], [146, 640, 0, P.punchW, 0], [154, 575, 0, P.punch, 0], [162, 562, 0, P.punch, 0], [166, 566, 0, M.hurt, 0], [171, 600, -70, M.hurtB, -0.25], [180, 650, -25, M.hurtB, -0.12], [190, 690, 0, M.wobble, 0], [196, 690, 0, M.wobble, 0],
-      [262, 1500, 0, M.lie, -1.57], [276, 1500, 0, M.lie, -1.57], [286, 1488, 0, M.wobble, -0.5], [296, 1472, 0, M.stand, 0], [304, 1458, 0, M.roar, 0], [312, 1420, 0, P.punchW, 0],
-      [350, 1322, 0, P.punchW, 0], [352, 1312, 0, M.hurtB, 0], [410, 1312, 0, M.hurtB, 0], [420, 1316, 0, M.wobble, 0], [440, 1316, 0, M.wobble, 0]];
-    const TD = [[0, 1], [110, -1]];
+    const Tk = [[0, 760, 0, M.roar, 0], [30, 700, 0, P.punchW, 0], [42, 570, 0, P.punchW, 0], [62, 1500, 0, M.lie, -1.57], [100, 1500, 0, M.lie, -1.57], [110, 1485, 0, M.wobble, -0.5], [120, 1468, 0, M.stand, 0],
+      [128, 1450, 0, M.roar, 0], [138, 1420, 0, P.punchW, 0], [186, 1330, 0, P.punchW, 0], [188, 1325, 0, M.hurtB, 0], [236, 1325, 0, M.hurtB, 0], [240, 1328, 0, M.wobble, 0]];
+    const TD = [[0, -1]];
     const C = [
-      [0, [[0, 330, 592, 0, 3.4], [50, 322, 596, 0, 3.7]]],                                     // 鍵：「カチャ」
-      [50, [[50, 418, 518, 0, 2.7], [112, 424, 532, 0, 2.35]]],                                  // 振り向いてメガネ → 照準
-      [112, [[112, 640, 590, 0, 1.25], [134, 620, 590, -0.02, 1.4]]],                            // にらみ合い
-      [134, [[134, 560, 600, -0.03, 1.55], [162, 500, 590, -0.06, 2.0]]],                         // スローでかわす
-      [162, [[162, 520, 590, 0.02, 1.9], [168, 550, 565, 0.05, 2.3], [186, 590, 585, 0, 1.7], [196, 620, 590, -0.04, 2.0]]],   // アッパー → 回し蹴りの振りかぶり
-      [262, [[262, 1360, 590, 0, 1.1], [292, 1320, 590, 0, 1.18]]],                               // 壊れたカウンターから起き上がる
-      [292, [[292, 610, 545, 0, 2.2], [306, 640, 560, 0, 2.45]]],                                 // 片手をポケットに入れたまま傘を向ける
-      [306, [[306, 712, 616, 0, 3.4], [312, 716, 616, 0, 3.8]]],                                  // 引き金のアップ
-      [312, [[312, 930, 600, -0.24, 2.7], [332, 1110, 600, 0.0, 3.0], [352, 1270, 598, 0.2, 2.7]]],   // 超スロー：回りこみながら針を追う
-      [352, [[352, 960, 590, 0, 1.12], [380, 966, 590, 0, 1.24]]],                                // 放電（照明が消える）
-      [380, [[380, 650, 515, 0, 2.9], [410, 652, 520, 0, 3.1]]],                                  // 青い光の中で首をかしげる
-      [410, [[410, 970, 590, 0, 1.12], [440, 980, 590, 0, 1.18]]],                                // 相手がくずれ落ちる
+      [0, [[0, 330, 592, 0, 3.4], [30, 322, 596, 0, 3.7]]],                                     // 鍵：「カチャ」
+      [30, [[30, 520, 590, 0, 1.6], [42, 490, 580, -0.04, 1.9]]],                                // 殴りかかってくる → 回し蹴りの振りかぶり
+      [96, [[96, 1330, 590, 0, 1.1], [114, 1300, 590, 0, 1.15]]],                                // 壊れたカウンターから起き上がる
+      [114, [[114, 610, 545, 0, 2.25], [132, 630, 552, 0, 2.45]]],                               // 片手をポケットに入れたまま傘を向ける（照準）
+      [132, null],                                                                                 // 傘の先のどアップ（傘の先の位置から決める）
+      [144, null],                                                                                 // 針にぴったり並走
+      [186, null],                                                                                 // 刺さる瞬間のアップ
+      [192, [[192, 975, 590, 0, 1.15], [222, 980, 590, 0, 1.25]]],                               // 放電（照明が消える）
+      [222, [[222, 650, 515, 0, 2.9], [240, 652, 520, 0, 3.1]]],                                 // 青い光の中で首をかしげる
     ];
     return { K, KD, KW, Tk, TD, C, walkA: V.bar, walkB: V.bar };
   })();
@@ -12079,8 +12063,8 @@ function pubNoise() {   // フィルムの粒子
     return { x, y: y + by, p, r, d };
   }
   function foeAt(t) { const [x, y, p, r] = kxTrack(KXM.Tk, t); return { x, y, p, r, d: stepAt(KXM.TD, t) }; }
-  const KXH = { up: 168, kick: 202, land: 220, shots: [], slash: 528, table: 1e9, bottle: 1e9, shield: -1, shatter: -1, win: 1e9, lock: 28,
-    fpv0: 196, fpv1: 262, crash: 222, fire: 312, taser: 352, freeze: 4, zap1: 410, walk: 440, light: 462, toss: 486, land2: 512, boom: 528 };
+  const KXH = { up: 1e9, kick: 48, land: 60, shots: [], slash: 290, table: 1e9, bottle: 1e9, shield: -1, shatter: -1, win: 1e9, lock: 18,
+    fpv0: 42, fpv1: 96, crash: 62, fire: 138, taser: 186, freeze: 4, zap1: 240, walk: 240, light: 248, toss: 262, land2: 280, boom: 290 };
   // グラス・ビン・ジョッキ（ワールド座標）
   function drawTumbler(x, y, s, full) {   // ウイスキーのグラス（底が x,y）
     ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
@@ -12203,8 +12187,8 @@ function pubNoise() {   // フィルムの粒子
     ctx.fillStyle = g; ctx.fillRect(x - 13, y - 26, 26, 52);
     ctx.fillStyle = '#6a4a18'; ctx.fillRect(x + 13, y - 6, 4 + k * 26, 12); ctx.fillStyle = '#d8b060'; ctx.fillRect(x + 13, y - 6, 4 + k * 26, 3);   // かんぬき
     ctx.fillStyle = '#2a1a08'; ctx.beginPath(); ctx.arc(x, y + 12, 4, 0, TAU); ctx.fill(); ctx.fillRect(x - 1.5, y + 12, 3, 9);
-    if (mt >= 222) {   // 鍵：差しこんで、回す
-      ctx.save(); ctx.translate(x, y + 14); ctx.rotate(-Math.PI / 2 * clamp((mt - 228) / 6, 0, 1));
+    if (mt >= KXH.lock - 10) {   // 鍵：差しこんで、回す
+      ctx.save(); ctx.translate(x, y + 14); ctx.rotate(-Math.PI / 2 * clamp((mt - KXH.lock + 5) / 5, 0, 1));
       ctx.fillStyle = '#d8b860'; ctx.fillRect(-1.5, -2, 22, 4); ctx.beginPath(); ctx.arc(26, 0, 8, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a1008'; ctx.beginPath(); ctx.arc(26, 0, 3, 0, TAU); ctx.fill();
       ctx.restore();
     }
@@ -12344,7 +12328,7 @@ function pubNoise() {   // フィルムの粒子
     const faceH = F.ch.faceH || BODY.face; drawFace(o.hx || 0, -150 + (o.hy || 0), faceH, o.ha || 0, 0, t, F.ch, 1);
     ctx.restore();
   }
-  let KX_TIP = null;   // 傘の先の画面座標（見た目だけ）
+  let KX_TIP = null, KX_TIPW = null;   // 傘の先の画面座標・ワールド座標（見た目だけ）
   function drawKotanMovie(S) {
     const F = S.F, T = S.T, mt0 = S.mt || 0, t = 1000 + mt0, FY = PUB.FY, FS = 1.9;
     const frz = mt0 >= KXH.taser && mt0 < KXH.taser + KXH.freeze, mt = frz ? KXH.taser : mt0;   // 刺さった瞬間に一瞬止まる
@@ -12354,12 +12338,18 @@ function pubNoise() {   // フィルムの粒子
     let cx, cy, cr, cz;
     if (fpv) { const f = mt - KXH.fpv0; cx = 1480 + Math.sin(f * 0.05) * 6; cy = 560; cr = -0.02 + Math.sin(f * 0.04) * 0.01; cz = 0.95; }
     else if (walk) { const f = mt - KXH.walk; cx = 1270 - f * 0.08; cy = 560; cr = 0; cz = 0.98 + f * 0.0004; }
+    else if (!shot[1]) {   // テーザーのどアップ：傘の先 → 針に並走 → 刺さるところ
+      const tw = KX_TIPW || { x: 905, y: 612 }, cw = { x: foeAt(KXH.taser).x + 10, y: FY - 140 }, q = clamp((mt - KXH.fire) / (KXH.taser - KXH.fire), 0, 1);
+      if (mt < 144) { const k = (mt - 132) / 12; cx = tw.x - 30 + k * 10; cy = tw.y; cr = 0; cz = 4.6 + k * 0.6; }
+      else if (mt < KXH.taser) { cx = lerp(tw.x, cw.x, q) - 40 * (1 - q); cy = lerp(tw.y, cw.y, q) - 6; cr = lerp(-0.25, 0.2, (mt - 144) / (KXH.taser - 144)); cz = 4.4; }
+      else { const k = (mt - KXH.taser) / 6; cx = cw.x; cy = cw.y; cr = 0.05; cz = 3.6 + k * 0.3; }
+    }
     else [cx, cy, cr, cz] = kxTrack(shot[1], mt);
     const dk = (h, k) => mt >= h ? Math.exp(-(mt - h) / k) : 0;
-    const hits = [[KXH.up, 10], [KXH.kick, 16], [KXH.crash, 22], [KXH.taser, 12], [KXH.boom, 34]];
+    const hits = [[KXH.kick, 16], [KXH.crash, 22], [KXH.taser, 6], [KXH.boom, 34]];
     const shk = frz ? 0 : Math.max(0, ...hits.map(([h, a]) => dk(h, 3) * a), fb >= 0 && fb < 40 ? 8 * (1 - fb / 40) : 0);
     cz *= 1 + dk(KXH.up, 5) * 0.06 + dk(KXH.taser, 6) * 0.05;
-    const slow = (mt >= 136 && mt < 160) || (mt >= KXH.fire && mt < KXH.taser);
+    const slow = mt >= KXH.fire + 4 && mt < KXH.taser;
     const dark = mt >= KXH.taser + 6 && mt < KXH.zap1 ? (((mt * 7) % 13) < 2 ? 0.5 : 0.86) : mt >= KXH.taser && mt < KXH.taser + 6 ? ((mt % 3) ? 0.6 : 0.15) : mt >= KXH.zap1 && mt < KXH.zap1 + 10 ? ((mt % 4) < 2 ? 0.6 : 0.2) : 0;
     const K = kotanAt(mt), Fo = foeAt(mt), TS = FS / Math.max(1, T ? T.ch.scale : 1);
     if (mt >= KXH.taser && mt < KXH.zap1 && !frz) { const R = srand(mt * 3); Fo.x += (R() - 0.5) * 12; Fo.p = lp(Fo.p, R() < 0.5 ? MOV.hurtB : MOV.side, 0.5 + R() * 0.5); Fo.r = (R() - 0.5) * 0.15; }
@@ -12373,7 +12363,7 @@ function pubNoise() {   // フィルムの粒子
       else Fo.x = 1500, Fo.y = 0, Fo.p = MOV.lie, Fo.r = -1.57;
     }
     // 爆発で相手が吹っ飛ぶ（奥の棚へ）
-    if (walk && fb >= 0) { const q = ease(clamp(fb / 26, 0, 1)), d = ease(clamp((fb - 44) / 18, 0, 1)); Fo.x = lerp(1316, 1700, q); Fo.y = -lerp(0, 230, Math.sin(q * 2.2) * 0.9 + q * 0.2) * (1 - d); Fo.r = -q * 4.5 - d * 0.3; Fo.p = d > 0.5 ? MOV.lie : MOV.tumble; foeSc = TS * (1 - q * 0.25); }
+    if (walk && fb >= 0) { const q = ease(clamp(fb / 26, 0, 1)), d = ease(clamp((fb - 44) / 18, 0, 1)); Fo.x = lerp(1328, 1700, q); Fo.y = -lerp(0, 230, Math.sin(q * 2.2) * 0.9 + q * 0.2) * (1 - d); Fo.r = -q * 4.5 - d * 0.3; Fo.p = d > 0.5 ? MOV.lie : MOV.tumble; foeSc = TS * (1 - q * 0.25); }
     ctx.save(); ctx.globalAlpha = fade;
     ctx.fillStyle = '#050302'; ctx.fillRect(0, 0, VW, VH);
     ctx.save();
@@ -12387,7 +12377,7 @@ function pubNoise() {   // フィルムの粒子
     drawPubTable(PUB.TABLE, mt);
     if (walk && fb >= 18) for (let i = 0; i < 40; i++) { const R = srand(i * 11 + 3), q = clamp((fb - 18) / 50, 0, 1), x = 1560 + R() * 320 + (R() - 0.5) * 300 * q, y = 260 + R() * 220 - 200 * q * R() + 500 * q * q; if (y < FY) { ctx.fillStyle = ['rgba(60,140,80,.9)', 'rgba(220,240,255,.85)', 'rgba(150,70,20,.9)', 'rgba(230,200,90,.85)'][i % 4]; ctx.save(); ctx.translate(x, y); ctx.rotate(R() * 6 + q * 10); ctx.fillRect(-5, -2, 10 + R() * 8, 4); ctx.restore(); } }
     const shadow = (x, y, w) => { const a = clamp(1 + y / 300, 0.2, 1); const g = ctx.createRadialGradient(x, FY, 4, x, FY, w); g.addColorStop(0, `rgba(0,0,0,${0.55 * a})`); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x, FY, w, w * 0.18, 0, 0, TAU); ctx.fill(); };
-    const foeOn = T && !(mt < 50) && !(mt >= 292 && mt < 312) && !(mt >= 380 && mt < 410) && !(fpv && foeScreen);
+    const foeOn = T && !(mt < 30) && !(fpv && foeScreen);
     let foeChest = null;
     if (foeOn) {
       if (Fo.y > -200) shadow(Fo.x, Fo.y, 110);
@@ -12395,23 +12385,19 @@ function pubNoise() {   // フィルムの粒子
       foeChest = camM.transformPoint(new DOMPoint(Fo.x + 10, FY + Fo.y - 140));
     }
     // ライター（後ろへ放ったあと、床で点滅）
-    const LX = 1300, LYf = FY - 8;
+    const LX = 1310, LYf = FY - 8;
     if (walk && mt >= KXH.land2 && mt < KXH.boom) { ctx.save(); ctx.translate(LX, LYf); ctx.rotate(1.57); ctx.scale(1.4, 1.4); const g = ctx.createLinearGradient(-6, 0, 6, 0); g.addColorStop(0, '#a07a20'); g.addColorStop(0.5, '#ffe6a0'); g.addColorStop(1, '#8a6418'); ctx.fillStyle = '#000'; rr(-7.5, -10, 15, 20, 2.5); ctx.fill(); ctx.fillStyle = g; rr(-6, -8.5, 12, 17, 2); ctx.fill(); ctx.globalCompositeOperation = 'lighter'; if ((mt >> 2) % 2) ctx.drawImage(glowSprite('rgba(255,70,40,.9)'), -24, -24, 48, 48); ctx.drawImage(glowSprite('rgba(255,160,50,.9)'), -12, -30, 24, 24); ctx.restore(); }
     if (!fpv && !walk) {
       shadow(K.x, K.y, 100);
-      if (mt >= 162 && mt < 172) for (const [d, al] of [[2, 0.3], [4, 0.15]]) { const g = kotanAt(mt - d); ctx.save(); ctx.globalAlpha *= al; drawFigureAt(F, g.x, FY + g.y, FS, g.p, g.d, t, g.r); ctx.restore(); }
       F._umb = 'closed'; F._mvFlash = mt >= KXH.fire && mt < KXH.fire + 3 ? [0] : null;
-      F._hud = mt >= 84 && mt < 112 ? clamp((mt - 84) / 6, 0, 1) : mt >= 300 && mt < 312 ? 1 : 0;
+      F._hud = mt >= 118 && mt < 136 ? clamp((mt - 118) / 5, 0, 1) : 0;
       let tip = null;
       F._held = (J, P) => { const a = P.fa.s + P.fa.e, th = Math.PI / 2 - a, h = J.fa[2]; tip = ctx.getTransform().transformPoint(new DOMPoint(h.x + Math.cos(th) * 104, h.y + Math.sin(th) * 104)); };
       try { drawFigureAt(F, K.x, FY + K.y, FS, K.p, K.d, t, K.r); } finally { F._umb = undefined; F._mvFlash = undefined; F._held = null; F._hud = 0; }
-      KX_TIP = tip;
+      KX_TIP = tip; if (tip) { const w = camM.inverse().transformPoint(tip); KX_TIPW = { x: w.x, y: w.y }; }
     }
     drawWhiskey(mt);
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
-    if (mt >= 140 && mt < 160) { const k = (mt - 140) / 20; ctx.globalAlpha = Math.sin(k * Math.PI) * 0.7; ctx.strokeStyle = 'rgba(255,240,220,.8)'; ctx.lineWidth = 12; ctx.beginPath(); ctx.moveTo(Fo.x + 60, FY - 250); ctx.quadraticCurveTo(Fo.x - 40, FY - 330, K.x + 20, FY - 300); ctx.stroke(); }
-    if (mt >= 162 && mt < 172) { const k = (mt - 162) / 10; ctx.globalAlpha = 1 - k; ctx.strokeStyle = 'rgba(220,230,255,.9)'; ctx.lineWidth = 14; ctx.beginPath(); ctx.arc(K.x + 30, FY - 200, 130, 0.9, 0.9 - k * 2.2, true); ctx.stroke(); }
-    { const k = dk(KXH.up, 4); if (k > 0.04) { const P0 = foeAt(KXH.up), hx = P0.x - 10, hy = FY + P0.y - 150; ctx.globalAlpha = k; ctx.drawImage(glowSprite('rgba(255,250,235,.95)'), hx - 110, hy - 110, 220, 220); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; for (let j = 0; j < 10; j++) { const a = j / 10 * TAU; line(hx + Math.cos(a) * 30, hy + Math.sin(a) * 30, hx + Math.cos(a) * 140 * (0.6 + (j % 3) * 0.2), hy + Math.sin(a) * 140 * (0.6 + (j % 3) * 0.2)); } } }
     ctx.restore();
     if (walk) drawBigBoom(LX, LYf - 20, fb);
     ctx.restore();
@@ -12436,8 +12422,10 @@ function pubNoise() {   // フィルムの粒子
     const tip = KX_TIP, zk = cz;
     if (!fpv && !walk && tip && foeChest && mt >= KXH.fire && mt < KXH.zap1 + 4) {
       if (mt < KXH.taser) {
-        const q = (mt - KXH.fire) / (KXH.taser - KXH.fire), bx = lerp(tip.x, foeChest.x, q), by = lerp(tip.y, foeChest.y, q) - Math.sin(q * Math.PI) * 10 * zk;
-        drawTaserWire(tip.x, tip.y, bx, by, zk, mt, false); drawBarbs(bx, by, Math.atan2(foeChest.y - tip.y, foeChest.x - tip.x), zk, mt * 0.25);
+        const q = (mt - KXH.fire) / (KXH.taser - KXH.fire), tw = KX_TIPW || { x: 905, y: 612 }, cw = { x: foeAt(KXH.taser).x + 10, y: FY - 140 };
+        const bp = camM.transformPoint(new DOMPoint(lerp(tw.x, cw.x, q), lerp(tw.y, cw.y, q) - Math.sin(q * Math.PI) * 6)), bx = bp.x, by = bp.y;
+        drawTaserWire(tip.x, tip.y, bx, by, Math.min(zk, 2.4), mt, false); drawBarbs(bx, by, Math.atan2(cw.y - tw.y, cw.x - tw.x) + cr, zk * 1.25, mt * 0.25);
+        if (mt < KXH.fire + 5) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1 - (mt - KXH.fire) / 5; ctx.drawImage(glowSprite('rgba(200,235,255,.95)'), tip.x - 160, tip.y - 160, 320, 320); ctx.restore(); }   // 傘の先が光る
         ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(200,230,255,.25)'; ctx.lineWidth = 2; for (let i = 0; i < 8; i++) { const R = srand(i * 3 + 1), yy = by + (R() - 0.5) * 120; line(bx - 60 - R() * 200, yy, bx - 30 - R() * 40, yy); } ctx.restore();   // 空気を切る線
       } else {
         drawTaserWire(tip.x, tip.y, foeChest.x, foeChest.y, zk, mt0, mt < KXH.zap1);
@@ -12459,14 +12447,14 @@ function pubNoise() {   // フィルムの粒子
     }
     // 画面に向かって歩くこうたん → 肩ごしにライターを後ろへ → 背後で大爆発
     if (walk) {
-      const f = mt - KXH.walk, q = clamp(f / 200, 0, 1), qq = q * q * 0.5 + q * 0.5, sc = lerp(2.3, 3.7, qq), x = lerp(400, 370, q), y = lerp(700, 900, qq);
+      const f = mt - KXH.walk, q = clamp(f / 100, 0, 1), qq = q * q * 0.5 + q * 0.5, sc = lerp(2.3, 3.7, qq), x = lerp(400, 370, q), y = lerp(700, 900, qq);
       ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.fillRect(0, 0, VW, VH);   // 手前のこうたんと奥を分ける
       const ph = f * 0.17, sw = Math.sin(ph);
       const o = { ph, armL: [[30 + sw * 2, -86], [28 + sw * 3, -60 - sw * 4]], armR: [[-30 - sw * 2, -86], [-28 - sw * 3, -60 + sw * 4]] };
-      const lt = mt >= 448 && mt < KXH.toss + 2;
-      if (lt) { o.lighter = 1; o.flame = mt >= KXH.light; const k = ease(clamp((mt - 448) / 10, 0, 1)); o.armR = [[lerp(-30, -26, k), lerp(-86, -92, k)], [lerp(-28, -10, k), lerp(-60, -98, k)]]; }
+      const lt = mt >= KXH.walk + 2 && mt < KXH.toss + 2;
+      if (lt) { o.lighter = 1; o.flame = mt >= KXH.light; const k = ease(clamp((mt - KXH.walk - 2) / 8, 0, 1)); o.armR = [[lerp(-30, -26, k), lerp(-86, -92, k)], [lerp(-28, -10, k), lerp(-60, -98, k)]]; }
       if (mt >= KXH.toss - 8 && mt < KXH.toss + 10) { const k = ease(clamp((mt - (KXH.toss - 8)) / 8, 0, 1)), k2 = ease(clamp((mt - KXH.toss) / 10, 0, 1)); o.armR = [[lerp(-26, -34, k), lerp(-92, -128, k)], [lerp(-10, -18, k) + k2 * 6, lerp(-98, -150, k) + k2 * 10]]; o.behindR = k2 > 0.3; }
-      if (mt >= 570 && mt < 620) { const k = ease(clamp((mt - 570) / 10, 0, 1)) * (1 - ease(clamp((mt - 608) / 10, 0, 1))); o.armR = [[lerp(-30, -22, k), lerp(-86, -96, k)], [lerp(-28, -3, k) + Math.sin(mt * 0.6) * k, lerp(-60, -112, k)]]; o.ha = 0.05 * k; }   // ネクタイを直す
+      if (mt >= KXH.boom + 10 && mt < KXH.boom + 40) { const k = ease(clamp((mt - KXH.boom - 10) / 8, 0, 1)) * (1 - ease(clamp((mt - KXH.boom - 30) / 8, 0, 1))); o.armR = [[lerp(-30, -22, k), lerp(-86, -96, k)], [lerp(-28, -3, k) + Math.sin(mt * 0.6) * k, lerp(-60, -112, k)]]; o.ha = 0.05 * k; }   // ネクタイを直す
       if (mt < KXH.toss) o.ha = Math.sin(f * 0.08) * 0.02;
       // 背後の爆発の光（オレンジのふちどり）
       const rim = fb >= 0 ? clamp(1 - fb / 120, 0.25, 1) : 0;
