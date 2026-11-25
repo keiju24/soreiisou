@@ -11057,6 +11057,28 @@ SC_.battle = (o) => {
       ctx.drawImage(glowSprite('rgba(255,70,20,.95)'), -34, -36, 68, 60); ctx.restore();
     }
   }
+  // かわいいぷるぷるうんこ（ステッキのうんこと同じ形・色。段ごとにゼリーのように揺れる）
+  function drawJellyPoop(heat, tt, wob) {
+    const C0 = mix3('#1f9fa4', '#e0601a', '#b01008', heat), C1 = mix3('#5fe0de', '#ffb040', '#ff5020', heat), C2 = mix3('#a8f6f2', '#ffe0a0', '#ffb090', heat), ST = mix3('#106a70', '#6a2a06', '#4a0800', heat);
+    const T3 = [[8, 22, 10], [-0.5, 17, 8.5], [-8, 12, 6.5]];
+    const off = i => Math.sin(tt * 0.36 + i * 0.95) * wob * (i + 0.5) * 1.1, sq = i => 1 + Math.sin(tt * 0.5 + i * 1.2) * 0.08 * wob;
+    for (let i = 0; i < 3; i++) {
+      const [y, rx, ry] = T3[i], s2 = sq(i);
+      ctx.save(); ctx.translate(off(i), y); ctx.scale(1 + (1 - s2) * 0.7, s2);
+      const g = ctx.createLinearGradient(0, -ry, 0, ry); g.addColorStop(0, C2); g.addColorStop(0.45, C1); g.addColorStop(1, C0);
+      ctx.fillStyle = g; ctx.strokeStyle = ST; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.ellipse(-rx * 0.35, -ry * 0.4, rx * 0.32, ry * 0.22, -0.15, 0, TAU); ctx.fill();   // ぷるんとしたつや
+      ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(-rx * 0.55, -ry * 0.5, 1.2, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+    const g = ctx.createLinearGradient(-6, 0, 6, 0); g.addColorStop(0, C0); g.addColorStop(1, C1);
+    ctx.save(); ctx.translate(off(3), 0); ctx.rotate(Math.sin(tt * 0.36 + 3) * 0.15 * wob);
+    ctx.fillStyle = g; ctx.strokeStyle = ST; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(-7, -11); ctx.quadraticCurveTo(-3, -22, 5, -20); ctx.quadraticCurveTo(9, -15, 7, -11); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
+    if (heat > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= heat * (0.75 + 0.25 * Math.sin(tt * 0.8)); ctx.drawImage(glowSprite('rgba(255,70,20,.95)'), -34, -36, 68, 60); ctx.restore(); }
+  }
   function unkoTitle(q) {   // 爆発の後ろの大きなタイトル
     const k = ease(clamp(q / 10, 0, 1)), sc = 1.2 - 0.12 * k - q * 0.0012;
     ctx.save(); ctx.translate(VW / 2, VH * 0.42); ctx.scale(sc, sc); ctx.globalAlpha *= k; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -11190,7 +11212,7 @@ SC_.battle = (o) => {
         ctx.strokeStyle = '#ffe680'; ctx.lineWidth = 8; ctx.beginPath(); ctx.ellipse(TX, gy - 300, 110, 26, 0, 0, TAU); ctx.stroke(); ctx.restore();   // 天使の輪
       }
       const wob = landed ? 1.2 + 2.2 * Math.exp(-lk / 18) + heatK * 1.5 : 1.4;   // めっちゃ揺れる
-      ctx.save(); ctx.translate(TX + tr, gy); ctx.scale(12 * sq, 12 / sq); ctx.translate(0, -18); drawRealPoop(heatK, mt * (1 + heatK), wob);
+      ctx.save(); ctx.translate(TX + tr, gy); ctx.scale(12 * sq, 12 / sq); ctx.translate(0, -18); drawJellyPoop(heatK, mt * (1 + heatK), wob);
       if (heatK > 0.15) {   // 赤く光るひび
         ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(255,230,140,${heatK})`; ctx.lineWidth = 0.8; ctx.lineCap = 'round';
         for (let i = 0; i < 9; i++) { const R = srand(i * 13 + 7); let x = (R() - 0.5) * 30, y = 10 - R() * 24; ctx.beginPath(); ctx.moveTo(x, y); for (let j = 0; j < 3; j++) { x += (R() - 0.5) * 8; y -= R() * 5; ctx.lineTo(x, y); } ctx.stroke(); }
