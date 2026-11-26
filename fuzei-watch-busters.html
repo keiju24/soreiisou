@@ -58,6 +58,65 @@
   .cur { display:inline-block; width:10px; height:18px; background:var(--crt); vertical-align:-3px; margin-left:4px; animation:b 1s steps(1) infinite; } @keyframes b { 50% { opacity:0; } }
   .pfoot { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
   .btn { white-space:nowrap; border:4px solid var(--ink); border-radius:8px; padding:4px 14px; font-weight:900; font-size:16px; color:var(--ink); background:linear-gradient(#cfcab9,#9c978a); box-shadow:0 4px 0 var(--ink); cursor:pointer; display:inline-flex; align-items:center; gap:4px; }
+  /* メンバー編成・いくせい：左＝3Dモデルと性能、右＝サークル／リスト */
+  .cp { display:grid; grid-template-rows:auto 1fr auto; gap:10px; padding:0 0 10px; }
+  .cphead { display:flex; align-items:center; gap:10px; padding:8px 14px; background:linear-gradient(90deg,#3a4232,#565a51 70%,#6b6a52); color:var(--cream); border-bottom:4px solid var(--ink); }
+  .role.big { min-width:34px; height:34px; font-size:20px; }
+  .cpname { font-size:26px; letter-spacing:.04em; text-shadow:0 2px 0 var(--ink); }
+  .cplv { margin-left:auto; display:flex; align-items:baseline; gap:6px; font:900 34px "Courier New",monospace; color:var(--hazard); text-shadow:0 2px 0 var(--ink); }
+  .cplv small { font:900 11px sans-serif; color:var(--cream); }
+  .cprole { background:var(--cream); border:3px solid var(--ink); border-radius:6px; padding:2px 10px; font-weight:900; font-size:16px; transform:skew(-8deg); }
+  .cpbody { display:grid; grid-template-columns:1fr 1.15fr; gap:10px; padding:0 12px; min-height:0; }
+  .cpstage { position:relative; border:4px solid var(--ink); border-radius:12px; overflow:hidden; background:#a8945f; min-height:0; }
+  .cpstage canvas { position:absolute; inset:0; width:100%; height:100%; }
+  .cpstage::after { content:""; position:absolute; inset:0; pointer-events:none; box-shadow:inset 0 0 40px #0006; }
+  .cpstage .tac { position:absolute; left:6px; top:6px; z-index:1; background:#1f1d1a; color:#e6dfcd; font-weight:900; font-size:12px; padding:2px 8px; }
+  .cpstats { display:flex; flex-direction:column; gap:5px; justify-content:center; }
+  .srow { display:flex; align-items:center; gap:8px; background:#efe7cd; border:2px solid var(--ink); border-radius:6px; padding:1px 8px 1px 0; }
+  .srow .k { color:#f4ecd8; font-weight:900; font-size:14px; padding:3px 18px 3px 10px; min-width:104px; clip-path:polygon(0 0,88% 0,100% 50%,88% 100%,0 100%); }
+  .srow b { margin-left:auto; font:900 22px "Courier New",monospace; }
+  .srow .up { color:#3f7a2c; font:900 13px monospace; width:40px; text-align:right; }
+  .eqline { display:flex; align-items:center; gap:8px; margin-top:2px; } .eqline small { display:block; font-size:10px; font-weight:900; color:#5a5446; } .eqline b { font-size:13px; }
+  .noeq { width:34px; height:34px; display:grid; place-items:center; border:2px dashed #8a826a; border-radius:8px; font-size:10px; font-weight:900; color:#8a826a; }
+  .cpmoves { display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:0 12px; }
+  .mv2 { display:flex; align-items:center; gap:8px; background:#efe7cd; border:2px solid var(--ink); border-radius:8px; padding:3px 8px; }
+  .mv2 small { display:block; font-size:10px; font-weight:900; color:#5a5446; } .mv2 b { font-size:15px; } .mv2 > span { margin-left:auto; font:900 12px monospace; }
+  .ringcard { display:flex; flex-direction:column; padding:10px 12px; gap:6px; }
+  .ringhead { display:flex; align-items:center; justify-content:space-between; }
+  .ringwrap { position:relative; flex:1; display:grid; place-items:center; min-height:0; }
+  .wing { position:absolute; top:50%; width:46%; height:64px; transform:translateY(-50%); background:repeating-linear-gradient(180deg,#cfae45 0 12px,#3b3a30 12px 20px); border:4px solid var(--ink); }
+  .wing.l { left:0; clip-path:polygon(0 0,100% 18%,100% 82%,0 100%,12% 50%); } .wing.r { right:0; clip-path:polygon(0 18%,100% 0,88% 50%,100% 100%,0 82%); }
+  .ring { position:relative; width:min(330px,92%); aspect-ratio:1; border-radius:50%; border:6px solid var(--ink); box-shadow:0 6px 0 var(--ink), inset 0 0 30px #0007;
+    background:conic-gradient(from -45deg,#8f3a2c 0 25%,#4c5f6c 0 50%,#5e6a3f 0 75%,#4c5f6c 0 100%); }
+  .ring::before { content:""; position:absolute; inset:12%; border-radius:50%; border:3px dashed #e6dcc055; }
+  .hub { position:absolute; left:50%; top:50%; width:22%; aspect-ratio:1; transform:translate(-50%,-50%); border-radius:50%; background:radial-gradient(circle at 40% 35%,#e3c463,#8b6a2a); border:5px solid var(--ink); }
+  .rslot { position:absolute; display:flex; flex-direction:column; align-items:center; gap:2px; width:104px; cursor:pointer; border-radius:12px; padding:2px; transform:translate(-50%,-50%); }
+  .rslot.top { left:50%; top:20%; } .rslot.bottom { left:50%; top:80%; } .rslot.left { left:20%; top:50%; } .rslot.right { left:80%; top:50%; }
+  .rslot .face { box-shadow:0 4px 0 var(--ink); }
+  .rtag { color:#f4ecd8; border:2px solid var(--ink); font-weight:900; font-size:11px; padding:0 6px; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transform:rotate(-3deg); }
+  .rlv { font:900 12px monospace; color:var(--cream); background:#1f1d1acc; padding:0 5px; border-radius:3px; }
+  .lrow { padding:4px 8px; } .lrow b { font-size:15px; } .tape.off { visibility:hidden; } .lrow .tape { min-width:52px; text-align:center; }
+  .lvtag { font:900 14px monospace; background:#1f1d1a; color:var(--hazard); padding:1px 6px; border-radius:4px; } .lvtag.big { font-size:20px; margin-left:auto; }
+  .xpbar { position:relative; width:110px; height:20px; border:2px solid var(--ink); border-radius:4px; background:#3b3a30; overflow:hidden; }
+  .xpbar i { position:absolute; left:0; top:0; bottom:0; background:linear-gradient(#e3c463,#b08a2c); } .xpbar em { position:relative; display:block; text-align:right; padding-right:4px; font:900 12px monospace; color:#f4ecd8; font-style:normal; text-shadow:0 1px 0 #000; }
+  #popLayer { position:absolute; inset:0; z-index:5; background:#0006; border-radius:14px; }
+  .pop { position:absolute; background:linear-gradient(#e2d8b9,#cfc39c); color:var(--ink); border:5px solid var(--ink); border-radius:14px; box-shadow:0 8px 0 var(--ink); padding:12px 14px; display:flex; flex-direction:column; gap:8px; }
+  .pop .phd { background:#1f1d1a; color:#e6dfcd; font-weight:900; padding:3px 12px; margin:-12px -14px 4px; border-radius:8px 8px 0 0; }
+  .pop.menu { right:52px; top:130px; width:250px; }
+  .pm { border:4px solid var(--ink); border-radius:10px; background:linear-gradient(#efe7cd,#d8cfb0); font-weight:900; font-size:18px; padding:6px; cursor:pointer; box-shadow:0 4px 0 var(--ink); transform:skew(-6deg); }
+  .pop.confirm { left:50%; top:50%; transform:translate(-50%,-50%); width:420px; text-align:center; }
+  .ptxt { font-weight:800; font-size:18px; line-height:1.6; } .ptxt b { font-size:22px; color:var(--red); }
+  .pbtns { display:flex; gap:12px; justify-content:center; }
+  .pb { min-width:120px; border:4px solid var(--ink); border-radius:10px; background:linear-gradient(#efe7cd,#d8cfb0); font-weight:900; font-size:18px; padding:6px 16px; cursor:pointer; box-shadow:0 4px 0 var(--ink); }
+  .pb.yes { background:linear-gradient(#d9bd5c,#b39436); } .pb.big { font-size:26px; padding:10px 28px; align-self:center; }
+  .pb.hold { transform:translateY(3px) scale(.97); box-shadow:0 1px 0 var(--ink); background:linear-gradient(#f0d36a,#d1a83c); }
+  .pop.charge { left:50%; top:50%; transform:translate(-50%,-50%); width:520px; }
+  .chn { display:flex; align-items:center; gap:10px; } .chn b { font-size:22px; }
+  .chbar { display:flex; align-items:center; gap:10px; }
+  .coin.big { width:40px; height:40px; border-width:4px; } .coin.big::after { left:10px; top:10px; width:10px; height:10px; }
+  .chg { position:relative; flex:1; height:42px; border:4px solid var(--ink); border-radius:8px; background:#2b2a24; overflow:hidden; }
+  .chg i { position:absolute; left:0; top:0; bottom:0; background:linear-gradient(#f0d36a,#c9952c); }
+  .chg em { position:relative; display:block; text-align:center; line-height:34px; font:900 22px "Courier New",monospace; color:#fff6df; font-style:normal; text-shadow:0 2px 0 #000; }
   .kfocus { outline:4px solid #9fe28c !important; outline-offset:2px; box-shadow:0 0 0 7px #9fe28c55 !important; position:relative; z-index:1; }
   .btn:active { transform:translateY(2px); box-shadow:0 2px 0 var(--ink); }
   .btn.go { background:linear-gradient(#d9bd5c,#b39436); } .btn.red { background:linear-gradient(#b5503d,#7d2a1e); color:#f0e3cf; } .btn.off { background:#9c978a; color:#5f5a4c; } .btn.sm { padding:1px 8px; font-size:13px; }
@@ -233,7 +292,7 @@ import {
   FILLMODE_FILL_WINDOW, RESOLUTION_AUTO, BLEND_NORMAL, PIXELFORMAT_SRGBA8,
   FILTER_LINEAR, FILTER_LINEAR_MIPMAP_LINEAR, ADDRESS_CLAMP_TO_EDGE, ADDRESS_REPEAT,
   TONEMAP_ACES, GAMMA_SRGB, SHADOW_PCF3_32F, CULLFACE_FRONT, CULLFACE_NONE,
-  Mesh, MeshInstance, TorusGeometry
+  Mesh, MeshInstance, TorusGeometry, Vec4
 } from 'playcanvas';
 
 
@@ -1636,13 +1695,14 @@ function padAlerts() {
   tiles[5].querySelector('.alert').style.display = NET.on ? '' : 'none';
 }
 function updateCoins() { document.querySelectorAll('.coinsTxt').forEach(e => e.textContent = save.settings.demo ? '∞' : fmt(save.coins)); }
-function openPad() { state.ui = 'pad'; Snd.menu(); $('pad').classList.add('on'); $('padHome').style.display = 'flex'; $('padScreen').style.display = 'none'; S.cur = null; updateCoins(); padAlerts(); padSelect(padSel); }
-function closePad(silent) { if (!silent && $('pad').classList.contains('on')) Snd.back(); $('pad').classList.remove('on'); state.ui = null; S.cur = null; stopHold(); writeSave(); }
+function openPad() { if ($('popLayer')) $('popLayer').style.display = 'none'; state.ui = 'pad'; Snd.menu(); $('pad').classList.add('on'); $('padHome').style.display = 'flex'; $('padScreen').style.display = 'none'; S.cur = null; updateCoins(); padAlerts(); padSelect(padSel); }
+function closePad(silent) { stopCharge(); pvHide(); S.retTo = null; if (!silent && $('pad').classList.contains('on')) Snd.back(); $('pad').classList.remove('on'); state.ui = null; S.cur = null; stopHold(); writeSave(); }
 
 // ---- 画面の共通の枠 ----
 const S = { cur: null, fromPad: false, nk: { slot: 0, pick: null, filter: 'all' }, ik: { key: null }, sb: { key: null, pick: null }, mo: { tab: 0, sel: 0 }, zk: { tab: 0, sel: 0 }, mu: { mode: 'search', quest: 0, cmt: 0, open: 'pub', code: '' }, ws: { tab: 0, type: 'tongs', pick: null }, qs: { sel: 0 }, st: { row: 0 } };
 const SCREENS = {};
 function openScreen(name, fromPad) {
+  S.retTo = null; S.pvKey = null; S.nk.mode = 'circle'; S.nk.pop = null; S.ik.pop = null;
   if (name === 'multi' && !NET.on && S.mu.mode === 'search' && !NET.searched) { NET.searched = true; setTimeout(netSearch, 0); }
   if (!fromPad && !S.cur && !$('pad').classList.contains('on')) Snd.menu();
   S.cur = name; S.fromPad = !!fromPad; state.ui = 'pad'; S.focusKey = null;
@@ -1654,16 +1714,20 @@ function renderScreen() {
   $('padTitle').textContent = s.title; $('padSub').textContent = s.sub || '';
   const m = $('scr'); m.style.gridTemplateColumns = s.cols || '1fr'; m.style.gridTemplateRows = s.rows || '1fr';
   m.innerHTML = s.html;
+  let pl = $('popLayer'); if (!pl) { pl = document.createElement('div'); pl.id = 'popLayer'; $('padScreen').parentNode.appendChild(pl); }
+  pl.innerHTML = s.pop || ''; pl.style.display = s.pop ? '' : 'none'; pl.querySelectorAll('[data-act]').forEach(bindAct);
+  pl.onclick = (e) => { if (e.target === pl) screenBack(); };
   $('padScreenDesc').textContent = s.desc || '';
   $('scrFoot').innerHTML = `<button class="btn" data-act="back"><span class="key">Esc</span>${S.fromPad ? 'もどる' : 'とじる'}</button>` + (s.foot || '');
   updateCoins();
   m.querySelectorAll('[data-act]').forEach(bindAct); $('scrFoot').querySelectorAll('[data-act]').forEach(bindAct);
   s.after && s.after();
   const items = navItems();
-  setFocus(items.find(e => (e.dataset.act || e.id) === S.focusKey) || (S.cur === 'gacha' && items.find(e => e.dataset.act === 'gcSpin')) || items[0], true);
+  setFocus(items.find(e => (e.dataset.act || e.id) === S.focusKey) || (S.cur === 'gacha' && items.find(e => e.dataset.act === 'gcSpin')) || items.find(e => e.dataset.act === 'charge') || items.find(e => e.dataset.act === 'nkYes') || items.find(e => e.classList.contains('lrow')) || items[0], true);
 }
 function bindAct(el) {
   const [act, ...args] = el.dataset.act.split(':');
+  if (act === 'charge') { el.onpointerdown = (e) => { e.preventDefault(); setFocus(el, true); startCharge(); addEventListener('pointerup', stopCharge, { once: true }); }; return; }
   if (act === 'hold') { el.onpointerdown = (e) => { e.preventDefault(); setFocus(el, true); startHold(() => doAct(args[0], args.slice(1))); }; return; }
   el.onclick = (e) => { e.stopPropagation(); setFocus(el, true); doAct(act, args); };
 }
@@ -1675,11 +1739,12 @@ function doAct(act, args) {
   if (!Snd.failed && act !== 'back') Snd.ok();
 }
 // ---- 移動キーでメニューの項目をえらぶ（いちばん近い方向の項目へ） ----
-function navItems() { return [...document.querySelectorAll('#scr [data-act], #scr input, #scrFoot [data-act]')].filter(el => el.offsetParent !== null && !el.classList.contains('off')); }
+function navItems() { const pl = $('popLayer'); if (pl && pl.style.display !== 'none' && S.cur) return [...pl.querySelectorAll('[data-act]')]; return [...document.querySelectorAll('#scr [data-act], #scr input, #scrFoot [data-act]')].filter(el => el.offsetParent !== null && !el.classList.contains('off')); }
 function setFocus(el, quiet) {
   document.querySelectorAll('.kfocus').forEach(e => e.classList.remove('kfocus'));
   if (!el) return;
   el.classList.add('kfocus'); S.focusKey = el.dataset.act || el.id;
+  if (el.dataset.pv && el.dataset.pv !== S.pvKey) pvFocus(el.dataset.pv);
   if (!quiet) el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 function navMove(dx, dy) {
@@ -1704,7 +1769,12 @@ function navEnter() {
   return true;
 }
 function screenBack() {
-  stopHold(); Snd.back();
+  stopHold(); stopCharge(); Snd.back();
+  const st = { nakama: S.nk, ikusei: S.ik }[S.cur];
+  if (st && st.pop) { closePop(st); renderScreen(); return; }
+  if (S.cur === 'nakama' && S.nk.mode === 'list') { S.nk.mode = 'circle'; S.focusKey = 'nkSlot:' + S.nk.slot; renderScreen(); return; }
+  if (S.retTo) { const r = S.retTo; S.retTo = null; S.cur = r.name; S.fromPad = r.fromPad; S.focusKey = r.focus; S.pvKey = null; renderScreen(); return; }
+  S.pvKey = null; if ($('popLayer')) $('popLayer').style.display = 'none';
   if (S.fromPad) { S.cur = null; S.focusKey = null; $('padHome').style.display = 'flex'; $('padScreen').style.display = 'none'; updateCoins(); padAlerts(); padSelect(padSel); }
   else closePad(true);
 }
@@ -1748,34 +1818,159 @@ function teamView() {
   }
   return save.team.map((k, i) => ({ kind: i === 0 ? 'me' : 'cpu', key: k }));
 }
+// =====================================================================
+//  メニューの左側：キャラの3Dモデル（専用カメラで描いて、左の枠に写す）と性能
+// =====================================================================
+const PV = { cam: null, model: null, key: null, el: null, on: false, rot: 0, ready: false };
+const PV_X = 1000;
+function pvInit() {
+  if (PV.ready) return; PV.ready = true;
+  const c = new Entity('pvCam');
+  c.addComponent('camera', { clearColor: new Color(.66, .58, .40), fov: 24, nearClip: .5, farClip: 40, priority: 10, toneMapping: TONEMAP_ACES, gammaCorrection: GAMMA_SRGB });
+  c.setPosition(PV_X, 1.45, 7.4); c.lookAt(PV_X, 1.3, 0);
+  c.enabled = false; app.root.addChild(c); PV.cam = c;
+  // 足もとの丸い影と台
+  const base = new Entity('pvBase'); app.root.addChild(base);
+  root = base; cyl(cm('#3b352a'), PV_X, .02, 0, 1.0, .04); cyl(cm('#8b7d55'), PV_X, -.06, 0, 1.15, .12); root = app.root;
+  app.on('frameend', pvCopy);
+}
+function pvShow(key, el) {
+  pvInit();
+  PV.el = el;
+  if (key !== PV.key) {
+    if (PV.model) PV.model.root.destroy();
+    PV.model = makeChar(crewByKey[key]); PV.key = key;
+    PV.model.root.setLocalPosition(PV_X, 0, 0);
+    PV.model.arms[0].setLocalEulerAngles(0, 0, -12); PV.model.arms[1].setLocalEulerAngles(-25, 0, 12);
+  }
+  PV.on = true; PV.cam.enabled = true;
+}
+function pvHide() { PV.on = false; PV.el = null; if (PV.cam) PV.cam.enabled = false; }
+function pvTick(dt) {
+  if (!PV.on) return;
+  if (!PV.el || !PV.el.isConnected || !$('pad').classList.contains('on')) { pvHide(); return; }
+  const W = canvas.width, H = canvas.height, r = PV.el.getBoundingClientRect(), k = W / Math.max(1, canvas.clientWidth);
+  const pw = Math.max(2, Math.round(r.width * k)), ph = Math.max(2, Math.round(r.height * k));
+  const rect = new Vec4(0, 0, Math.min(1, pw / W), Math.min(1, ph / H));
+  PV.cam.camera.rect = rect; PV.cam.camera.scissorRect = rect;
+  PV.pw = pw; PV.ph = ph;
+  // 縦長の枠に合わせて、カメラの距離を変える
+  const asp = pw / ph; PV.cam.setPosition(PV_X, 1.45, asp < .8 ? 7.4 / Math.max(.55, asp) * .8 : 7.4);
+  PV.rot += dt * .55;
+  if (PV.model) {
+    const m = PV.model;
+    m.root.setLocalEulerAngles(0, Math.sin(PV.rot) * 35, 0);
+    m.body.setLocalPosition(0, Math.sin(PV.rot * 4) * .02, 0);
+    if (m.head) m.head.setEulerAngles(0, 0, 0);
+    const f = m.root.findByName('float'); if (f) f.setLocalPosition(0, .25 + Math.sin(PV.rot * 5) * .06, .2);
+  }
+}
+function pvCopy() {
+  if (!PV.on || !PV.el || !PV.pw) return;
+  const el = PV.el;
+  if (el.width !== PV.pw || el.height !== PV.ph) { el.width = PV.pw; el.height = PV.ph; }
+  try { el.getContext('2d').drawImage(canvas, 0, canvas.height - PV.ph, PV.pw, PV.ph, 0, 0, PV.pw, PV.ph); } catch (e) { }
+}
+const STAT_COL = { hp: '#5f8a45', chi: '#a9402f', waz: '#6f4f96', mam: '#4f6f86', sub: '#3f7f78', kai: '#8b7d55' };
+function cpHead(key) {
+  const c = crewByKey[key], cs = chOf(key);
+  return `<span class="role big" style="background:${ROLE[c.role][1]}">${c.role}</span><b class="cpname">${c.name}</b>
+    <span class="cplv"><small>レベル</small>${cs.lv}</span><span class="cprole" style="color:${ROLE[c.role][1]}">${ROLE[c.role][0]}</span>`;
+}
+function cpStats(key, next) {
+  const cs = chOf(key), st = totalStats(key), nx = next && cs.lv < 99 ? totalStats(key, cs.lv + 1) : null;
+  const e = cs.eq != null && eqById(cs.eq);
+  return [...STAT_NAMES, ['kai', 'かいしん']].map(([k, n]) => `<div class="srow"><span class="k" style="background:${STAT_COL[k]}">${n}</span><b>${st[k]}${k === 'kai' ? '%' : ''}</b>${nx && k !== 'kai' ? `<span class="up">+${nx[k] - st[k]}</span>` : ''}</div>`).join('')
+    + `<div class="eqline">${e ? icEq(e.t, e.r, 34) : '<span class="noeq">なし</span>'}<div><small>そうび</small><b>${e ? eqName(e) : '—'}</b></div></div>`;
+}
+function cpMoves(key) {
+  const c = crewByKey[key], ml = moveLv(chOf(key).lv);
+  return c.moves.map((m, i) => `<div class="mv2">${icSk(i, c.role, 34)}<div><small>${MOVE_TYPES[i]}</small><b>${m}</b></div><span>Lv${ml}</span></div>`).join('');
+}
+function charPanel(key, o = {}) {
+  return `<div class="card cp"><div class="cphead" id="cpHead">${cpHead(key)}</div>
+    <div class="cpbody"><div class="cpstage"><canvas class="pv3d" id="pv3d"></canvas><span class="tac">さくせん：${TACTICS[save.tactic]}</span></div>
+      <div class="cpstats" id="cpStats">${cpStats(key, o.next)}</div></div>
+    <div class="cpmoves" id="cpMoves">${cpMoves(key)}</div></div>`;
+}
+// 右側で項目をえらぶと、左の性能と3Dモデルが切りかわる
+function pvFocus(key) {
+  if (!key || !crewByKey[key] || !$('cpHead')) return;
+  S.pvKey = key;
+  $('cpHead').innerHTML = cpHead(key); $('cpStats').innerHTML = cpStats(key, S.cur === 'ikusei'); $('cpMoves').innerHTML = cpMoves(key);
+  pvShow(key, $('pv3d'));
+}
+function closePop(st) { st.pop = null; S.focusKey = S.retFocus || null; }
+function openPop(st, kind) { S.retFocus = S.focusKey; st.pop = kind; S.focusKey = null; }
+
 SCREENS.nakama = () => {
-  const N = S.nk; N.pick ??= save.team[0];
-  const slots = teamView(), list = CREW.filter(c => N.filter === 'all' || c.role === N.filter);
+  const N = S.nk; N.mode ??= 'circle';
+  const slots = teamView();
+  const cur = slots[N.slot] || slots[0];
+  let right, pop = '', desc;
+  if (N.mode === 'list') {
+    const list = CREW.filter(c => N.filter === 'all' || c.role === N.filter);
+    right = `<div class="card" style="padding:10px 12px;display:flex;flex-direction:column;min-height:0">
+      <div style="display:flex;gap:6px;align-items:center"><span class="lbl">いれかえ：${N.slot === 0 ? 'リーダー' : 'CPU ' + N.slot}</span><span class="mono" style="margin-left:6px">仲間 ${ownedCrew().length}/${CREW.length}</span><span style="margin-left:auto"></span>${[['all', '全員'], ['A', 'A'], ['T', 'T'], ['R', 'R'], ['H', 'H']].map(([f, l]) => `<button class="pill ${N.filter === f ? 'on' : ''}" data-act="filter:${f}">${l}</button>`).join('')}</div>
+      <div class="rows">${list.map(c => { const ti = save.team.indexOf(c.key);
+        if (!owned(c.key)) return `<div class="row unk" data-act="locked">${faceImg(c.key, 34, true)}<b>？？？</b><span style="margin-left:auto" class="small">屋上のガシャで仲間に</span>${roleTag(c.role)}</div>`;
+        return `<div class="row lrow" data-act="nkCand:${c.key}" data-pv="${c.key}">${ti >= 0 ? `<span class="tape">${ti === 0 ? 'リーダー' : '出動中'}</span>` : '<span class="tape off"></span>'}${faceImg(c.key, 34)}<b>${c.name}</b><span style="margin-left:auto"></span>${roleTag(c.role)}<span class="lvtag">Lv${chOf(c.key).lv}</span></div>`; }).join('')}</div></div>`;
+    desc = '入れる隊員をえらんで、Enter かクリック';
+    if (N.pop === 'confirm') pop = `<div class="pop confirm"><div class="ptxt"><b>${crewByKey[N.cand].name}</b> を<br>${N.slot === 0 ? 'リーダー' : '出動メンバー'}に選びますか？</div>
+      <div class="pbtns"><button class="pb yes" data-act="nkYes">はい</button><button class="pb" data-act="nkNo">いいえ</button></div></div>`;
+  } else {
+    const pos = ['top', 'left', 'right', 'bottom'];
+    right = `<div class="card dark ringcard">
+      <div class="ringhead"><span class="lbl">出動メンバー</span><span class="mono">${NET.on ? 'オンライン　／　' : ''}さくせん：${TACTICS[save.tactic]}</span></div>
+      <div class="ringwrap"><div class="wing l"></div><div class="wing r"></div><div class="ring"><div class="hub"></div>
+        ${slots.map((sl, i) => `<div class="rslot ${pos[i]} ${sl.key ? '' : 'empty'}" data-act="nkSlot:${i}"${sl.key ? ` data-pv="${sl.key}"` : ''}>
+          <span class="rtag" style="background:${sl.kind === 'me' ? '#a9402f' : sl.kind === 'net' ? '#5f8a45' : '#4f6f86'}">${sl.kind === 'me' ? 'リーダー' : sl.kind === 'net' ? esc(sl.name) : 'CPU'}</span>
+          ${sl.key ? faceImg(sl.key, 70) : '<span class="face empty" style="width:70px;height:70px">＋</span>'}
+          <span class="rlv">${sl.key ? crewByKey[sl.key].role + ' Lv' + (sl.lv ?? chOf(sl.key).lv) : 'あき'}${NET.on && sl.kind !== 'cpu' ? (sl.ready ? ' ✔' : '') : ''}</span></div>`).join('')}
+      </div></div>
+      <div class="mono" style="text-align:center">隊員をえらんで Enter かクリック</div></div>`;
+    desc = N.slot === 0 ? 'リーダーは自分が操作する隊員です' : 'CPU の隊員がいっしょに出動します';
+    if (N.pop === 'menu') {
+      const k = cur.key, isMe = N.slot === 0, canEdit = cur.kind !== 'net';
+      pop = `<div class="pop menu"><div class="phd">なにをする？</div>
+        ${canEdit ? `<button class="pm" data-act="nkList">いれかえ</button>` : ''}
+        ${k && (isMe || cur.kind === 'cpu') ? `<button class="pm" data-act="nkGo:soubi">そうび</button><button class="pm" data-act="nkGo:ikusei">いくせい</button>` : ''}
+        <button class="pm" data-act="tactic">さくせん：${TACTICS[save.tactic]}</button>
+        ${!isMe && k && cur.kind === 'cpu' && !NET.on ? `<button class="pm" data-act="nkRemove">ひかえにもどす</button>` : ''}</div>`;
+    }
+  }
+  const pvKey = S.pvKey && crewByKey[S.pvKey] ? S.pvKey : (cur.key || save.team[0]);
   return {
-    title: 'メンバー編成', sub: 'MEMBER / 出動するメンバーを決める', cols: '1.05fr 1fr',
-    html: `${whoPanel(N.pick)}
-    <div style="display:grid;grid-template-rows:auto 1fr;gap:12px;min-height:0">
-      <div class="card dark" style="padding:10px 12px">
-        <span class="lbl">出動メンバー</span><span class="mono" style="float:right">さくせん：${TACTICS[save.tactic]}${NET.on ? '　／　オンライン' : ''}</span>
-        <div class="slots">${slots.map((s, i) => `<div class="slot ${N.slot === i ? 'sel' : ''}" data-act="slot:${i}">
-          <div class="who2" style="background:${s.kind === 'me' ? '#a9402f' : s.kind === 'net' ? '#5f8a45' : '#4f6f86'}">${s.kind === 'me' ? 'リーダー（自分）' : s.kind === 'net' ? esc(s.name) : 'CPU'}</div>
-          ${s.key ? faceImg(s.key, 58) : '<span class="face empty" style="width:58px;height:58px">＋</span>'}
-          <div class="sn">${s.key ? crewByKey[s.key].name : 'あき'}</div>
-          <div class="mono">${s.key ? crewByKey[s.key].role + '・Lv' + (s.lv ?? chOf(s.key).lv) : '—'}${NET.on && s.kind !== 'cpu' ? (s.ready ? ' ✔OK' : ' 準備中') : ''}</div></div>`).join('')}</div>
-      </div>
-      <div class="card" style="padding:10px 12px;display:flex;flex-direction:column;min-height:0">
-        <div style="display:flex;gap:6px;align-items:center"><span class="lbl">隊員名簿</span><span class="mono" style="margin-left:6px">仲間 ${ownedCrew().length}/${CREW.length}</span><span style="margin-left:auto"></span>${[['all', '全員'], ['A', 'A'], ['T', 'T'], ['R', 'R'], ['H', 'H']].map(([f, l]) => `<button class="pill ${N.filter === f ? 'on' : ''}" data-act="filter:${f}">${l}</button>`).join('')}</div>
-        <div class="rows">${list.map(c => { const ti = save.team.indexOf(c.key); if (!owned(c.key)) return `<div class="row unk" data-act="locked">
-          <span class="mono" style="width:60px"></span>${faceImg(c.key, 30, true)}<b>？？？</b><span style="margin-left:auto" class="small">屋上のガシャで仲間に</span>${roleTag(c.role)}<span class="mono" style="width:54px;text-align:right">${'★'.repeat(CREW_RARE[c.key])}</span></div>`; return `<div class="row ${N.pick === c.key ? 'on' : ''}" data-act="pick:${c.key}">
-          <span class="mono" style="width:60px">${ti === 0 ? '★リーダー' : ti > 0 ? 'CPU' : ''}</span>${faceImg(c.key, 30)}<b>${c.name}</b><span style="margin-left:auto"></span>${roleTag(c.role)}<span class="mono" style="width:54px;text-align:right">Lv${chOf(c.key).lv}</span></div>`; }).join('')}</div>
-      </div>
-    </div>`,
-    desc: N.slot === 0 ? 'リーダーは自分が操作する隊員です。名簿でえらんで「いれかえ」' : 'CPU の隊員がいっしょに出動します。名簿でえらんで「いれかえ」',
-    foot: B('swap', 'いれかえ', 'Enter', 'go') + (N.slot > 0 && !NET.on ? B('remove', 'はずす', 'X') : '') + B('tactic', 'さくせん：' + TACTICS[save.tactic], 'Q') + (NET.on ? B('ready', (NET.myReady ? '準備OK を取り消す' : '準備OK'), 'R', NET.myReady ? '' : 'go') : ''),
+    title: 'メンバー編成', sub: 'MEMBER / 出動するメンバーを決める', cols: '1.12fr 1fr',
+    html: charPanel(pvKey) + right, pop, desc,
+    foot: (N.mode === 'circle' ? B('tactic', 'さくせん', 'Q') : '') + (NET.on ? B('ready', (NET.myReady ? '準備OK を取り消す' : '準備OK'), 'R', NET.myReady ? '' : 'go') : ''),
+    after() { pvShow(pvKey, $('pv3d')); },
   };
 };
 const ACT = {
   back: screenBack,
+  nkSlot(i) {
+    const N = S.nk; N.slot = +i; const sl = teamView()[+i];
+    if (!sl.key) { if (sl.kind === 'net') return; N.mode = 'list'; S.focusKey = null; renderScreen(); return; }
+    openPop(N, 'menu'); renderScreen();
+  },
+  nkList() { const N = S.nk; closePop(N); N.mode = 'list'; S.focusKey = null; renderScreen(); },
+  nkCand(k) { const N = S.nk; N.cand = k; S.pvKey = k; openPop(N, 'confirm'); renderScreen(); },
+  nkNo() { closePop(S.nk); Snd.lock = false; Snd.back(); Snd.failed = true; renderScreen(); },
+  nkYes() {
+    const N = S.nk; N.pick = N.cand; closePop(N); N.mode = 'circle';
+    const before = save.team.join();
+    ACT.swap();
+    if (save.team.join() === before && Snd.failed) { N.mode = 'list'; renderScreen(); return; }
+    S.pvKey = N.cand; S.focusKey = 'nkSlot:' + N.slot; toast(`${crewByKey[N.cand].name}を出動メンバーにした`); renderScreen();
+  },
+  nkRemove() { const N = S.nk; closePop(N); if (N.slot > 0) { save.team[N.slot] = null; dirty(); } renderScreen(); },
+  nkGo(scr) {
+    const N = S.nk, k = teamView()[N.slot].key; closePop(N);
+    if (scr === 'soubi') { S.sb.key = k; S.sb.pick = null; } else { S.ik.key = k; S.ik.pop = null; }
+    S.retTo = { name: 'nakama', fromPad: S.fromPad, focus: 'nkSlot:' + N.slot };
+    S.cur = scr; S.focusKey = null; S.pvKey = k; renderScreen();
+  },
   slot(i) { S.nk.slot = +i; const k = teamView()[+i].key; if (k) S.nk.pick = k; Snd.move(); renderScreen(); },
   filter(f) { S.nk.filter = f; Snd.move(); renderScreen(); },
   pick(k) { S.nk.pick = k; Snd.move(); renderScreen(); },
@@ -1797,7 +1992,7 @@ const ACT = {
     Snd.ok(); dirty(); netSendMe(true); renderScreen();
   },
   remove() { const i = S.nk.slot; if (i === 0) return; save.team[i] = null; Snd.back(); dirty(); renderScreen(); },
-  tactic() { save.tactic = (save.tactic + 1) % TACTICS.length; Snd.move(); dirty(); renderScreen(); },
+  tactic() { save.tactic = (save.tactic + 1) % TACTICS.length; dirty(); renderScreen(); },
   ready() { NET.myReady = !NET.myReady; Snd.ok(); netSendMe(true); renderScreen(); },
 };
 
@@ -1815,31 +2010,65 @@ function drawMeter(cv, lv) {
 }
 SCREENS.ikusei = () => {
   const I = S.ik; I.key ??= save.team[0];
-  const c = crewByKey[I.key], cs = chOf(I.key), max = cs.lv >= 99, need = lvCost(cs.lv), ml = moveLv(cs.lv);
-  const nextAt = ml >= 10 ? null : ml * 10;
+  const list = ownedCrew();
+  if (!owned(I.key)) I.key = list[0].key;
+  const pvKey = S.pvKey && owned(S.pvKey) ? S.pvKey : I.key;
+  const left = (k) => { const cs = chOf(k); return cs.lv >= 99 ? 'MAX' : fmt(lvCost(cs.lv) - (cs.xp || 0)); };
+  const right = `<div class="card" style="padding:10px 12px;display:flex;flex-direction:column;min-height:0">
+    <div style="display:flex;gap:6px;align-items:center"><span class="lbl">レベルアップ</span><span class="mono" style="margin-left:auto">次のLvまで（朕銭）</span></div>
+    <div class="rows">${list.map(c => { const ti = save.team.indexOf(c.key), cs = chOf(c.key), pct = cs.lv >= 99 ? 100 : Math.floor((cs.xp || 0) / lvCost(cs.lv) * 100);
+      return `<div class="row lrow ${I.key === c.key ? 'on' : ''}" data-act="ikPick:${c.key}" data-pv="${c.key}">${ti >= 0 ? `<span class="tape">${ti === 0 ? 'リーダー' : '出動中'}</span>` : '<span class="tape off"></span>'}${faceImg(c.key, 34)}<b>${c.name}</b><span style="margin-left:auto"></span>${roleTag(c.role)}<span class="lvtag">Lv${cs.lv}</span>
+        <span class="xpbar"><i style="width:${pct}%"></i><em>${left(c.key)}</em></span></div>`; }).join('')}</div></div>`;
+  let pop = '';
+  if (I.pop === 'charge') {
+    const c = crewByKey[I.key], cs = chOf(I.key), max = cs.lv >= 99, cost = lvCost(cs.lv), xp = cs.xp || 0;
+    pop = `<div class="pop charge"><div class="phd">Enter／ボタン長押しで朕銭チャージ</div>
+      <div class="chn">${faceImg(I.key, 40)}<b>${c.name}</b><span class="lvtag big" id="chgLv">Lv${cs.lv}</span></div>
+      <div class="chbar"><span class="coin big"></span><div class="chg"><i id="chgFill" style="width:${max ? 100 : xp / cost * 100}%"></i><em id="chgLeft">${max ? 'レベルは最大です' : 'あと ' + fmt(cost - xp)}</em></div></div>
+      ${max ? '' : `<button class="pb yes big" data-act="charge" id="chgBtn">チャージ！</button>`}
+      <div class="mono" style="color:#4f4a3c">持っている朕銭 <span class="coinsTxt"></span>　／　はなすと止まります</div>
+      <div class="pbtns"><button class="pb" data-act="ikStop">やめる</button></div></div>`;
+  }
   return {
-    title: 'いくせい', sub: 'TRAINING / 朕銭でレベルを上げる', cols: '1.25fr .9fr',
-    html: `${whoPanel(I.key, { next: true })}
-    <div style="display:grid;grid-template-rows:1fr auto;gap:12px;min-height:0">
-      <div class="card dark" style="padding:10px 14px;display:flex;flex-direction:column;gap:8px;align-items:center">
-        <span class="lbl" style="align-self:flex-start">出力メーター</span>
-        <canvas id="meter" width="300" height="170" style="width:250px"></canvas>
-        <div style="font-weight:900;font-size:18px">${max ? 'レベルは最大です' : `必要な朕銭 <span class="big crtTxt">${fmt(need)}</span>`}</div>
-        <div style="display:flex;gap:10px">${max ? '' : `<button class="btn go" data-act="hold:lvup"><span class="key">Enter</span>Lvアップ</button>${B('lvmax', '上げられるだけ', 'Shift')}`}</div>
-        <div class="mono">長押しで連続 ／ 上限 Lv99 ／ 持っている朕銭 <span class="coinsTxt"></span></div>
-      </div>
-      <div class="card" style="padding:10px 12px">
-        <span class="lbl">技のレベル</span>
-        <div style="font-weight:800;font-size:13px;margin:6px 0">技は隊員のレベルで自動で上がります。${nextAt ? `次は <b class="ng">Lv${nextAt}</b> で技Lv${ml + 1}` : '技のレベルは最大（Lv10）です'}</div>
-        <div class="pipbar">${Array.from({ length: 10 }, (_, i) => `<span class="${i < ml ? 'f' : ''}"></span>`).join('')}</div>
-      </div>
-    </div>`,
-    desc: `朕銭を使って、${c.name}のレベルを上げます`,
-    foot: B('ikPrev', '前の隊員', 'Z') + B('ikNext', '次の隊員', 'C'),
-    after() { drawMeter($('meter'), cs.lv); },
+    title: 'いくせい', sub: 'TRAINING / 朕銭でレベルを上げる', cols: '1.12fr 1fr',
+    html: charPanel(pvKey, { next: true }) + right, pop,
+    desc: I.pop === 'charge' ? '長押しするほど速くチャージされます。ゲージがいっぱいになると Lv が上がります' : 'レベルを上げる隊員をえらんで、Enter かクリック',
+    foot: I.pop ? '' : B('lvmax', '上げられるだけ', 'Shift'),
+    after() { pvShow(pvKey, $('pv3d')); },
   };
 };
+// ---- 朕銭チャージ（長押しで、どんどんゲージが増える） ----
+function startCharge() { const I = S.ik; if (I.pop !== 'charge' || I.holding) return; I.holding = true; I.ht = 0; I.tick = 0; $('chgBtn') && $('chgBtn').classList.add('hold'); }
+function stopCharge() { const I = S.ik; if (!I.holding) return; I.holding = false; $('chgBtn') && $('chgBtn').classList.remove('hold'); writeSave(); }
+function chargeTick(dt) {
+  const I = S.ik; if (!I.holding) { I.t0 = 0; return; }
+  if (I.pop !== 'charge' || S.cur !== 'ikusei') { I.holding = false; return; }
+  // 重い端末でも同じ速さになるよう、実際の経過時間で進める
+  const now = performance.now(); dt = I.t0 ? Math.min(.25, (now - I.t0) / 1000) : dt; I.t0 = now;
+  const cs = chOf(I.key);
+  if (cs.lv >= 99) { stopCharge(); renderScreen(); return; }
+  I.ht += dt;
+  // 押し続けるほど速くなる（はじめは1レベル約0.6秒、2秒たつと1秒に十数レベル）
+  let budget = lvCost(cs.lv) * (1.6 + I.ht * I.ht * 4) * dt, ups = 0;
+  while (budget > 0 && cs.lv < 99) {
+    const cost = lvCost(cs.lv), amt = Math.min(Math.ceil(budget), cost - (cs.xp || 0), save.coins);
+    if (amt <= 0) break;
+    save.coins -= amt; cs.xp = (cs.xp || 0) + amt; budget -= amt;
+    if (cs.xp >= cost) { cs.xp -= cost; cs.lv++; ups++; }
+  }
+  if (cs.lv >= 99) cs.xp = 0;
+  dirty();
+  if (ups) { Snd.up(); const keep = I.ht; renderScreen(); I.holding = cs.lv < 99; I.ht = keep; if (I.holding && $('chgBtn')) $('chgBtn').classList.add('hold'); if (!I.holding) writeSave(); return; }
+  if (save.coins <= 0 || (cs.xp || 0) < lvCost(cs.lv) && save.coins < 1) { stopCharge(); Snd.err(); toast('朕銭が足りません'); return; }
+  const cost = lvCost(cs.lv);
+  if ((I.tick += dt) > .07) { I.tick = 0; Snd.beep(260 + (cs.xp / cost) * 700, .03, 'square', .25); }
+  const f = $('chgFill'); if (f) f.style.width = (cs.xp / cost * 100) + '%';
+  const l = $('chgLeft'); if (l) l.textContent = 'あと ' + fmt(cost - cs.xp);
+  updateCoins();
+}
 Object.assign(ACT, {
+  ikPick(k) { S.ik.key = k; S.pvKey = k; openPop(S.ik, 'charge'); renderScreen(); },
+  ikStop() { stopCharge(); closePop(S.ik); Snd.lock = false; Snd.back(); Snd.failed = true; renderScreen(); },
   lvup() {
     const cs = chOf(S.ik.key);
     if (cs.lv >= 99) { stopHold(); return; }
@@ -1848,6 +2077,7 @@ Object.assign(ACT, {
     save.coins -= need; cs.lv++; Snd.up(); dirty(); renderScreen();
   },
   lvmax() {
+    if (S.pvKey && owned(S.pvKey)) S.ik.key = S.pvKey;
     const cs = chOf(S.ik.key); let n = 0;
     while (cs.lv < 99 && save.coins >= lvCost(cs.lv)) { save.coins -= lvCost(cs.lv); cs.lv++; n++; }
     if (!n) { Snd.err(); toast('朕銭が足りません'); return; }
@@ -2961,6 +3191,8 @@ addEventListener('keydown', (e) => {
       if (k === 'ArrowRight' || k === 'KeyD') return navMove(1, 0);
       if (k === 'ArrowUp' || k === 'KeyW') return navMove(0, -1);
       if (k === 'ArrowDown' || k === 'KeyS') return navMove(0, 1);
+      if ((k === 'Enter' || k === 'Space') && S.cur === 'ikusei' && S.ik.pop === 'charge' && $('chgBtn') && $('chgBtn').classList.contains('kfocus')) { if (!e.repeat) startCharge(); return; }
+      if ((k === 'Enter' || k === 'Space') && e.repeat) return;
       if ((k === 'Enter' || k === 'Space') && navEnter()) return;
       const foot = [...$('scrFoot').querySelectorAll('[data-act]')];
       const byKey = (label) => foot.find(b => (b.querySelector('.key') || {}).textContent === label);
@@ -2990,7 +3222,7 @@ addEventListener('keydown', (e) => {
   if (/^Digit[1-4]$/.test(k)) { sendStamp(+k.slice(5) - 1); return; }
   keys.add(k);
 });
-addEventListener('keyup', (e) => keys.delete(e.code));
+addEventListener('keyup', (e) => { keys.delete(e.code); if (e.code === 'Enter' || e.code === 'Space') stopCharge(); });
 addEventListener('blur', () => keys.clear());
 
 // =====================================================================
@@ -3006,6 +3238,7 @@ function placeTag(el, a, dy) {
   el.style.transform = `translate(${scrV.x}px, ${scrV.y}px) translate(-50%, -100%)`;
 }
 function uiTick(dt) {
+  pvTick(dt); chargeTick(dt);
   // 話しかけられる相手
   const p = player.pos, fl = state.floor;
   nearNpc = null; let best = 1.9;
