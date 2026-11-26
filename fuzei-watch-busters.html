@@ -117,6 +117,41 @@
   .chg { position:relative; flex:1; height:42px; border:4px solid var(--ink); border-radius:8px; background:#2b2a24; overflow:hidden; }
   .chg i { position:absolute; left:0; top:0; bottom:0; background:linear-gradient(#f0d36a,#c9952c); }
   .chg em { position:relative; display:block; text-align:center; line-height:34px; font:900 22px "Courier New",monospace; color:#fff6df; font-style:normal; text-shadow:0 2px 0 #000; }
+  /* 出動 */
+  .dsp { display:flex; flex-direction:column; padding:0 0 12px; background:linear-gradient(#d9c98f,#c4b27a); }
+  .dhead, .mshead { display:flex; align-items:center; gap:12px; padding:8px 16px; background:linear-gradient(90deg,#2e2a24,#4a463a); color:var(--cream); border-bottom:4px solid var(--ink);
+    background-image:linear-gradient(90deg,#2e2a24,#4a463a), repeating-linear-gradient(135deg,transparent 0 10px,#0002 10px 20px); }
+  .dhead b, .mshead b { font-size:26px; letter-spacing:.04em; text-shadow:0 2px 0 #000; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .drec { display:flex; align-items:center; gap:8px; font:900 32px "Courier New",monospace; color:var(--hazard); text-shadow:0 2px 0 #000; }
+  .drec small { font:900 11px/1.1 sans-serif; color:var(--cream); text-align:right; }
+  .dgrid { flex:1; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:12px; padding:12px 14px 0; min-height:0; }
+  .dcard { position:relative; display:flex; align-items:center; gap:14px; padding:10px 14px; border:4px solid var(--ink); border-radius:14px; box-shadow:0 5px 0 var(--ink);
+    background:linear-gradient(100deg,#efe7cd 0 46%,color-mix(in srgb,var(--rc) 35%,#efe7cd) 100%); min-height:0; overflow:visible; }
+  .dcard.lead { background:linear-gradient(100deg,#f3e3c6 0 46%,color-mix(in srgb,var(--rc) 45%,#f3e3c6) 100%); }
+  .dcard .face { box-shadow:0 0 0 5px var(--rc), 0 6px 0 5px var(--ink); }
+  .dtag { position:absolute; left:10px; top:-14px; z-index:1; background:var(--rc); color:#f4ecd8; border:3px solid var(--ink); font-weight:900; font-size:13px; padding:0 10px; transform:rotate(-4deg); max-width:60%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .dcard.lead .dtag { background:var(--red); }
+  .dinfo { min-width:0; flex:1; } .drole { display:flex; align-items:center; gap:6px; font-weight:900; font-size:17px; color:var(--rc); }
+  .dname { font-weight:900; font-size:22px; margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .dlv { font:900 15px monospace; color:#4f4a3c; }
+  .okpop { position:absolute; left:92px; top:6px; background:#9fe28c; color:var(--ink); border:3px solid var(--ink); border-radius:12px 12px 12px 2px; font-weight:900; font-size:18px; padding:0 10px; box-shadow:0 3px 0 var(--ink); animation:okp .35s ease-out; }
+  @keyframes okp { from { transform:scale(.3); } 70% { transform:scale(1.15); } }
+  .dside { display:flex; flex-direction:column; gap:14px; padding:12px 14px; }
+  .dbtn { border:5px solid var(--ink); border-radius:14px; background:linear-gradient(#efe7cd,#cfc39a); color:var(--ink); font-weight:900; font-size:22px; padding:10px; cursor:pointer; box-shadow:0 6px 0 var(--ink); transform:skew(-8deg); }
+  .dbtn.go { font-size:40px; padding:18px 10px; background:linear-gradient(#f0d36a,#c9952c); letter-spacing:.08em; }
+  .dbtn.go.done { font-size:22px; background:linear-gradient(#bfe8a8,#7fb35f); }
+  .dbtn.off { background:linear-gradient(#a9a693,#87846f); color:#5f5a4c; }
+  .dwait { border:4px dashed #cfc7ad88; border-radius:12px; padding:14px; text-align:center; font-weight:900; color:#d9d2bb; }
+  .dcap { margin-top:auto; display:flex; align-items:flex-end; gap:8px; }
+  .dcap img { width:96px; filter:drop-shadow(0 3px 0 #000); }
+  .dsay { flex:1; background:#10150e; color:var(--crt); border:3px solid var(--ink); border-radius:10px 10px 10px 2px; padding:8px 12px; font-weight:900; }
+  .ms { display:flex; flex-direction:column; padding:0; background:linear-gradient(#e9dfb8,#d6c88f); }
+  .msbody { display:grid; grid-template-columns:200px 1fr; gap:14px; padding:14px; }
+  .msboss { position:relative; border:4px solid var(--ink); border-radius:14px; background:#2b2a24; height:200px; display:grid; place-items:center; overflow:visible; }
+  .msboss img { max-width:90%; max-height:90%; filter:grayscale(1) sepia(1) hue-rotate(40deg) saturate(2); }
+  .msinfo { display:grid; grid-template-columns:1fr 1fr; gap:8px; align-content:start; }
+  .mf { background:#f4ecd8; border:3px solid var(--ink); border-radius:8px; padding:4px 10px; } .mf.wide { grid-column:1/-1; }
+  .mf small { display:block; color:var(--red); font-weight:900; font-size:12px; } .mf b { font-size:18px; }
+  .msdesc { margin:0 14px 14px; background:#f4ecd8; border:3px solid var(--ink); border-radius:10px; padding:10px 14px; font-weight:800; font-size:16px; line-height:1.6; }
   .kfocus { outline:4px solid #9fe28c !important; outline-offset:2px; box-shadow:0 0 0 7px #9fe28c55 !important; position:relative; z-index:1; }
   .btn:active { transform:translateY(2px); box-shadow:0 2px 0 var(--ink); }
   .btn.go { background:linear-gradient(#d9bd5c,#b39436); } .btn.red { background:linear-gradient(#b5503d,#7d2a1e); color:#f0e3cf; } .btn.off { background:#9c978a; color:#5f5a4c; } .btn.sm { padding:1px 8px; font-size:13px; }
@@ -1436,7 +1471,7 @@ function placeNpcs() {
   const craft = makeHenry('craft'); craft.pos = new Vec3(12.2, 0, -10.0); craft.floor = 0; craft.face = 0; craft.fixed = true;
   craft.talk = { name: '職人ヘンリー', text: 'おう、素材を持ってきたか？ 装備を作るのも、きたえるのも、お助けアイテムを買うのも、ここだ。', kind: 'craft' };
   const capt = makeHenry('cap'); capt.pos = new Vec3(12.5, FH, -9.0); capt.floor = 1; capt.face = 0; capt.fixed = true;
-  capt.talk = { name: 'ヘンリー隊長', text: '出動要請が来ている。受けるクエストを選んでくれ。', kind: 'quest' };
+  capt.talk = { name: 'ヘンリー隊長', text: '出動の準備はいいか？ ミッションを選んで、出動するんだ！', kind: 'quest' };
   actors.push(craft, capt); npcs.push(craft, capt);
   // 調べられるもの
   npcs.push({ pos: new Vec3(4.7, 0, -5.4), floor: 0, thing: true, talk: { name: '受付', kind: 'desk' } });
@@ -1786,7 +1821,7 @@ function closePad(silent) { stopCharge(); pvHide(); S.retTo = null; if (!silent 
 const S = { cur: null, fromPad: false, nk: { slot: 0, pick: null, filter: 'all' }, ik: { key: null }, sb: { key: null, pick: null }, mo: { tab: 0, sel: 0 }, zk: { tab: 0, sel: 0 }, mu: { mode: 'search', quest: 0, cmt: 0, open: 'pub', code: '' }, ws: { tab: 0, type: 'tongs', pick: null }, qs: { sel: 0 }, st: { row: 0 } };
 const SCREENS = {};
 function openScreen(name, fromPad) {
-  S.retTo = null; S.pvKey = null; S.nk.mode = 'circle'; S.nk.pop = null; S.ik.pop = null;
+  S.retTo = null; S.pvKey = null; S.nk.mode = 'circle'; S.nk.pop = null; S.ik.pop = null; S.qs.pop = null;
   if (name === 'multi' && !NET.on && S.mu.mode === 'search' && !NET.searched) { NET.searched = true; setTimeout(netSearch, 0); }
   if (!fromPad && !S.cur && !$('pad').classList.contains('on')) Snd.menu();
   S.cur = name; S.fromPad = !!fromPad; state.ui = 'pad'; S.focusKey = null;
@@ -1807,7 +1842,7 @@ function renderScreen() {
   m.querySelectorAll('[data-act]').forEach(bindAct); $('scrFoot').querySelectorAll('[data-act]').forEach(bindAct);
   s.after && s.after();
   const items = navItems();
-  setFocus(items.find(e => (e.dataset.act || e.id) === S.focusKey) || (S.cur === 'gacha' && items.find(e => e.dataset.act === 'gcSpin')) || items.find(e => e.dataset.act === 'charge') || items.find(e => e.dataset.act === 'nkYes') || items.find(e => e.classList.contains('lrow')) || items[0], true);
+  setFocus(items.find(e => (e.dataset.act || e.id) === S.focusKey) || (S.cur === 'gacha' && items.find(e => e.dataset.act === 'gcSpin')) || items.find(e => e.dataset.act === 'charge') || items.find(e => e.dataset.act === 'nkYes') || items.find(e => e.dataset.act === 'qYes') || (S.cur === 'dispatch' && (items.find(e => e.dataset.act === (curMission() ? (isLead() ? 'dspGo' : 'dspReady') : (isLead() ? 'dspPick' : 'dspReady'))))) || items.find(e => e.classList.contains('lrow')) || items[0], true);
 }
 function bindAct(el) {
   const [act, ...args] = el.dataset.act.split(':');
@@ -1829,6 +1864,7 @@ function setFocus(el, quiet) {
   if (!el) return;
   el.classList.add('kfocus'); S.focusKey = el.dataset.act || el.id;
   if (el.dataset.pv && el.dataset.pv !== S.pvKey) pvFocus(el.dataset.pv);
+  if (el.dataset.mq != null) msFocus(el.dataset.mq);
   if (!quiet) el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 function navMove(dx, dy) {
@@ -1854,7 +1890,7 @@ function navEnter() {
 }
 function screenBack() {
   stopHold(); stopCharge(); Snd.back();
-  const st = { nakama: S.nk, ikusei: S.ik }[S.cur];
+  const st = { nakama: S.nk, ikusei: S.ik, quest: S.qs }[S.cur];
   if (st && st.pop) { closePop(st); renderScreen(); return; }
   if (S.cur === 'nakama' && S.nk.mode === 'list') { S.nk.mode = 'circle'; S.focusKey = 'nkSlot:' + S.nk.slot; renderScreen(); return; }
   if (S.retTo) { const r = S.retTo; S.retTo = null; S.cur = r.name; S.fromPad = r.fromPad; S.focusKey = r.focus; S.pvKey = null; renderScreen(); return; }
@@ -2026,7 +2062,7 @@ SCREENS.nakama = () => {
   return {
     title: 'メンバー編成', sub: 'MEMBER / 出動するメンバーを決める', cols: '1.12fr 1fr',
     html: charPanel(pvKey) + right, pop, desc,
-    foot: (N.mode === 'circle' ? B('tactic', 'さくせん', 'Q') : '') + (NET.on ? B('ready', (NET.myReady ? '準備OK を取り消す' : '準備OK'), 'R', NET.myReady ? '' : 'go') : ''),
+    foot: (N.mode === 'circle' ? B('tactic', 'さくせん', 'Q') : ''),
     after() { pvShow(pvKey, $('pv3d')); },
   };
 };
@@ -2415,28 +2451,100 @@ Object.assign(ACT, {
 });
 
 // =====================================================================
-//  出動指令（ヘンリー隊長）
+//  出動（ヘンリー隊長）：メンバーとミッションを確認して出動する
+//  ミッションはここで初めて選ぶ（オンラインではホストが選ぶ）。参加した人は「準備OK」を押す
 // =====================================================================
-SCREENS.quest = () => {
-  const Q = S.qs, q = QUESTS[Q.sel], acc = save.quest === q.key, cur = QUESTS.find(x => x.key === save.quest);
+const curMission = () => QUESTS.find(x => x.key === (NET.on && NET.room ? NET.room.quest : save.quest)) || null;
+const isLead = () => !NET.on || NET.host;
+const mmss = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+const RANK_OF = { 'ふつう': 1, 'むずかしい': 2, 'げきむず': 3 };
+function allReady() { return !NET.on || NET.room.members.every(m => m.host || m.ready); }
+SCREENS.dispatch = () => {
+  const q = curMission(), slots = teamView(), lead = isLead();
+  const ready = allReady(), canGo = lead && q && ready;
+  const cards = slots.map((sl, i) => {
+    const c = sl.key && crewByKey[sl.key], role = c ? ROLE[c.role] : null;
+    // OK のポップは、入ってきた人が「準備OK」を押したときだけ（ホストは出動を押す人なので出さない）
+    const ok = NET.on && (sl.kind === 'me' ? !NET.host && NET.myReady : sl.kind === 'net' && !sl.host && sl.ready);
+    const tag = sl.kind === 'me' ? (!NET.on ? 'リーダー' : NET.host ? 'ホスト（あなた）' : 'あなた') : sl.kind === 'net' ? (sl.host ? 'ホスト：' : '') + esc(sl.name) : 'CPU';
+    return `<div class="dcard ${i === 0 ? 'lead' : ''}" style="--rc:${role ? role[1] : '#6a6452'}">
+      <span class="dtag">${tag}</span>
+      ${c ? faceImg(sl.key, 96) : '<span class="face empty" style="width:96px;height:96px">？</span>'}
+      ${ok ? '<span class="okpop">OK!</span>' : ''}
+      <div class="dinfo"><div class="drole">${c ? `<span class="role" style="background:${role[1]}">${c.role}</span>${role[0]}` : '—'}</div>
+        <div class="dname">${c ? c.name : (NET.on ? '（ホストのCPU）' : 'あき')}</div>
+        <div class="dlv">${c ? 'Lv' + (sl.lv ?? chOf(sl.key).lv) : ''}</div></div></div>`;
+  }).join('');
+  const goBtn = lead
+    ? `<button class="dbtn go ${canGo ? '' : 'off'}" data-act="dspGo">出動!!</button>`
+    : `<button class="dbtn go ${NET.myReady ? 'done' : ''}" data-act="dspReady">${NET.myReady ? '準備OK！（取り消す）' : '準備OK'}</button>`;
+  const line = !q ? (lead ? 'まずはミッションを選ぶんだ！' : 'ホストがミッションを選ぶのを待て！')
+    : !ready ? '全員の準備OKを待っているぞ'
+    : lead ? 'ミッションを選んで出動するんだ！' : '準備はいいな？ ホストの出動を待て！';
   return {
-    title: '出動指令', sub: 'DISPATCH / ヘンリー隊長', cols: '1fr 1.1fr',
-    html: `<div class="card" style="padding:10px 12px;display:flex;flex-direction:column;gap:6px;min-height:0"><span class="lbl">出動要請</span>
-        <div class="rows">${QUESTS.map((x, i) => `<div class="row ${i === Q.sel ? 'on' : ''}" data-act="qSel:${i}">${faceImg(x.boss, 34)}<div><b>${x.name}</b> <span class="pill">${x.diff}</span><div class="small">おすすめ Lv${x.lv}以上　／　${x.area}</div></div>${save.quest === x.key ? '<span class="tape" style="margin-left:auto">受理中</span>' : ''}</div>`).join('')}</div></div>
-      <div class="card" style="padding:14px;display:flex;flex-direction:column;gap:12px">
-        <div style="display:flex;gap:14px;align-items:center"><div class="photo small">${`<img src="${F[crewByKey[q.boss].img].src}" style="filter:grayscale(1) sepia(1) hue-rotate(40deg) saturate(2)">`}</div>
-          <div><div class="h3">${q.name}</div><div class="b15">場所：${q.area}　／　難しさ：${q.diff}　／　おすすめ Lv${q.lv}以上</div></div></div>
-        <p style="margin:0;font-weight:700;line-height:1.6">${q.desc}</p>
-        <div class="card dark" style="padding:8px 12px"><span class="lbl">報酬</span><div class="b15" style="margin-top:6px"><span class="coin"></span> ${fmt(q.reward)} 朕銭　＋　${crewByKey[q.boss].name}の素材（★1〜★3）　＋　${crewByKey[q.boss].name}が正気にもどる</div></div>
+    title: '出動', sub: 'SORTIE / ヘンリー隊長', cols: '1.55fr 1fr',
+    html: `<div class="card dsp">
+        <div class="dhead"><b>${q ? q.name : 'ミッション未選択'}</b><span class="drec"><small>おすすめ<br>レベル</small>${q ? 'Lv ' + q.lv : '—'}</span></div>
+        <div class="dgrid">${cards}</div></div>
+      <div class="card dark dside">
+        <span class="lbl">ミッション</span>
+        ${lead ? `<button class="dbtn" data-act="dspPick">ミッションをえらぶ</button>` : '<div class="dwait">ミッションはホストが選びます</div>'}
+        ${goBtn}
+        <div class="dcap"><img src="${F.BHEN_FACE.src}"><div class="dsay">${line}</div></div>
       </div>`,
-    desc: cur ? `「${cur.name}」を受理中。1F の救急車に乗ると出動します` : 'クエストを選んで「受理する」を押してください',
-    foot: acc ? B('qCancel', '受理を取り消す', 'X') : B('qAccept', '受理する', 'Enter', 'go'),
+    foot: B('dspTeam', 'メンバー編成', 'Q') + B('dspBag', 'もちもの', 'Y'),
+  };
+};
+// ---- ミッションをえらぶ（左：くわしい内容、右：一覧） ----
+function msDetail(i) {
+  const q = QUESTS[i], boss = crewByKey[q.boss], done = (save.cleared || {})[q.key];
+  return `<div class="mshead"><b>${q.name}</b><span class="drec"><small>おすすめ<br>レベル</small>Lv ${q.lv}</span></div>
+    <div class="msbody">
+      <div class="msboss"><img src="${F[boss.img].src}"><span class="stamp">${done ? 'クリア済' : 'ブスイ反応'}</span></div>
+      <div class="msinfo">
+        <div class="mf wide"><small>もくてき</small><b>${boss.name}を正気にもどせ！</b></div>
+        <div class="mf"><small>ばしょ</small><b>${q.area}</b></div>
+        <div class="mf"><small>ランク</small><b>${'★'.repeat(RANK_OF[q.diff] || 1)}　${q.diff}</b></div>
+        <div class="mf"><small>制限時間</small><b>${mmss(BT_TIME)}</b></div>
+        <div class="mf"><small>クリア報酬</small><b><span class="coin"></span> ${fmt(q.reward)}</b></div>
+      </div></div>
+    <div class="msdesc">${q.desc}</div>`;
+}
+function msFocus(i) { const d = $('msDetail'); if (!d) return; S.qs.sel = +i; d.innerHTML = msDetail(+i); }
+SCREENS.quest = () => {
+  const Q = S.qs, cur = curMission();
+  let pop = '';
+  if (Q.pop === 'confirm') pop = `<div class="pop confirm"><div class="ptxt"><b>${QUESTS[Q.sel].name}</b><br>このミッションを受けますか？</div>
+    <div class="pbtns"><button class="pb yes" data-act="qYes">はい</button><button class="pb" data-act="qNo">いいえ</button></div></div>`;
+  return {
+    title: 'ミッションをえらぶ', sub: 'MISSION / ヘンリー隊長', cols: '1.25fr 1fr',
+    html: `<div class="card ms" id="msDetail">${msDetail(Q.sel)}</div>
+      <div class="card" style="padding:10px 12px;display:flex;flex-direction:column;gap:6px;min-height:0"><span class="lbl">ミッション一覧</span>
+        <div class="rows">${QUESTS.map((x, i) => `<div class="row lrow msrow" data-act="qPick:${i}" data-mq="${i}">${faceImg(x.boss, 38)}<div style="min-width:0"><b>${x.name}</b><div class="small">${x.area}　／　${x.diff}</div></div>
+          <span style="margin-left:auto"></span>${cur && cur.key === x.key ? '<span class="tape">選択中</span>' : ''}${(save.cleared || {})[x.key] ? '<span class="tape" style="background:#5f8a45">クリア</span>' : ''}<span class="lvtag">Lv${x.lv}</span></div>`).join('')}</div></div>`,
+    pop, foot: '',
   };
 };
 Object.assign(ACT, {
-  qSel(i) { S.qs.sel = +i; Snd.move(); renderScreen(); },
-  qAccept() { save.quest = QUESTS[S.qs.sel].key; Snd.ok(); toast(`「${QUESTS[S.qs.sel].name}」を受理した`); dirty(); netRoomQuest(); renderScreen(); },
-  qCancel() { save.quest = null; Snd.back(); dirty(); renderScreen(); },
+  dspPick() { S.retTo = { name: 'dispatch', fromPad: S.fromPad, focus: 'dspGo' }; S.cur = 'quest'; S.qs.pop = null; S.focusKey = 'qPick:' + S.qs.sel; renderScreen(); },
+  dspGo() {
+    const q = curMission();
+    if (!q) { Snd.err(); toast('先にミッションを選んでください'); return; }
+    if (!allReady()) { Snd.err(); toast('全員が準備OKになるまで出動できません'); return; }
+    closePad(true); startSortie(q);
+  },
+  dspReady() { NET.myReady = !NET.myReady; netSendMe(true); renderScreen(); },
+  dspTeam() { S.retTo = { name: 'dispatch', fromPad: S.fromPad, focus: 'dspTeam' }; S.cur = 'nakama'; S.nk.mode = 'circle'; S.nk.pop = null; S.focusKey = null; S.pvKey = null; renderScreen(); },
+  dspBag() { S.retTo = { name: 'dispatch', fromPad: S.fromPad, focus: 'dspBag' }; S.cur = 'mochi'; S.focusKey = null; renderScreen(); },
+  qPick(i) { S.qs.sel = +i; openPop(S.qs, 'confirm'); renderScreen(); },
+  qNo() { closePop(S.qs); Snd.lock = false; Snd.back(); Snd.failed = true; renderScreen(); },
+  qYes() {
+    const q = QUESTS[S.qs.sel]; closePop(S.qs);
+    save.quest = q.key; dirty();
+    if (NET.on && NET.host) { NET.room.quest = q.key; NET.room.members.forEach(m => { if (!m.host) m.ready = false; }); hostBroadcast(); }
+    toast(`「${q.name}」を受けた`);
+    S.retTo = null; S.cur = 'dispatch'; S.focusKey = 'dspGo'; renderScreen();
+  },
 });
 
 // =====================================================================
@@ -3041,7 +3149,7 @@ async function netCreate() {
     NET.peer = peer;
     peer.on('open', () => {
       Object.assign(NET, { on: true, host: true, me: 'host', busy: '', myReady: false });
-      NET.room = { quest: QUESTS[M.quest].key, cmt: M.cmt, open: M.open, code, host: save.name, members: [{ id: 'host', host: true, ...myInfo() }] };
+      NET.room = { quest: null, cmt: M.cmt, open: M.open, code, host: save.name, members: [{ id: 'host', host: true, ...myInfo() }] };
       NET.players = { host: { x: player.pos.x, y: player.pos.y, z: player.pos.z, f: player.face, m: false } };
       Snd.ok(); S.mu.mode = 'room'; if (S.cur === 'multi') renderScreen();
     });
@@ -3078,7 +3186,7 @@ function hostData(conn, d) {
     const P = NET.players[mem.id] ||= {};
     for (const k of ['x', 'y', 'z', 'f']) if (Number.isFinite(m[k])) P[k] = m[k];
     P.x = Math.max(-1, Math.min(RW + 1, P.x)); P.z = Math.max(-RD - 1, Math.min(1, P.z)); P.y = Math.max(-1, Math.min(FH + 2, P.y)); P.m = !!m.m;
-    if (m.full && S.cur === 'nakama') renderScreen();
+    if (m.full && (S.cur === 'nakama' || S.cur === 'dispatch')) renderScreen();
   } else if (m.t === 'stamp' && m.s >= 0 && m.s < STAMPS.length) { bcast({ t: 'stamp', id: mem.id, s: m.s | 0 }); showStamp(mem.id, m.s | 0); }
 }
 function hostDrop(conn) {
@@ -3137,9 +3245,10 @@ function guestData(d, timer) {
   } else if (m.t === 'full') { clearTimeout(timer); netReset(m.why || '入れませんでした'); }
   else if (m.t === 'kick') { netReset('ホストに外されました'); }
   else if (m.t === 'all') {
-    const before = JSON.stringify(NET.room && NET.room.members);
+    const before = JSON.stringify(NET.room && [NET.room.members, NET.room.quest]);
+    if (NET.room && m.room.quest !== NET.room.quest) NET.myReady = false;
     NET.room = m.room; NET.players = m.p || {};
-    if (before !== JSON.stringify(m.room.members) && (S.cur === 'multi' || S.cur === 'nakama')) renderScreen();
+    if (before !== JSON.stringify([m.room.members, m.room.quest]) && (S.cur === 'multi' || S.cur === 'nakama' || S.cur === 'dispatch' || S.cur === 'quest')) renderScreen();
   } else if (m.t === 'stamp') showStamp(m.id, m.s);
 }
 function netSendMe(full) {
@@ -3180,21 +3289,20 @@ SCREENS.multi = () => {
   const M = S.mu, R = NET.room;
   let right;
   if (NET.on && R) {
-    const q = QUESTS.find(x => x.key === R.quest) || QUESTS[0];
+    const q = QUESTS.find(x => x.key === R.quest);
     right = `<div style="display:flex;gap:10px;align-items:center"><span class="lbl">${NET.host ? 'あなたの募集' : '参加中の募集'}</span><span class="pill">${R.open === 'pub' ? 'だれでも' : '合言葉'}</span>${R.open === 'key' ? `<span class="mono" style="color:var(--ink)">合言葉</span><span class="codebox">${R.code}</span>` : ''}</div>
-      <div class="h3">${q.name} <span class="pill">${q.diff}</span></div><div class="b15">おすすめ Lv${q.lv}以上　／　「${COMMENTS[R.cmt]}」　／　ホスト：${esc(R.host)}</div>
+      <div class="h3">${q ? `${q.name} <span class="pill">${q.diff}</span>` : 'ミッション未定'}</div><div class="b15">${q ? `おすすめ Lv${q.lv}以上　／　` : ''}「${COMMENTS[R.cmt]}」　／　ホスト：${esc(R.host)}</div>
       <div class="rows">${R.members.map(m => `<div class="row">${faceImg(m.ch, 40)}<div><b>${esc(m.name)}</b>${m.host ? ' <span class="tape">ホスト</span>' : ''}${m.id === NET.me ? ' <span class="tape" style="background:var(--hazard);color:var(--ink)">あなた</span>' : ''}<div class="small">${crewByKey[m.ch].name}・Lv${m.lv}</div></div><span class="mono" style="margin-left:auto;color:${m.ready ? '#3f7a2c' : '#8a826a'}">${m.ready ? '✔ 準備OK' : '準備中'}</span>${NET.host && !m.host ? `<button class="btn red sm" data-act="kick:${m.id}">外す</button>` : ''}</div>`).join('')}
       ${Array.from({ length: 4 - R.members.length }, () => '<div class="row unk"><b>募集中…</b><span class="mono" style="margin-left:auto">あき</span></div>').join('')}</div>
-      <div class="small">本部を一緒に歩けます。1〜4キーでスタンプ（${STAMPS.join('・')}）。メンバー編成で「準備OK」にしてね</div>`;
+      <div class="small">本部を一緒に歩けます。1〜4キーでスタンプ（${STAMPS.join('・')}）。ミッションと出動は 2F のヘンリー隊長から（参加した人は「準備OK」）</div>`;
   } else if (M.mode === 'create') {
     right = `<span class="lbl">募集を出す</span>
-      <div class="form"><b>クエスト</b><div class="opts">${QUESTS.map((q, i) => `<button class="${M.quest === i ? 'on' : ''}" data-act="muQ:${i}">${q.name}</button>`).join('')}</div>
-      <b>ひとこと</b><div class="opts">${COMMENTS.map((c, i) => `<button class="${M.cmt === i ? 'on' : ''}" data-act="muC:${i}">${c}</button>`).join('')}</div>
+      <div class="form"><b>ひとこと</b><div class="opts">${COMMENTS.map((c, i) => `<button class="${M.cmt === i ? 'on' : ''}" data-act="muC:${i}">${c}</button>`).join('')}</div>
       <b>公開</b><div class="opts">${[['pub', 'だれでも（募集一覧に出る）'], ['key', '合言葉（知っている人だけ）']].map(([k, l]) => `<button class="${M.open === k ? 'on' : ''}" data-act="muO:${k}">${l}</button>`).join('')}</div></div>
       ${B('muStart', NET.busy ? NET.busy : '募集を開始する', 'Enter', 'go')}`;
   } else {
     right = `<div style="display:flex;gap:6px;align-items:center"><span class="lbl">募集一覧</span><span class="mono" style="margin-left:auto;color:var(--ink)">${NET.searching ? 'さがしています…' : `${NET.list.length} 件`}</span></div>
-      <div class="rows">${NET.list.length ? NET.list.map((r, i) => { const q = QUESTS.find(x => x.key === r.quest) || QUESTS[0]; return `<div class="row" data-act="muJoin:pub-${r.slot}">${faceImg(r.members[0].ch, 40)}<div style="flex:1"><b>${q.name}</b> <span class="pill">${q.diff}</span><div class="small">ホスト：${esc(r.host)}　／　おすすめ Lv${q.lv}以上　／　「${COMMENTS[r.cmt] || ''}」</div></div><div class="pips">${[0, 1, 2, 3].map(j => `<span class="${j < r.n ? 'f' : ''}"></span>`).join('')}</div><b class="mono" style="color:var(--ink);font-size:18px">${r.n}/4</b></div>`; }).join('') : `<div class="empty">${NET.searching ? 'さがしています…' : '見つかった募集はありません。「一覧を更新」でもう一度さがせます'}</div>`}</div>
+      <div class="rows">${NET.list.length ? NET.list.map((r, i) => { const q = QUESTS.find(x => x.key === r.quest); return `<div class="row" data-act="muJoin:pub-${r.slot}">${faceImg(r.members[0].ch, 40)}<div style="flex:1"><b>${q ? q.name : 'ミッション未定'}</b>${q ? ` <span class="pill">${q.diff}</span>` : ''}<div class="small">ホスト：${esc(r.host)}${q ? `　／　おすすめ Lv${q.lv}以上` : ''}　／　「${COMMENTS[r.cmt] || ''}」</div></div><div class="pips">${[0, 1, 2, 3].map(j => `<span class="${j < r.n ? 'f' : ''}"></span>`).join('')}</div><b class="mono" style="color:var(--ink);font-size:18px">${r.n}/4</b></div>`; }).join('') : `<div class="empty">${NET.searching ? 'さがしています…' : '見つかった募集はありません。「一覧を更新」でもう一度さがせます'}</div>`}</div>
       <div class="mono" style="color:#5a5446">同時に出せる募集は ${PUB_SLOTS} 件まで</div>`;
   }
   return {
@@ -3232,7 +3340,7 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMo
 function interact(n) {
   const t = n.talk;
   if (t.kind === 'craft') showTalk(t.name, t.text, () => openScreen('workshop'));
-  else if (t.kind === 'quest') showTalk(t.name, t.text, () => openScreen('quest'));
+  else if (t.kind === 'quest') showTalk(t.name, t.text, () => openScreen('dispatch'));
   else if (t.kind === 'form') openScreen('nakama');
   else if (t.kind === 'multi') openScreen('multi');
   else if (t.kind === 'gacha') openScreen('gacha');
@@ -3249,10 +3357,7 @@ function interact(n) {
       showTalk('受付', '今日の出勤ボーナスです。300朕銭をどうぞ！ また明日も来てくださいね。');
     } else showTalk('受付', '今日の出勤ボーナスは、もう受け取りずみです。クエストは 2F 指令室のヘンリー隊長から受けられます。');
   } else if (t.kind === 'ambulance') {
-    const q = QUESTS.find(x => x.key === save.quest);
-    if (!q) showTalk('救急車', 'まだクエストを受けていない。2F 指令室のヘンリー隊長から、クエストを受理しよう。');
-    else if (NET.on && NET.room.members.some(m => !(m.id === NET.me ? NET.myReady : m.ready))) showTalk('救急車', '全員が「準備OK」になると出動できます。メンバー編成（2F 結成ボード / Hu-jo Pad）で準備OK を押そう。');
-    else showTalk('救急車', `「${q.name}」へ出動！ 全員、乗りこめ！`, () => startSortie(q));
+    showTalk('救急車', '出動は 2F 指令室のヘンリー隊長のところからだ。ミッションを選んで「出動!!」を押せば、この救急車で現場へ向かうぞ！');
   }
 }
 
