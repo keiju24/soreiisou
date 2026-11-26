@@ -1418,6 +1418,7 @@ app.on('update', (dt) => {
 let started = false;
 function startGame() {
   if (started) return; started = true;
+  Snd.load();      // クリックしたときに効果音を読みこんでおく
   fade(() => {
     titleOn = false; tcv.style.display = 'none';
     document.body.classList.add('game');
@@ -1434,7 +1435,7 @@ async function boot() {
   uiInit();
   requestAnimationFrame(titleLoop);
   document.body.dataset.ready = '1';
-  if (new URLSearchParams(location.search).has('debug')) window.__dbg = { app, get player() { return player; }, state, startGame, setPlayer, FH, npcs, openPad, openScreen, interact, save, NET, GA };
+  if (new URLSearchParams(location.search).has('debug')) window.__dbg = { app, get player() { return player; }, state, startGame, setPlayer, FH, npcs, openPad, openScreen, interact, save, NET, GA, Snd };
 }
 
 // =====================================================================
@@ -1514,17 +1515,36 @@ const Snd = {
       o.connect(g); g.connect(this.ctx.destination); o.start(t); o.stop(t + d + .02);
     } catch (e) { }
   },
-  files: {}, lock: false, failed: false,
+  // 効果音のファイルは先に読みこんで WebAudio で鳴らす（Audio 要素より再生の遅れが少ない）
+  SE: { menu: 'se/fwb-menu.mp3', move: 'se/fwb-move.mp3', ok: 'se/fwb-ok.mp3', back: 'se/fwb-back.mp3' },
+  bufs: {}, files: {}, lock: false, failed: false,
+  load() {
+    try { this.ctx ??= new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+    for (const [k, url] of Object.entries(this.SE)) {
+      if (this.bufs[k] !== undefined) continue;
+      this.bufs[k] = null;
+      fetch(url).then(r => r.arrayBuffer()).then(b => this.ctx.decodeAudioData(b)).then(buf => { this.bufs[k] = buf; }).catch(() => { });
+    }
+  },
   file(k) {
     const vol = save.settings.se / 5; if (!vol) return;
+    this.load();
+    const buf = this.bufs[k];
+    if (buf && this.ctx) {
+      if (this.ctx.state === 'suspended') this.ctx.resume();
+      const src = this.ctx.createBufferSource(), g = this.ctx.createGain();
+      src.buffer = buf; g.gain.value = Math.min(1, vol * .8); src.connect(g); g.connect(this.ctx.destination); src.start();
+      return;
+    }
+    // まだ読みこめていないときだけ Audio 要素で鳴らす
     let a = this.files[k];
-    if (!a) a = this.files[k] = new Audio({ menu: 'se/fwb-menu.mp3', move: 'se/fwb-move.mp3', ok: 'se/fwb-ok.mp3' }[k]);
+    if (!a) a = this.files[k] = new Audio(this.SE[k]);
     a.volume = Math.min(1, vol * .8); try { a.currentTime = 0; } catch (e) { } a.play().catch(() => { });
   },
   menu() { this.file('menu'); },
   move() { if (!this.lock) this.file('move'); },
   ok() { if (!this.lock) this.file('ok'); },
-  back() { if (!this.lock) this.beep(440, .06, 'square', .4, -120); },
+  back() { if (!this.lock) this.file('back'); },
   err() { this.failed = true; this.beep(180, .14, 'sawtooth', .6); },
   buy() { [988, 1319].forEach((f, i) => setTimeout(() => this.beep(f, .07, 'triangle', .8), i * 60)); },
   up() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => this.beep(f, .07, 'triangle', .8), i * 45)); },
@@ -1617,7 +1637,7 @@ function padAlerts() {
 }
 function updateCoins() { document.querySelectorAll('.coinsTxt').forEach(e => e.textContent = save.settings.demo ? '∞' : fmt(save.coins)); }
 function openPad() { state.ui = 'pad'; Snd.menu(); $('pad').classList.add('on'); $('padHome').style.display = 'flex'; $('padScreen').style.display = 'none'; S.cur = null; updateCoins(); padAlerts(); padSelect(padSel); }
-function closePad() { $('pad').classList.remove('on'); state.ui = null; S.cur = null; stopHold(); writeSave(); }
+function closePad(silent) { if (!silent && $('pad').classList.contains('on')) Snd.back(); $('pad').classList.remove('on'); state.ui = null; S.cur = null; stopHold(); writeSave(); }
 
 // ---- 画面の共通の枠 ----
 const S = { cur: null, fromPad: false, nk: { slot: 0, pick: null, filter: 'all' }, ik: { key: null }, sb: { key: null, pick: null }, mo: { tab: 0, sel: 0 }, zk: { tab: 0, sel: 0 }, mu: { mode: 'search', quest: 0, cmt: 0, open: 'pub', code: '' }, ws: { tab: 0, type: 'tongs', pick: null }, qs: { sel: 0 }, st: { row: 0 } };
@@ -1686,7 +1706,7 @@ function navEnter() {
 function screenBack() {
   stopHold(); Snd.back();
   if (S.fromPad) { S.cur = null; S.focusKey = null; $('padHome').style.display = 'flex'; $('padScreen').style.display = 'none'; updateCoins(); padAlerts(); padSelect(padSel); }
-  else closePad();
+  else closePad(true);
 }
 let holdT = 0, holdI = 0;
 function startHold(fn) { stopHold(); fn(); holdT = setTimeout(() => { holdI = setInterval(fn, 70); }, 380); addEventListener('pointerup', stopHold, { once: true }); }
@@ -3006,7 +3026,7 @@ function uiTick(dt) {
 function uiInit() { buildPad(); applySettings(); updateCoins(); }
 function onGameStart() { applyBgm(); }
 $('padBtn').onclick = () => { if (!state.ui) openPad(); };
-$('padClose').onclick = closePad;
+$('padClose').onclick = () => closePad();
 addEventListener('beforeunload', () => { if (saveTimer !== 1e9) writeSave(); });
 boot();
 
