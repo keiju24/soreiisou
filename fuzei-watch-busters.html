@@ -58,6 +58,7 @@
   .cur { display:inline-block; width:10px; height:18px; background:var(--crt); vertical-align:-3px; margin-left:4px; animation:b 1s steps(1) infinite; } @keyframes b { 50% { opacity:0; } }
   .pfoot { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
   .btn { white-space:nowrap; border:4px solid var(--ink); border-radius:8px; padding:4px 14px; font-weight:900; font-size:16px; color:var(--ink); background:linear-gradient(#cfcab9,#9c978a); box-shadow:0 4px 0 var(--ink); cursor:pointer; display:inline-flex; align-items:center; gap:4px; }
+  .kfocus { outline:4px solid #9fe28c !important; outline-offset:2px; box-shadow:0 0 0 7px #9fe28c55 !important; position:relative; z-index:1; }
   .btn:active { transform:translateY(2px); box-shadow:0 2px 0 var(--ink); }
   .btn.go { background:linear-gradient(#d9bd5c,#b39436); } .btn.red { background:linear-gradient(#b5503d,#7d2a1e); color:#f0e3cf; } .btn.off { background:#9c978a; color:#5f5a4c; } .btn.sm { padding:1px 8px; font-size:13px; }
   #scr { flex:1; display:grid; gap:12px; min-height:0; }
@@ -152,7 +153,7 @@
 <canvas id="title"></canvas>
 <div class="hud" id="floorTag"></div>
 <button class="hud" id="padBtn">Hu-jo Pad <span class="key" style="margin:0 0 0 6px">Esc</span></button>
-<div class="hud" id="help">WASD／矢印で移動・Shift で走る・Space でジャンプ・Enter で話す／調べる・1〜4 でスタンプ・Esc で Hu-jo Pad</div>
+<div class="hud" id="help">WASD／矢印で移動・Shift で走る・Enter で話す／調べる・1〜4 でスタンプ・Esc で Hu-jo Pad</div>
 <div id="prompt"></div>
 <div id="talk"></div>
 <div id="toast"></div>
@@ -161,7 +162,7 @@
     <div class="phead"><div class="logo">Hu-jo <b>Pad</b><small>FUJO WATCH BUSTERS 隊員用端末</small></div><div class="counter"><span class="coin"></span><span class="coinsTxt"></span></div><div class="x" id="padClose">×</div></div>
     <div class="ptiles" id="padTiles"></div>
     <div class="crt">&gt; <span id="padDesc"></span><span class="cur"></span></div>
-    <div class="pfoot"><span style="font-weight:800;color:#d9d2bb">矢印キー／WASD でえらぶ・Enter で決定・Esc でとじる</span><span style="margin-left:auto;background:#c4b585;color:#2a2519;border:3px solid var(--ink);padding:3px 10px;font-weight:900;font-size:13px;transform:rotate(1.5deg)">クエストの受理は 2F 指令室のヘンリー隊長へ</span></div>
+    <div class="pfoot"><span style="font-weight:800;color:#d9d2bb">移動キー（WASD／矢印）でえらぶ・Enter かクリックで決定・Esc でとじる</span><span style="margin-left:auto;background:#c4b585;color:#2a2519;border:3px solid var(--ink);padding:3px 10px;font-weight:900;font-size:13px;transform:rotate(1.5deg)">クエストの受理は 2F 指令室のヘンリー隊長へ</span></div>
   </div>
   <div id="padScreen" style="display:none;flex-direction:column;gap:12px;height:100%">
     <div class="phead"><h2 class="htitle" id="padTitle"></h2><span class="hsub" id="padSub"></span><div class="counter"><span class="coin"></span><span class="coinsTxt"></span></div></div>
@@ -1230,15 +1231,23 @@ const Snd = {
       o.connect(g); g.connect(this.ctx.destination); o.start(t); o.stop(t + d + .02);
     } catch (e) { }
   },
-  move() { this.beep(660, .04, 'square', .4); },
-  ok() { this.beep(880, .06); setTimeout(() => this.beep(1320, .08), 50); },
-  back() { this.beep(440, .06, 'square', .4, -120); },
-  err() { this.beep(180, .14, 'sawtooth', .6); },
+  files: {}, lock: false, failed: false,
+  file(k) {
+    const vol = save.settings.se / 5; if (!vol) return;
+    let a = this.files[k];
+    if (!a) a = this.files[k] = new Audio({ menu: 'se/fwb-menu.mp3', move: 'se/fwb-move.mp3', ok: 'se/fwb-ok.mp3' }[k]);
+    a.volume = Math.min(1, vol * .8); try { a.currentTime = 0; } catch (e) { } a.play().catch(() => { });
+  },
+  menu() { this.file('menu'); },
+  move() { if (!this.lock) this.file('move'); },
+  ok() { if (!this.lock) this.file('ok'); },
+  back() { if (!this.lock) this.beep(440, .06, 'square', .4, -120); },
+  err() { this.failed = true; this.beep(180, .14, 'sawtooth', .6); },
   buy() { [988, 1319].forEach((f, i) => setTimeout(() => this.beep(f, .07, 'triangle', .8), i * 60)); },
   up() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => this.beep(f, .07, 'triangle', .8), i * 45)); },
   talk() { this.beep(520 + Math.random() * 120, .025, 'square', .25); },
 };
-const bgm = new Audio('bgm/mitanicho.mp3'); bgm.loop = true;
+const bgm = new Audio('bgm/fwb-hq.mp3'); bgm.loop = true;
 function applyBgm() { bgm.volume = Math.min(1, save.settings.bgm / 5 * .45); if (save.settings.bgm && started) bgm.play().catch(() => { }); else bgm.pause(); }
 function applySettings() {
   const s = save.settings;
@@ -1324,7 +1333,7 @@ function padAlerts() {
   tiles[5].querySelector('.alert').style.display = NET.on ? '' : 'none';
 }
 function updateCoins() { document.querySelectorAll('.coinsTxt').forEach(e => e.textContent = fmt(save.coins)); }
-function openPad() { state.ui = 'pad'; Snd.ok(); $('pad').classList.add('on'); $('padHome').style.display = 'flex'; $('padScreen').style.display = 'none'; S.cur = null; updateCoins(); padAlerts(); padSelect(padSel); }
+function openPad() { state.ui = 'pad'; Snd.menu(); $('pad').classList.add('on'); $('padHome').style.display = 'flex'; $('padScreen').style.display = 'none'; S.cur = null; updateCoins(); padAlerts(); padSelect(padSel); }
 function closePad() { $('pad').classList.remove('on'); state.ui = null; S.cur = null; stopHold(); writeSave(); }
 
 // ---- 画面の共通の枠 ----
@@ -1332,7 +1341,8 @@ const S = { cur: null, fromPad: false, nk: { slot: 0, pick: null, filter: 'all' 
 const SCREENS = {};
 function openScreen(name, fromPad) {
   if (name === 'multi' && !NET.on && S.mu.mode === 'search' && !NET.searched) { NET.searched = true; setTimeout(netSearch, 0); }
-  S.cur = name; S.fromPad = !!fromPad; state.ui = 'pad';
+  if (!fromPad && !S.cur && !$('pad').classList.contains('on')) Snd.menu();
+  S.cur = name; S.fromPad = !!fromPad; state.ui = 'pad'; S.focusKey = null;
   $('pad').classList.add('on'); $('padHome').style.display = 'none'; $('padScreen').style.display = 'flex';
   renderScreen();
 }
@@ -1346,15 +1356,53 @@ function renderScreen() {
   updateCoins();
   m.querySelectorAll('[data-act]').forEach(bindAct); $('scrFoot').querySelectorAll('[data-act]').forEach(bindAct);
   s.after && s.after();
+  const items = navItems();
+  setFocus(items.find(e => (e.dataset.act || e.id) === S.focusKey) || items[0], true);
 }
 function bindAct(el) {
   const [act, ...args] = el.dataset.act.split(':');
-  if (act === 'hold') { el.onpointerdown = (e) => { e.preventDefault(); startHold(() => ACT[args[0]](...args.slice(1))); }; return; }
-  el.onclick = (e) => { e.stopPropagation(); if (ACT[act]) ACT[act](...args); };
+  if (act === 'hold') { el.onpointerdown = (e) => { e.preventDefault(); setFocus(el, true); startHold(() => doAct(args[0], args.slice(1))); }; return; }
+  el.onclick = (e) => { e.stopPropagation(); setFocus(el, true); doAct(act, args); };
+}
+function doAct(act, args) {
+  if (act === 'back') return screenBack();
+  if (!ACT[act]) return;
+  Snd.lock = true; Snd.failed = false;
+  try { ACT[act](...args); } finally { Snd.lock = false; }
+  if (!Snd.failed && act !== 'back') Snd.ok();
+}
+// ---- 移動キーでメニューの項目をえらぶ（いちばん近い方向の項目へ） ----
+function navItems() { return [...document.querySelectorAll('#scr [data-act], #scr input, #scrFoot [data-act]')].filter(el => el.offsetParent !== null && !el.classList.contains('off')); }
+function setFocus(el, quiet) {
+  document.querySelectorAll('.kfocus').forEach(e => e.classList.remove('kfocus'));
+  if (!el) return;
+  el.classList.add('kfocus'); S.focusKey = el.dataset.act || el.id;
+  if (!quiet) el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+function navMove(dx, dy) {
+  const items = navItems(), cur = items.find(e => e.classList.contains('kfocus'));
+  if (!cur) { setFocus(items[0]); Snd.move(); return; }
+  const r = cur.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  let best = null, bs = 1e9;
+  for (const el of items) {
+    if (el === cur) continue;
+    const q = el.getBoundingClientRect(), x = q.left + q.width / 2 - cx, y = q.top + q.height / 2 - cy;
+    const along = dx ? x * dx : y * dy; if (along <= 4) continue;
+    const s = along + (dx ? Math.abs(y) : Math.abs(x)) * 2.5;
+    if (s < bs) { bs = s; best = el; }
+  }
+  if (best) { setFocus(best); Snd.move(); }
+}
+function navEnter() {
+  const el = navItems().find(e => e.classList.contains('kfocus')); if (!el) return false;
+  if (el.tagName === 'INPUT') { el.focus(); return true; }
+  const [act, ...args] = el.dataset.act.split(':');
+  doAct(act === 'hold' ? args[0] : act, act === 'hold' ? args.slice(1) : args);
+  return true;
 }
 function screenBack() {
   stopHold(); Snd.back();
-  if (S.fromPad) { S.cur = null; $('padHome').style.display = 'flex'; $('padScreen').style.display = 'none'; updateCoins(); padAlerts(); padSelect(padSel); }
+  if (S.fromPad) { S.cur = null; S.focusKey = null; $('padHome').style.display = 'flex'; $('padScreen').style.display = 'none'; updateCoins(); padAlerts(); padSelect(padSel); }
   else closePad();
 }
 let holdT = 0, holdI = 0;
@@ -1481,7 +1529,7 @@ SCREENS.ikusei = () => {
       </div>
     </div>`,
     desc: `朕銭を使って、${c.name}のレベルを上げます`,
-    foot: B('ikPrev', '前の隊員', '◀') + B('ikNext', '次の隊員', '▶'),
+    foot: B('ikPrev', '前の隊員', 'Z') + B('ikNext', '次の隊員', 'C'),
     after() { drawMeter($('meter'), cs.lv); },
   };
 };
@@ -1534,7 +1582,7 @@ SCREENS.soubi = () => {
         <div class="small" style="text-align:right;font-weight:900">${e.id === cs.eq ? '—' : statDiff(SB.key, e)}</div></div>`; }).join('') : '<div class="empty">装備がありません。1F 工房の職人ヘンリーに作ってもらおう</div>'}</div>
     </div>`,
     desc: pk ? `${eqName(pk)}：${eqStatText(equipStats(pk))}${EQUIPS[pk.t].t[pk.r - 1] ? '・' + EQUIPS[pk.t].t[pk.r - 1] : ''}` : '装備はまだありません',
-    foot: B('ikPrevS', '前の隊員', '◀') + B('ikNextS', '次の隊員', '▶') + B('eqBest', 'おすすめ', 'R') + (cur ? B('eqOff', 'はずす', 'X') : '') + (pk && pk.id !== cs.eq ? B('eqOn', 'そうびする', 'Enter', 'go') : ''),
+    foot: B('ikPrevS', '前の隊員', 'Z') + B('ikNextS', '次の隊員', 'C') + B('eqBest', 'おすすめ', 'R') + (cur ? B('eqOff', 'はずす', 'X') : '') + (pk && pk.id !== cs.eq ? B('eqOn', 'そうびする', 'Enter', 'go') : ''),
   };
 };
 Object.assign(ACT, {
@@ -2046,7 +2094,7 @@ function interact(n) {
 //  入力
 // =====================================================================
 addEventListener('keydown', (e) => {
-  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) { if (e.code === 'Escape') e.target.blur(); return; }
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) { if (e.code === 'Escape' || e.code === 'Enter') e.target.blur(); return; }
   if (titleOn) { if (e.code === 'Enter' || e.code === 'Space') startGame(); return; }
   if (state.busy) return;
   const k = e.code;
@@ -2055,15 +2103,20 @@ addEventListener('keydown', (e) => {
     e.preventDefault();
     if (S.cur) {
       if (k === 'Escape' || k === 'KeyM') return screenBack();
+      if (k === 'ArrowLeft' || k === 'KeyA') return navMove(-1, 0);
+      if (k === 'ArrowRight' || k === 'KeyD') return navMove(1, 0);
+      if (k === 'ArrowUp' || k === 'KeyW') return navMove(0, -1);
+      if (k === 'ArrowDown' || k === 'KeyS') return navMove(0, 1);
+      if ((k === 'Enter' || k === 'Space') && navEnter()) return;
       const foot = [...$('scrFoot').querySelectorAll('[data-act]')];
       const byKey = (label) => foot.find(b => (b.querySelector('.key') || {}).textContent === label);
-      const map = { Enter: 'Enter', ShiftLeft: 'Shift', ShiftRight: 'Shift', KeyX: 'X', KeyQ: 'Q', KeyR: 'R', KeyY: 'Y', ArrowLeft: '◀', ArrowRight: '▶' };
+      const map = { Enter: 'Enter', ShiftLeft: 'Shift', ShiftRight: 'Shift', KeyX: 'X', KeyQ: 'Q', KeyR: 'R', KeyY: 'Y', KeyZ: 'Z', KeyC: 'C' };
       if (S.cur === 'mochi' || S.cur === 'zukan' || S.cur === 'workshop') {
         const tabKey = S.cur === 'mochi' ? 'mo' : S.cur === 'zukan' ? 'zk' : 'ws', n = S.cur === 'mochi' ? 2 : 3;
         if (k === 'KeyL' || k === 'KeyR' && S.cur !== 'multi') { const T = S[tabKey]; T.tab = (T.tab + (k === 'KeyR' ? 1 : n - 1)) % n; if (tabKey !== 'ws') T.sel = 0; Snd.move(); renderScreen(); return; }
       }
       const b = map[k] && byKey(map[k]);
-      if (b) { if (b.dataset.act.startsWith('hold:')) ACT[b.dataset.act.split(':')[1]](); else b.click(); return; }
+      if (b) { const [a, ...g] = b.dataset.act.split(':'); setFocus(b, true); doAct(a === 'hold' ? g[0] : a, a === 'hold' ? g.slice(1) : g); return; }
       if (k === 'Digit1' && S.cur === 'nakama') return;
       return;
     }
@@ -2073,12 +2126,12 @@ addEventListener('keydown', (e) => {
     else if (k === 'ArrowLeft' || k === 'KeyA') padSelect((padSel + n - 1) % n);
     else if (k === 'ArrowDown' || k === 'KeyS') padSelect(Math.min(n - 1, padSel + cols));
     else if (k === 'ArrowUp' || k === 'KeyW') padSelect(Math.max(0, padSel - cols));
-    else if (k === 'Enter') { Snd.ok(); openScreen(PAD_TILES[padSel][0], true); }
+    else if (k === 'Enter' || k === 'Space') { Snd.ok(); openScreen(PAD_TILES[padSel][0], true); }
     return;
   }
   if (k === 'Escape' || k === 'KeyM') { openPad(); return; }
   if ((k === 'Enter' || k === 'KeyE') && nearNpc) { interact(nearNpc); return; }
-  if (k === 'Space') { e.preventDefault(); if (player.grounded) { player.vy = 7; player.grounded = false; } }
+  if (k === 'Space') e.preventDefault();
   if (/^Digit[1-4]$/.test(k)) { sendStamp(+k.slice(5) - 1); return; }
   keys.add(k);
 });
