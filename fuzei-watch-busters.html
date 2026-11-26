@@ -148,11 +148,21 @@
   .face.lock img { filter:brightness(0) opacity(.45); }
   /* 朕銭ガシャ */
   body.game.cine .hud { display:none; }
-  #gaRes { position:fixed; left:50%; top:46px; transform:translateX(-50%) scale(.85); opacity:0; transition:.25s; z-index:30; min-width:340px; max-width:calc(100% - 40px); text-align:center; background:linear-gradient(#e2d8b9,#cfc39c); color:var(--ink); border:5px solid var(--ink); border-radius:14px; box-shadow:0 6px 0 var(--ink); padding:26px 26px 12px; pointer-events:none; }
-  #gaRes.on { opacity:1; transform:translateX(-50%) scale(1); cursor:pointer; }
+  #gaRes { position:fixed; left:50%; bottom:34px; transform:translateX(-50%) scale(.85); opacity:0; transition:.25s; z-index:30; min-width:340px; max-width:calc(100% - 40px); text-align:center; background:linear-gradient(#e2d8b9,#cfc39c); color:var(--ink); border:5px solid var(--ink); border-radius:14px; box-shadow:0 6px 0 var(--ink); padding:26px 26px 12px; pointer-events:none; }
+  #gaRes.on { opacity:1; transform:translateX(-50%) scale(1); cursor:pointer; animation:gaSlam .38s cubic-bezier(.2,1.4,.4,1) both; }
+  @keyframes gaSlam { 0% { transform:translateX(-50%) scale(2.4); opacity:0; } 60% { transform:translateX(-50%) scale(.94); opacity:1; } 100% { transform:translateX(-50%) scale(1); opacity:1; } }
+  #gaRank { position:fixed; left:50%; top:46%; z-index:31; pointer-events:none; opacity:0; white-space:nowrap; font:900 76px "Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif; color:var(--c,#fff); -webkit-text-stroke:4px var(--ink); paint-order:stroke fill; text-shadow:0 6px 0 var(--ink),0 0 30px var(--c,#fff); letter-spacing:.04em; }
+  #gaRank.on { animation:gaRank 1.6s ease-out forwards; }
+  #gaRank.r0, #gaRank.r1 { font-size:54px; }
+  #gaRank.r3 { --c:#ffd84a; font-size:84px; animation:gaRank 1.8s ease-out forwards, gaHue .7s linear infinite; }
+  @keyframes gaHue { to { filter:hue-rotate(360deg); } }
+  @keyframes gaRank { 0% { transform:translate(-50%,-50%) scale(3) rotate(-8deg); opacity:0; } 14% { transform:translate(-50%,-50%) scale(.95) rotate(-3deg); opacity:1; } 22% { transform:translate(-50%,-50%) scale(1.05) rotate(-3deg); } 78% { opacity:1; } 100% { transform:translate(-50%,-70%) scale(1) rotate(-3deg); opacity:0; } }
+  #gaFlash { position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:29; }
+  #gaFlash.on { animation:gaFlash .55s ease-out; }
+  @keyframes gaFlash { 0% { opacity:.95; } 100% { opacity:0; } }
   #gaRes .rib { position:absolute; left:18px; right:18px; top:-20px; border:4px solid var(--ink); border-radius:8px; font-weight:900; font-size:20px; padding:2px; color:var(--ink); }
   #gaRes .rib.rainbow { background:linear-gradient(90deg,#ff8b7b,#ffd84a,#8fe08a,#7fd3ff,#c79bff) !important; }
-  #gaRes .nm { font-weight:900; font-size:30px; } #gaRes .sb { font-weight:800; font-size:15px; margin-top:4px; }
+  #gaRes .nm { font-weight:900; font-size:30px; line-height:1.25; } #gaRes .sb { font-weight:800; font-size:15px; margin-top:4px; }
   #gaRes .new { position:absolute; right:-20px; top:12px; transform:rotate(12deg); background:var(--red); color:#f4ecd8; border:4px solid var(--ink); border-radius:8px; font-weight:900; padding:0 10px; font-size:20px; }
   #gaRes small { display:block; margin-top:8px; font:800 12px monospace; color:#4f4a3c; }
   #gaHint { position:fixed; right:18px; bottom:16px; display:none; font-weight:900; color:#f4ecd8; background:#0009; padding:6px 12px; border-radius:8px; z-index:30; }
@@ -190,6 +200,8 @@
 <div id="talk"></div>
 <div id="toast"></div>
 <div id="gaRes"></div>
+<div id="gaRank"></div>
+<div id="gaFlash"></div>
 <div id="gaHint"><span class="key">Enter</span>クリックで とばす</div>
 <div id="pad"><div class="dev"><div class="dbody">
   <div id="padHome" style="display:flex;flex-direction:column;gap:12px;height:100%">
@@ -1424,7 +1436,7 @@ function newSave() {
   return {
     v: 2, name: '新人隊員', coins: 2000, team: ['homura', 'berserker', 'nagata', 'shimarin'], tactic: 0,
     chars: {}, equips: [], nextId: 1, mats: {}, items: {}, set: [null, null], quest: null,
-    seen: {}, crafted: {}, settings: { bgm: 3, se: 4, quality: 1, zoom: 1, text: 1, guide: 1 },
+    seen: {}, crafted: {}, settings: { bgm: 3, se: 4, quality: 1, zoom: 1, text: 1, guide: 1, demo: 1 },
     daily: '', gift: false, play: 0,
     own: Object.fromEntries(STARTERS.map(k => [k, 1])), gacha: 0,
   };
@@ -1443,6 +1455,16 @@ const save = (() => {
   if (!s.team[0]) s.team[0] = 'homura';
   return s;
 })();
+// デモプレイ用：せっていの「朕銭（デモ用）」が「むげん」のあいだは、朕銭がへらない（表示は ∞）。
+// 本当の朕銭は realCoins にとっておき、セーブにもそちらを書く
+const DEMO_COINS = 99999999;
+let realCoins = save.coins;
+Object.defineProperty(save, 'coins', {
+  get() { return save.settings.demo ? DEMO_COINS : realCoins; },
+  set(v) { if (!save.settings.demo) realCoins = v; },
+  enumerable: true, configurable: true,
+});
+Object.defineProperty(save, 'toJSON', { value() { const o = { ...this }; o.coins = realCoins; return o; }, enumerable: false });
 const owned = (k) => !!save.own[k];
 const ownedCrew = () => CREW.filter(c => owned(c.key));
 let saveTimer = 0;
@@ -1576,7 +1598,7 @@ function padAlerts() {
   tiles[1].querySelector('.alert').style.display = canUp ? '' : 'none';
   tiles[5].querySelector('.alert').style.display = NET.on ? '' : 'none';
 }
-function updateCoins() { document.querySelectorAll('.coinsTxt').forEach(e => e.textContent = fmt(save.coins)); }
+function updateCoins() { document.querySelectorAll('.coinsTxt').forEach(e => e.textContent = save.settings.demo ? '∞' : fmt(save.coins)); }
 function openPad() { state.ui = 'pad'; Snd.ok(); $('pad').classList.add('on'); $('padHome').style.display = 'flex'; $('padScreen').style.display = 'none'; S.cur = null; updateCoins(); padAlerts(); padSelect(padSel); }
 function closePad() { $('pad').classList.remove('on'); state.ui = null; S.cur = null; stopHold(); writeSave(); }
 
@@ -1902,6 +1924,7 @@ const SET_ROWS = [
   ['zoom', 'カメラの距離', ['近い', 'ふつう', '遠い'], '本部を見下ろすカメラの距離を変えます'],
   ['text', '文字の速さ', ['おそい', 'ふつう', 'はやい'], '会話の文字が出る速さを変えます'],
   ['guide', '操作ガイド', ['表示しない', '表示する'], '画面の下の操作説明を出すかどうかを変えます'],
+  ['demo', '朕銭（デモ用）', ['ふつう', 'むげん'], 'デモプレイ用。「むげん」のあいだは朕銭がへりません（ふつうにもどすと、もとの朕銭にもどります）'],
 ];
 SCREENS.settei = () => ({
   title: 'せってい', sub: 'CONFIG / 音量・画質・操作・データ', cols: '1fr 320px',
@@ -2301,11 +2324,19 @@ function gaParts() {
   // 火花
   GA.sparkMat = mat('#ffffff', { emissive: '#ffffff', ei: 2 });
   GA.sparks = Array.from({ length: 22 }, () => { const e = new Entity(); e.addComponent('render', { type: 'box', material: GA.sparkMat, castShadows: false }); P.addChild(e); e.enabled = false; return { e, v: new Vec3(), life: 0 }; });
+  // 前ぶれの炎：機械のまわりと煙突から、火の玉が立ちのぼる
+  const fms = ['#ff5a1f', '#ff8a2a', '#ffc44a'].map(h => { const m = new StandardMaterial(); m.diffuse = hexCol(h); m.emissive = hexCol(h); m.emissiveIntensity = 2.2; m.opacity = .85; m.blendType = BLEND_NORMAL; m.depthWrite = false; m.update(); return m; });
+  GA.flames = [];
+  for (let i = 0; i < 30; i++) {
+    const col = i % 6, a = col / 6 * Math.PI * 2 + .5, chim = i >= 24;
+    GA.flames.push({ x: chim ? .5 : Math.sin(a) * 1.4, y: chim ? 3.7 : .1, z: chim ? -.25 : Math.cos(a) * 1.25, w: chim ? .42 : .6, h: chim ? 1.6 : 2.2, ph: (i * .37) % 1, m: fms[i % 3] });
+  }
+  GA.flames.forEach(f => { f.e = new Entity(); f.e.addComponent('render', { type: 'sphere', material: f.m, castShadows: false }); P.addChild(f.e); f.e.enabled = false; });
   cap.enabled = false; GA.puffs.forEach(p => p.e.enabled = false);
 }
-function gaSparks(col, n = 14, power = 1) {
+function gaSparks(col, n = 14, power = 1, at = null) {
   GA.sparkMat.emissive.set(col.r, col.g, col.b); GA.sparkMat.diffuse.set(col.r, col.g, col.b); GA.sparkMat.update();
-  const c = GA.cap.getPosition();
+  const c = at || GA.cap.getPosition();
   for (let i = 0; i < n; i++) {
     const s = GA.sparks.find(s => s.life <= 0) || GA.sparks[i % GA.sparks.length], a = Math.random() * Math.PI * 2;
     s.e.enabled = true; s.e.setPosition(c.x, c.y, c.z); s.life = .6 + Math.random() * .5;
@@ -2315,41 +2346,74 @@ function gaSparks(col, n = 14, power = 1) {
 function gaStart(res) {
   gaParts();
   const F0 = gachaFx.pos, seq = capSeq(res.r), isChar = !!res.ch;
-  const open = GT.out + .5 + (seq.length - 1) * GT.shake + .3;
+  const shakesEnd = GT.out + .5 + (seq.length - 1) * GT.shake, open = shakesEnd + 1.15;
+  // 大当たりの前ぶれ：ウルトラレアは必ず。レアでも、ときどきフェイントで出る
+  const omen = res.r === 3 || (res.r === 2 && Math.random() < .25);
   Object.assign(GA, {
-    on: true, t: 0, res, seq, isChar, open, end: open + (isChar ? 3.0 : .9), shown: 0, flash: 0, opened: false, revealed: false, ended: false,
-    tick: 0, shakeDone: 0, chr: null, item: null, skip: false,
+    on: true, t: 0, res, seq, isChar, omen, shakesEnd, open, end: open + (isChar ? 3.5 : 1.0), flash: 0, quake: 0,
+    opened: false, ended: false, landed: false, hopped: 0, omenOn: false, tick: 0, sparkT: 0, shakeDone: 0, chr: null, item: null, skip: false, shot: -1,
     camPos: camera.getPosition().clone(), camLook: new Vec3(cam.x, cam.y, cam.z),
   });
+  for (let i = 0; i < 6; i++) delete GA['rattle' + i];
   // 自分の隊員は機械の左に立って見守る
   player.pos.set(F0.x - 2.4, F0.y, F0.z + 2.7); player.face = Math.PI / 2; player.vy = 0;
-  GA.cap.enabled = false; GA.top.setLocalPosition(0, 0, 0); GA.top.setLocalEulerAngles(0, 0, 0); GA.bot.setLocalScale(1, 1, 1); GA.ol.enabled = true; GA.band.enabled = true; GA.top.enabled = true;
+  GA.cap.enabled = false; GA.top.setLocalPosition(0, 0, 0); GA.top.setLocalEulerAngles(0, 0, 0); GA.bot.setLocalScale(1, 1, 1);
+  GA.ol.enabled = true; GA.band.enabled = true; GA.top.enabled = true; GA.cap.setLocalScale(1, 1, 1);
   $('pad').classList.remove('on'); S.cur = null; state.ui = 'gacha3d'; document.body.classList.add('cine');
   $('gaHint').classList.add('on'); $('gaRes').classList.remove('on');
 }
+// ---- カメラ：場面ごとに切りかえる（見上げる → 横から → カプセルに寄る → 開く → キャラの正面）----
 function gaCamera(dt) {
   const F0 = gachaFx.pos, t = GA.t;
-  let pos, look;
-  if (t < GT.crank) { pos = [1.8, 2.9, 7.8]; look = [0, 1.6, 1.0]; }
-  else if (!GA.opened || !GA.isChar) { pos = [1.0, 1.75, 6.2]; look = [0, .7, 2.6]; }
-  else { pos = [.9, 2.5, 8.6]; look = [0, 1.25, 2.6]; }
-  const k = 1 - Math.exp(-dt * (GA.skip ? 30 : 3.2));
-  GA.camPos.x += (F0.x + pos[0] - GA.camPos.x) * k; GA.camPos.y += (F0.y + pos[1] - GA.camPos.y) * k; GA.camPos.z += (F0.z + pos[2] - GA.camPos.z) * k;
-  GA.camLook.x += (F0.x + look[0] - GA.camLook.x) * k; GA.camLook.y += (F0.y + look[1] - GA.camLook.y) * k; GA.camLook.z += (F0.z + look[2] - GA.camLook.z) * k;
-  camera.setPosition(GA.camPos); camera.lookAt(GA.camLook);
+  let shot, pos, look, snap = false;
+  if (t < .95) { shot = 0; pos = [-1.7, .75, 4.6]; look = [.1, 2.9, 0]; snap = true; }              // 主人公の目線で機械を見上げる
+  else if (t < GT.crank) { shot = 1; pos = [2.6, 1.7, 5.4]; look = [0, 1.7, .5]; snap = true; }     // 横からハンドル
+  else if (t < GA.shakesEnd) { shot = 2; pos = [1.0, 1.75, 6.2]; look = [0, .7, 2.6]; }             // カプセル
+  else if (!GA.opened) { shot = 3; pos = [.3, 1.5, 7.0]; look = [0, 1.0, 3.6]; }                    // とびだすカプセルに寄る
+  else if (!GA.isChar) { shot = 4; pos = [.6, 1.6, 6.7]; look = [0, .95, 3.7]; }
+  else if (t - GA.open < 2.5) { shot = 5; pos = [.9, 2.6, 9.8]; look = [0, 1.3, 3.6]; }              // 煙
+  else { shot = 6; pos = [0, 1.9, 8.8]; look = [0, 1.05, 3.6]; }                                   // キャラの正面
+  const tp = new Vec3(F0.x + pos[0], F0.y + pos[1], F0.z + pos[2]), tl = new Vec3(F0.x + look[0], F0.y + look[1], F0.z + look[2]);
+  if (GA.shot !== shot && snap) { GA.camPos.copy(tp); GA.camLook.copy(tl); }
+  GA.shot = shot;
+  const k = 1 - Math.exp(-dt * (GA.skip ? 30 : shot === 3 ? 6 : 3.2));
+  GA.camPos.lerp(GA.camPos, tp, k); GA.camLook.lerp(GA.camLook, tl, k);
+  GA.quake = Math.max(0, GA.quake - dt * 1.6);
+  const q = GA.quake * .12;
+  camera.setPosition(GA.camPos.x + (Math.random() - .5) * q, GA.camPos.y + (Math.random() - .5) * q, GA.camPos.z + (Math.random() - .5) * q);
+  camera.lookAt(GA.camLook);
+}
+// ---- 大当たりの前ぶれ：空が暗くなり、機械のまわりから炎が噴き出す ----
+const SUN_I = 1.25, AMB = new Color(.5, .48, .46), BG_OMEN = new Color(.13, .05, .07);
+function gaOmen(dt) {
+  const t = GA.t, u = t - GA.open;
+  const d = !GA.omen ? 0 : t < .25 ? 0 : u < 1.6 ? ease((t - .25) / .7) : Math.max(0, 1 - (u - 1.6) / 1.0);
+  sun.light.intensity = SUN_I * (1 - .72 * d);
+  app.scene.ambientLight = new Color(AMB.r * (1 - .6 * d) + .12 * d, AMB.g * (1 - .7 * d), AMB.b * (1 - .65 * d) + .05 * d);
+  camera.camera.clearColor = new Color(BG_SKY.r + (BG_OMEN.r - BG_SKY.r) * d, BG_SKY.g + (BG_OMEN.g - BG_SKY.g) * d, BG_SKY.b + (BG_OMEN.b - BG_SKY.b) * d);
+  const F0 = gachaFx.pos;
+  GA.flames.forEach((f, i) => {
+    f.e.enabled = d > .03;
+    if (!f.e.enabled) return;
+    const k = (time * 1.5 + f.ph) % 1, pw = d * (t < GT.crank + .4 ? 1 : .6), sc = f.w * (1 - k * .75) * (.6 + pw * .5);
+    f.e.setLocalPosition(F0.x + f.x * (1 - k * .25) + Math.sin(time * 9 + i) * .05, F0.y + f.y + k * f.h * pw, F0.z + f.z * (1 - k * .25)); f.e.setLocalScale(sc, sc * 1.4, sc);
+  });
+  if (GA.omen && t > .25 && !GA.omenOn) { GA.omenOn = true; GA.quake = .8; if (!GA.skip) { Snd.beep(55, 1.2, 'sawtooth', 1, -20); setTimeout(() => Snd.beep(70, 1.0, 'sawtooth', .9, 30), 300); } }
+  if (d > .3 && t < GA.open && t - GA.sparkT > .22) { GA.sparkT = t; gaSparks(new Color(1, .5 + Math.random() * .3, .15), 6, .8, new Vec3(F0.x + (Math.random() - .5) * 2.2, F0.y + .4, F0.z + (Math.random() - .5) * 2.2)); }
 }
 function gaUpdate(dt) {
   const F0 = gachaFx.pos, Fx = gachaFx;
   GA.t += dt; const t = GA.t, quiet = GA.skip;
   GA.flash = Math.max(0, GA.flash - dt * 2.5);
+  gaOmen(dt);
   // ---- 機械：ハンドルが回り、ゆれて、炉の火が強くなる ----
   if (t < GT.crank) {
-    const p = t / GT.crank, amp = Math.min(1, t / .4) * .05;
+    const p = t / GT.crank, amp = Math.min(1, t / .4) * (GA.omen ? .09 : .05);
     Fx.mach.setLocalPosition(F0.x + Math.sin(t * 61) * amp, F0.y + Math.abs(Math.sin(t * 37)) * amp * .6, F0.z + Math.sin(t * 47) * amp * .5);
     Fx.crank.setLocalEulerAngles(-ease(p) * 720, 0, 0);
     if (t - GA.tick > .17) { GA.tick = t; if (!quiet) Snd.beep(280 + p * 260, .05, 'square', .5); }
   } else Fx.mach.setLocalPosition(F0.x, F0.y, F0.z);
-  const heat = t < GT.crank ? 1.3 + t / GT.crank * 2.2 : 2.2;
+  const heat = (t < GT.crank ? 1.3 + t / GT.crank * 2.2 : 2.2) + (GA.omen && t < GA.open ? 1.5 : 0);
   // ---- カプセル ----
   const nShake = GA.seq.length - 1;
   let cur = GA.seq[0];
@@ -2359,47 +2423,55 @@ function gaUpdate(dt) {
   Fx.glow.emissive.set(...(t < GT.crank ? [1, .54, .16] : [capCol.r, capCol.g, capCol.b])); Fx.glow.emissiveIntensity = heat + GA.flash * 2; Fx.glow.update();
   Fx.lamp.light.color = t < GT.crank ? new Color(1, .55, .2) : capCol; Fx.lamp.light.intensity = 1.2 + heat * .4 + GA.flash * 4;
   if (GA.cap.enabled && !GA.opened) {
-    let x = 0, y = .45, z = 2.6, rx = 0, rz = 0;
+    let y = .45, z = 2.6, rx = 0, rz = 0, sc = 1;
     if (t < GT.out) {
       const p = (t - GT.crank) / (GT.out - GT.crank);
       z = .85 + (2.6 - .85) * ease(p); y = .45 + Math.abs(Math.sin(p * Math.PI * 2.5)) * (1 - p) * .7; rx = z / .45 * 57.3;
-    } else {
+    } else if (t < GA.shakesEnd) {
       rx = 2.6 / .45 * 57.3;
       // ゆれ：ぷるぷる → ぴょん → 色が変わる（変わらないこともある）
       for (let i = 0; i < nShake; i++) {
         const u = t - (GT.out + .5 + i * GT.shake);
         if (u >= 0 && u < .7) { const k = u / .7; rz = Math.sin(u * 42) * 16 * k; y += Math.max(0, Math.sin(u * 30)) * .06 * k; if (u > .62) y += (u - .62) / .08 * .25; }
-        else if (u >= .7 && u < 1.0) y += Math.max(0, .25 - (u - .7) * 1.2) ;
+        else if (u >= .7 && u < 1.0) y += Math.max(0, .25 - (u - .7) * 1.2);
         if (u >= .7 && GA.shakeDone === i) {
           GA.shakeDone = i + 1; GA.flash = 1;
           const up = GA.seq[i + 1] > GA.seq[i];
-          if (up) { gaSparks(hexCol(CAP_COL[GA.seq[i + 1]]), 16 + GA.seq[i + 1] * 4); if (!quiet) [660, 880, 1175, 1568].slice(0, 2 + GA.seq[i + 1]).forEach((f, j) => setTimeout(() => Snd.beep(f, .09, 'triangle', .9), j * 70)); }
+          if (up) { GA.quake = .25 + GA.seq[i + 1] * .1; gaSparks(hexCol(CAP_COL[GA.seq[i + 1]]), 16 + GA.seq[i + 1] * 4); if (!quiet) [660, 880, 1175, 1568].slice(0, 2 + GA.seq[i + 1]).forEach((f, j) => setTimeout(() => Snd.beep(f, .09, 'triangle', .9), j * 70)); }
           else if (!quiet) Snd.beep(220, .12, 'square', .5, -40);
         }
-        if (u >= 0 && u < .02 && !quiet && !GA['rattle' + i]) { GA['rattle' + i] = 1; for (let j = 0; j < 5; j++) setTimeout(() => Snd.beep(500 + Math.random() * 200, .03, 'square', .3), j * 110); }
+        if (u >= 0 && !quiet && !GA['rattle' + i]) { GA['rattle' + i] = 1; for (let j = 0; j < 5; j++) setTimeout(() => Snd.beep(500 + Math.random() * 200, .03, 'square', .3), j * 110); }
       }
+    } else {
+      // 大きくはねて、手前にとびだす → ドスンと着地
+      const p = Math.min(1, (t - GA.shakesEnd) / .8);
+      z = 2.6 + 1.0 * ease(p); y = .45 + Math.sin(p * Math.PI) * 1.7; rx = 2.6 / .45 * 57.3 + p * 720; sc = 1 + Math.sin(p * Math.PI) * .25;
+      if (p >= 1) { const w = Math.min(1, (t - GA.shakesEnd - .8) / .3); rx = 0; sc = 1; y = .45 - Math.sin(w * Math.PI) * .08; rz = Math.sin(w * Math.PI * 3) * 8 * (1 - w); }
+      if (p >= 1 && !GA.landed) { GA.landed = true; GA.quake = .7; gaSparks(capCol, 10, .6); if (!quiet) Snd.beep(90, .25, 'sawtooth', .9, -40); }
+      if (t - GA.shakesEnd < .05 && !GA.leapSnd) { GA.leapSnd = 1; if (!quiet) Snd.beep(300, .35, 'triangle', .7, 700); }
     }
-    GA.cap.setLocalPosition(F0.x + x, F0.y + y, F0.z + z); GA.cap.setLocalEulerAngles(rx, 0, rz);
+    GA.cap.setLocalPosition(F0.x, F0.y + y, F0.z + z); GA.cap.setLocalEulerAngles(rx, 0, rz); GA.cap.setLocalScale(sc, sc * (GA.landed && t < GA.shakesEnd + 1.0 ? .92 : 1), sc);
   }
   // ---- 開く ----
   if (t >= GA.open && !GA.opened) {
-    GA.opened = true; GA.flash = 1.2; GA.cap.setLocalEulerAngles(0, 0, 0); GA.ol.enabled = false; GA.band.enabled = false;
+    GA.opened = true; GA.leapSnd = 0; GA.flash = 1.2; GA.quake = .5; GA.cap.setLocalEulerAngles(0, 0, 0); GA.cap.setLocalScale(1, 1, 1); GA.ol.enabled = false; GA.band.enabled = false;
     gaSparks(capCol, 22, 1.2);
     if (!quiet) { Snd.beep(120, .3, 'sawtooth', .9, 300); setTimeout(() => Snd.beep(900, .4, 'sine', .6, -700), 60); }
+    gaRankText(GA.res.r); $('gaFlash').classList.remove('on'); void $('gaFlash').offsetWidth; $('gaFlash').classList.add('on');
     const c = GA.cap.getPosition();
     GA.puffs.forEach(p => { p.e.enabled = true; p.e.setPosition(c.x, c.y, c.z); p.e.setLocalScale(.01, .01, .01); });
     if (GA.isChar) {
-      const a = makeChar(crewByKey[GA.res.ch]); a.pos = new Vec3(F0.x, F0.y, F0.z + 2.6); a.face = 0; a.root.enabled = false; GA.chr = a;
+      const a = makeChar(crewByKey[GA.res.ch]); a.pos = new Vec3(F0.x, F0.y, F0.z + 3.6); a.face = 0; a.root.enabled = false; GA.chr = a;
     } else {
-      const im = new Image(); im.src = GA.res.src; GA.itemImg = im;
+      const im = new Image(); im.src = GA.res.src;
       const keep = root; root = floors[2];
-      GA.item = decal((g, W, H) => { if (im.complete) g.drawImage(im, 0, 0, W, H); }, 128, 128, F0.x, F0.y + .9, F0.z + 2.7, .9, .9, '+z', { alpha: true, glow: .25 });
+      GA.item = decal((g, W, H) => { if (im.complete) g.drawImage(im, 0, 0, W, H); }, 128, 128, F0.x, F0.y + .9, F0.z + 3.7, .9, .9, '+z', { alpha: true, glow: .25 });
       root = keep;
       if (!im.complete) im.onload = () => { GA.item && (GA.item.ctx.drawImage(im, 0, 0, 128, 128), GA.item.tex.upload()); };
     }
   }
   if (GA.opened) {
-    const u = t - GA.open, c = new Vec3(F0.x, F0.y + .45, F0.z + 2.6);
+    const u = t - GA.open, c = new Vec3(F0.x, F0.y + .45, F0.z + 3.6);
     GA.top.setLocalPosition(0, ease(u / .5) * 1.6 + Math.max(0, u - .5) * -2, -ease(u / .5) * .4); GA.top.setLocalEulerAngles(-ease(u / .5) * 140, 0, 0);
     const bs = Math.max(0, 1 - u / .5); GA.bot.setLocalScale(bs, bs, bs); GA.top.enabled = u < 1.0;
     // 煙：キャラは濃くて長い、アイテムはすぐ消える
@@ -2413,14 +2485,17 @@ function gaUpdate(dt) {
       p.e.setLocalScale(s, s * .85, s);
     });
     if (GA.chr) {
-      // 煙がいちばん濃くなってから、中にキャラを置く（煙が晴れると見える）
-      GA.chr.root.enabled = u > 1.0;
-      const a = GA.chr, hop = u > 2.2 && u < 2.75 ? Math.sin((u - 2.2) / .55 * Math.PI) * .55 : 0;
-      a.pos.y = F0.y + hop; animate(a, false, false, dt, time);
-      if (u > 2.2 && !GA.hopped) { GA.hopped = 1; if (!quiet) Snd.beep(520, .12, 'triangle', .7, 400); }
+      // 煙がいちばん濃くなってから、中にキャラを置く（煙が晴れると見える）→ くるっと回ってポーズ
+      const a = GA.chr; a.root.enabled = u > 1.0;
+      const spin = u > 2.55 ? Math.min(1, (u - 2.55) / .5) : 0, hop = u > 2.55 && u < 3.05 ? Math.sin((u - 2.55) / .5 * Math.PI) * .6 : 0;
+      a.pos.y = F0.y + hop; a.face = ease(spin) * Math.PI * 2;
+      animate(a, false, false, dt, time); a.head.setLocalEulerAngles(-12, 0, 0);
+      if (u > 3.05) { const k = Math.min(1, (u - 3.05) / .15); a.arms[1].setLocalEulerAngles(-160 * k, 0, 25 * k); a.arms[0].setLocalEulerAngles(-20 * k, 0, -40 * k); a.body.setLocalPosition(0, Math.sin(time * 6) * .03, 0); }
+      if (u > 2.55 && !GA.hopped) { GA.hopped = 1; if (!quiet) Snd.beep(520, .15, 'triangle', .7, 500); }
+      if (u > 3.05 && GA.hopped === 1) { GA.hopped = 2; GA.quake = .25; if (!quiet) Snd.beep(1047, .12, 'square', .6); }
       const f = a.root.findByName('float'); if (f) f.setLocalPosition(0, .25 + Math.sin(time * 3) * .06, .2);
     }
-    if (GA.item) { const sc = Math.min(1, ease(u / .35) * 1.15); GA.item.holder.setLocalScale(sc, sc, sc); GA.item.holder.setLocalPosition(F0.x, F0.y + .95 + Math.sin(u * 3) * .08, F0.z + 2.7); GA.item.holder.setLocalEulerAngles(0, Math.sin(u * 2) * 18, 0); }
+    if (GA.item) { const sc = Math.min(1, ease(u / .35) * 1.15); GA.item.holder.setLocalScale(sc, sc, sc); GA.item.holder.setLocalPosition(F0.x, F0.y + .95 + Math.sin(u * 3) * .08, F0.z + 3.7); GA.item.holder.setLocalEulerAngles(0, Math.sin(u * 2) * 18, 0); }
   }
   // 火花
   for (const s of GA.sparks) {
@@ -2432,12 +2507,20 @@ function gaUpdate(dt) {
   if (t >= GA.end && !GA.ended) { GA.ended = true; GA.skip = false; gaShowResult(); }
   gaCamera(dt);
 }
+// カプセルが開いた瞬間の、レア度の大きな文字
+function gaRankText(r) {
+  const el = $('gaRank');
+  el.className = ''; el.textContent = ['おまけ', 'ノーマル', 'レア！', 'ウルトラレア！！'][r];
+  el.style.setProperty('--c', RARE_COL[r]); void el.offsetWidth; el.className = 'on r' + r;
+  if (r >= 2) [784, 988, 1319].forEach((f, i) => setTimeout(() => Snd.beep(f, .1, 'triangle', .9), i * 80));
+}
 function gaShowResult() {
   const res = GA.res, r = res.r, el = $('gaRes');
-  const sub = r === 0 ? (res.it ? 'もちものに入れました' : '素材を手に入れました') : res.isNew ? '仲間になった！ 2F の結成ボードでメンバーに入れられます' : `かさなり：${res.lv ? 'Lv ＋' + res.lv : ''}${res.coins ? (res.lv ? '・' : '') + '朕銭 ＋' + fmt(res.coins) : ''}`;
+  const big = r === 0 ? `${esc(res.name)} ×${res.n}` : res.isNew ? `${esc(res.name)}が<br>仲間になった！` : `${esc(res.name)}`;
+  const sub = r === 0 ? (res.it ? 'もちものに入れました' : '素材を手に入れました') : res.isNew ? '2F の結成ボードでメンバーに入れられます' : `かさなりボーナス：${res.lv ? 'Lv ＋' + res.lv : ''}${res.coins ? (res.lv ? '・' : '') + '朕銭 ＋' + fmt(res.coins) : ''}`;
   el.innerHTML = `<div class="rib ${r === 3 ? 'rainbow' : ''}" style="background:${r ? RARE_COL[r] : '#b9ad88'}">${r ? '★'.repeat(r) + ' ' + RARE_NAME[r] : 'おまけ'}</div>
-    ${res.isNew ? '<div class="new">NEW!</div>' : ''}<div class="nm">${esc(res.ch ? res.name : res.name + ' ×' + res.n)}</div><div class="sb">${sub}</div><small>Enter／クリックで ガシャにもどる</small>`;
-  el.classList.add('on'); $('gaHint').classList.remove('on');
+    ${res.isNew ? '<div class="new">NEW!</div>' : ''}<div class="nm">${big}</div><div class="sb">${sub}</div><small>Enter／クリックで ガシャにもどる</small>`;
+  el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); $('gaHint').classList.remove('on');
   if (r === 3) { Snd.up(); setTimeout(() => Snd.up(), 260); setTimeout(() => [1568, 2093].forEach((f, i) => setTimeout(() => Snd.beep(f, .12, 'triangle', .9), i * 90)), 520); }
   else if (r === 2) { Snd.up(); setTimeout(() => Snd.ok(), 250); }
   else if (r === 1) Snd.up(); else Snd.buy();
@@ -2455,7 +2538,8 @@ function gaEnd() {
   if (GA.item) { GA.item.holder.destroy(); GA.item = null; }
   Fx.mach.setLocalPosition(F0.x, F0.y, F0.z); Fx.crank.setLocalEulerAngles(0, 0, 0);
   Fx.glow.emissive.set(1, .54, .16); Fx.glow.update(); Fx.lamp.light.color = new Color(1, .55, .2); Fx.lamp.light.intensity = 1.2;
-  $('gaRes').classList.remove('on'); $('gaHint').classList.remove('on'); document.body.classList.remove('cine');
+  sun.light.intensity = SUN_I; app.scene.ambientLight = AMB.clone(); camera.camera.clearColor = BG_SKY; GA.flames.forEach(f => f.e.enabled = false);
+  $('gaRes').classList.remove('on'); $('gaHint').classList.remove('on'); $('gaRank').className = ''; document.body.classList.remove('cine');
   // カメラは今の位置からなめらかに戻す
   const p = player.pos; cam.x = GA.camLook.x; cam.y = GA.camLook.y;
   S.gc.last = GA.res; state.ui = null;
