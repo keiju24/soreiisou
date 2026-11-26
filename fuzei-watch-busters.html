@@ -313,6 +313,42 @@
   .gcRate.r3 .t i { color:#1b1519; } .gcRate.r2 .t i { color:#d8402f; } .gcRate.r1 .t i { color:#3f8fe0; }
   .btn.huge { font-size:21px; padding:8px 18px; justify-content:center; }
 
+  /* ===== ごうせい・しんか ===== */
+  .gsbox { display:flex; flex-direction:column; padding:14px; gap:6px; min-height:0; }
+  .gspot { display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; padding:14px 8px; background:radial-gradient(circle,#4a3a5a,#2a2230); border:4px solid var(--ink); border-radius:14px; color:var(--cream); }
+  .gsin, .gsout { display:flex; flex-direction:column; align-items:center; gap:2px; text-align:center; } .gsin small { font-weight:800; font-size:11px; max-width:96px; } .gsin b { font:900 15px monospace; } .gsin.ng b { color:#ff8a6a; } .gsin.ok b { color:var(--crt); }
+  .gsout b { font-weight:900; font-size:15px; } .gsplus, .gsarrow { font-weight:900; font-size:24px; color:#f0c048; }
+  .gshd { font-weight:900; font-size:12px; color:#6a6452; margin:6px 0 2px; border-bottom:2px solid #b9ad88; }
+  .row.ng { opacity:.55; } .row.ng.on { opacity:1; }
+  .anyic { display:inline-grid; place-items:center; border:3px solid var(--ink); border-radius:10px; font:900 16px monospace; color:#fff; } .anyic.r1 { background:#8b9188; } .anyic.r2 { background:#4f6f86; } .anyic.r3 { background:#b5862a; }
+  .evtag { display:inline-block; margin-left:6px; font-size:11px; font-weight:900; padding:1px 6px; border-radius:4px; background:#b5862a; color:#fff; vertical-align:middle; } .evtag.can { background:#a9402f; animation:b 1s steps(1) infinite; }
+  .evbox { border:3px solid var(--ink); border-radius:10px; padding:8px 10px; background:#efe7cd; display:flex; flex-direction:column; gap:6px; }
+  .evarrow { display:flex; align-items:center; gap:8px; font-size:16px; } .evarrow span { color:#b5862a; font-weight:900; } .evarrow .to { color:#a9402f; }
+  .evneed { display:flex; flex-wrap:wrap; gap:6px 12px; } .evneed span { font-weight:900; font-size:13px; } .evneed .ok { color:#3f7a2c; } .evneed .ng { color:#a9402f; } .evneed small { margin-left:4px; font-weight:800; color:#6a6452; }
+  .btn[disabled] { opacity:.5; filter:grayscale(.6); cursor:not-allowed; }
+  #fxLayer { position:fixed; inset:0; z-index:40; display:none; place-items:center; background:#000c; cursor:pointer; }
+  #fxLayer.on { display:grid; }
+  #fxLayer .fxc { position:relative; width:420px; height:420px; display:grid; place-items:center; }
+  #fxLayer .fin { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) rotate(var(--a)) translateY(-150px) rotate(calc(-1 * var(--a))); }
+  #fxLayer.fuse.on .fin { animation:fxIn .8s cubic-bezier(.6,0,.9,.5) forwards; }
+  @keyframes fxIn { to { transform:translate(-50%,-50%) rotate(calc(var(--a) + 360deg)) translateY(0) rotate(calc(-1 * var(--a) - 360deg)) scale(.2); opacity:0; } }
+  #fxLayer .fflash { position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle,#fff,#fff0 60%); opacity:0; }
+  #fxLayer.fuse.on .fflash { animation:fxFlash .5s .75s ease-out; } #fxLayer.evo.on .fflash { animation:fxFlash .7s 1.3s ease-out; }
+  @keyframes fxFlash { 0% { opacity:0; transform:scale(.3); } 30% { opacity:1; } 100% { opacity:0; transform:scale(1.6); } }
+  #fxLayer .fout { position:absolute; display:flex; flex-direction:column; align-items:center; gap:4px; color:var(--cream); opacity:0; transform:scale(.3); }
+  #fxLayer.fuse.on .fout { animation:fxPop .45s .85s cubic-bezier(.2,1.6,.4,1) forwards; }
+  #fxLayer .fout b { font-size:24px; font-weight:900; } #fxLayer .fout small { font-weight:900; color:var(--hazard); font-size:16px; }
+  @keyframes fxPop { to { opacity:1; transform:scale(1); } }
+  #fxLayer .erays { position:absolute; inset:-80px; background:repeating-conic-gradient(#ffd84a55 0 10deg,#0000 10deg 20deg); border-radius:50%; animation:fxSpin 3s linear infinite; opacity:0; }
+  #fxLayer.evo.on .erays { animation:fxSpin 3s linear infinite, fxPop .6s .2s forwards; }
+  @keyframes fxSpin { to { rotate:360deg; } }
+  #fxLayer .eface { width:200px; height:200px; border-radius:50%; overflow:hidden; border:6px solid var(--ink); background:#b9ad88; box-shadow:0 0 40px #ffd84a; }
+  #fxLayer.evo.on .eface { animation:fxShake 1.3s ease-in; } #fxLayer .eface img { width:100%; height:100%; object-fit:cover; object-position:top; }
+  @keyframes fxShake { 0%,100% { transform:none; } 20% { transform:scale(1.05) rotate(-4deg); } 40% { transform:scale(1.1) rotate(5deg); } 60% { transform:scale(1.15) rotate(-6deg); filter:brightness(1.6); } 80% { transform:scale(1.2) rotate(6deg); filter:brightness(2.4); } }
+  #fxLayer .etxt { position:absolute; bottom:-60px; left:50%; transform:translateX(-50%); width:max-content; text-align:center; color:var(--cream); opacity:0; }
+  #fxLayer.evo.on .etxt { animation:fxPop .5s 1.45s forwards; }
+  #fxLayer .etxt small { display:block; font-size:40px; font-weight:900; color:var(--hazard); text-shadow:0 4px 0 var(--ink); } #fxLayer .etxt div { font-size:22px; font-weight:900; } #fxLayer .etxt b { color:#ffd84a; font-size:28px; }
+  #fxLayer .etxt em { display:block; font-style:normal; font-weight:800; margin-top:4px; } #fxLayer .etxt i { display:block; font:800 12px monospace; margin-top:8px; opacity:.7; font-style:normal; }
   /* ===== 出動（戦闘） ===== */
   .bbub { position:absolute; left:0; top:0; display:none; background:#fff6df; color:var(--ink); border:3px solid var(--ink); border-radius:12px; padding:2px 10px; font-weight:900; font-size:14px; white-space:nowrap; }
   .bbub.on { display:block; } .bbub.sos { background:#ffd6cc; color:#a9402f; animation:b 1s steps(1) infinite; }
@@ -399,6 +435,7 @@
 <div id="talk"></div>
 <div id="toast"></div>
 <div id="gaRes"></div>
+<div id="fxLayer" onclick="this.classList.contains('done') && window.__fxClose && window.__fxClose()"></div>
 <div id="gaRank"></div>
 <div id="gaFlash"></div>
 <div id="bt">
@@ -510,6 +547,7 @@ const BOSSES = [
 const MATS = {};
 ENEMIES.forEach(e => e.mats.forEach((n, i) => MATS[e.key + (i + 1)] = { id: e.key + (i + 1), name: n, r: i + 1, src: e.name, draw: e.draw[i] }));
 BOSSES.forEach(e => e.mats.forEach((n, i) => MATS['b_' + e.key + (i + 1)] = { id: 'b_' + e.key + (i + 1), name: n, r: i + 1, src: e.name + '（ボス）', draw: e.draw[i] }));
+MATS.x_evo = { id: 'x_evo', name: '進化の玉', r: 3, src: '合成でつくる・ガシャ・ボス', draw: 'evo' };   // 隊員の進化に使う
 
 // ---- 装備（1人1つ。★1〜★3、＋0〜＋5） ----
 // s：★ごとの数値（hp たいりょく・chi ちから・waz わざ・mam まもり・sub すばやさ・kai かいしん%）　t：★ごとの特性
@@ -587,6 +625,7 @@ function baseStats(c, lv) {
   for (const [k] of STAT_NAMES) { const [a, b] = B[k]; o[k] = Math.round(a + (b - a) * (lv - 1) / 98); }
   if (c.tw) { if (c.tw.hp) o.hp = Math.round(o.hp * c.tw.hp); if (c.tw.sub) o.sub += c.tw.sub; }
   o.kai = 5;
+  if (save.chars[c.key] && save.chars[c.key].evo) { for (const k in o) if (k !== 'kai') o[k] = Math.round(o[k] * 1.2); o.kai += 5; }   // 進化：1.2 倍
   return o;
 }
 
@@ -646,6 +685,7 @@ const ITEM_ICON = {
 };
 // ---- 素材（ここは絵の種類。レア度で背景色と金色が変わる） ----
 const MAT_ICON = {
+  evo(g) { const gr = g.createRadialGradient(26, 24, 3, 32, 32, 22); gr.addColorStop(0, '#fffbe0'); gr.addColorStop(.45, '#f0c048'); gr.addColorStop(1, '#a9402f'); circ(g, 32, 32, 19, gr); starP(g, 32, 32, 9, '#fffbe0'); g.save(); g.globalAlpha = .5; g.fillStyle = '#fff'; g.beginPath(); g.ellipse(25, 23, 6, 3.5, -.6, 0, 7); g.fill(); g.restore(); },
   paper(g) { poly(g, [[16, 30], [24, 14], [40, 12], [50, 24], [48, 44], [34, 52], [18, 46]], '#ece4cc'); line(g, [[24, 22], [34, 30], [28, 42]], 2); line(g, [[40, 20], [36, 34], [44, 40]], 2); },
   tab(g, r) { rot(g, -.3, () => { rr(g, 14, 20, 36, 24, 12, r === 3 ? GOLD : '#b7c0c4'); rr(g, 20, 26, 14, 12, 6, '#3a3d38'); circ(g, 42, 32, 3); }); if (r === 3) starP(g, 52, 12, 6, '#f6e9b0'); },
   shard(g, r) { poly(g, [[12, 22], [44, 12], [50, 30], [30, 52], [18, 42]], r === 3 ? GOLD : '#cfae45'); line(g, [[22, 26], [42, 20]], 2); },
@@ -1384,33 +1424,115 @@ function limb(parent, pos, len, m, r = .07) {
   inked(pivot, 'cylinder', m, [0, -len / 2, 0], [r * 2, len, r * 2], null, .02);
   return pivot;
 }
-function makeChar(c) {
-  const rootE = new Entity(c.key), body = new Entity('body');
-  rootE.addChild(body);
-  const big = c.prop === 'muscle';
-  const suit = M.khaki, roleM = cm(ROLE[c.role][1]);
-  // 胴体（つなぎ）とベルト・ワッペン
-  inked(body, 'sphere', suit, [0, .95, 0], big ? [.86, .82, .62] : [.66, .78, .5]);
-  piece(body, 'cylinder', roleM, [0, .78, 0], big ? [.84, .1, .6] : [.64, .1, .48]);
-  piece(body, 'box', M.yellow, [0, .78, big ? .3 : .24], [.16, .1, .03]);
-  piece(body, 'sphere', roleM, [.18, 1.1, big ? .29 : .22], [.14, .14, .04]);
-  // 背中の吸引装置
-  inked(body, 'box', M.steel, [0, 1.0, -.36], [.42, .56, .22], null, .02);
-  piece(body, 'cylinder', M.slime, [0, .98, -.49], [.2, .36, .2]);
-  piece(body, 'box', M.dark, [0, 1.22, -.47], [.3, .08, .04]);
-  // 手足
-  const legs = [-1, 1].map(s => limb(body, [s * .14, .62, 0], .58, M.khaki2, .075));
-  legs.forEach(l => inked(l, 'box', M.dark, [0, -.6, .06], [.16, .1, .26], null, .02));
-  const sx = big ? .5 : .38;
-  const arms = [-1, 1].map(s => limb(body, [s * sx, 1.15, 0], .52, suit, big ? .11 : .065));
-  arms.forEach(a => inked(a, 'sphere', M.dark, [0, -.55, 0], big ? [.24, .24, .24] : [.15, .15, .15], null, .02));
-  if (big) arms.forEach(a => inked(a, 'sphere', cm('#c69c78'), [0, -.22, .02], [.26, .3, .26], null, .02));
+// ---- 見た目：キャラごとに体つき・服・帽子・背中の物がちがう（顔は写真のステッカー）----
+//  h：背の高さ　w：横はば　top：上の服　bot：下の服　parts：つける物
+const LOOK = {
+  homura:    { h: 1.0, w: .95, top: '#c0392b', bot: '#2b2421', skin: '#f1c8a0', shoe: '#1a1a1a', glove: '#2b2421', acc: '#f0c048', parts: ['scarf', 'flamepads', 'belt'] },
+  berserker: { h: 1.08, w: 1.4, top: '#3f4a2c', bot: '#5a4a35', skin: '#c69c78', shoe: '#2b2421', glove: '#c69c78', acc: '#8a6a44', parts: ['bare', 'fur', 'spikes', 'belt'] },
+  nagata:    { h: 1.0, w: 1.0, top: '#2e3a44', bot: '#56603f', skin: '#e9c4a0', shoe: '#1d1b19', glove: '#1d1b19', acc: '#cfae45', parts: ['vest', 'helmet', 'kneepads'] },
+  shimarin:  { h: .88, w: .9, top: '#6f4f96', bot: '#6f4f96', skin: '#f1d4b8', shoe: '#3a2a50', glove: '#f1d4b8', acc: '#e8d27a', parts: ['robe', 'hood', 'stars'] },
+  henry:     { h: 1.08, w: .82, top: '#7a2ccc', bot: '#7a2ccc', skin: '#f1c8a0', shoe: '#f4f1ea', glove: '#f1c8a0', acc: '#f0c048', parts: ['track', 'headband'] },
+  kotan:     { h: .95, w: 1.28, top: '#1d1b1f', bot: '#1d1b1f', skin: '#f1c8a0', shoe: '#1a1a1a', glove: '#f4f1ea', acc: '#a9402f', parts: ['belly', 'tails', 'tophat', 'bowtie'] },
+  archer:    { h: 1.12, w: .86, top: '#3c5a3a', bot: '#2e3a2c', skin: '#e9c4a0', shoe: '#3a2a1e', glove: '#5a3f25', acc: '#b8a06a', parts: ['cloak', 'hood', 'quiver', 'neckscarf'] },
+  imai:      { h: 1.0, w: 1.05, top: '#f4f1ea', bot: '#2d4a6e', skin: '#e9c4a0', shoe: '#e8c24a', glove: '#e9c4a0', acc: '#2d4a6e', parts: ['stripes', 'sailor', 'boots'] },
+  chinta:    { h: 1.0, w: 1.08, top: '#d9a838', bot: '#f4f1ea', skin: '#f1c8a0', shoe: '#a9402f', glove: '#f4f1ea', acc: '#a9402f', parts: ['cape', 'crown', 'sequins'] },
+  ichigo:    { h: .98, w: .95, top: '#f4f1ea', bot: '#c23a3a', skin: '#f1c8a0', shoe: '#5a3f25', glove: '#f1c8a0', acc: '#3f8a3a', parts: ['hakama', 'leaf', 'sash'] },
+  unko:      { h: .9, w: 1.08, top: '#7a5432', bot: '#5a3f25', skin: '#f1c8a0', shoe: '#3a2a1e', glove: '#7a5432', acc: '#f08ab0', parts: ['robe', 'swirlhat', 'dots'] },
+  kenshin:   { h: 1.02, w: 1.0, top: '#e07a35', bot: '#e07a35', skin: '#e9c4a0', shoe: '#2b2421', glove: '#4a4f47', acc: '#8b9188', parts: ['toolbelt', 'goggles', 'pack'] },
+};
+// ---- 進化：進化すると名前・必殺技の名前・見た目（光る輪と胸のしるし）が変わり、能力が 1.2 倍 ----
+const EVO = {
+  homura: { name: '炎帝ホムラ', ult: '紅蓮大文字・極' },
+  berserker: { name: '鬼神バーサーカー', ult: '狂戦士の大雄叫び' },
+  nagata: { name: 'NA・GATA改', ult: 'フルバースト改' },
+  shimarin: { name: '星読みしまりん', ult: 'スターライトヒール' },
+  henry: { name: '雷速ヘンリー', ult: '雷神ラッシュ' },
+  kotan: { name: '大紳士こうたんご主人様', ult: 'ジェントル・ストーム' },
+  archer: { name: '月影の恵授', ult: '月穿つ一矢' },
+  imai: { name: '深海王 今井', ult: '大海嘯・深淵' },
+  chinta: { name: '大帝 朕太', ult: '朕の大リサイタル' },
+  ichigo: { name: '剣聖いちご', ult: '紅白百花乱舞' },
+  unko: { name: '黄金うんこいちご', ult: '運気大上昇' },
+  kenshin: { name: 'Kenshin MkII', ult: '量産機起動' },
+};
+const EVO_NEED = { lv: 30, orb: 1, coins: 3000 };
+const isEvo = (k) => !!(save.chars[k] && save.chars[k].evo);
+const cname = (k) => isEvo(k) ? EVO[k].name : crewByKey[k].name;
+const mvName = (k, i) => i === 3 && isEvo(k) ? EVO[k].ult : crewByKey[k].moves[i];
+function makeChar(c, evo = isEvo(c.key)) {
+  const L = LOOK[c.key] || LOOK.homura, H = L.h, W = L.w, has = (p) => L.parts.includes(p);
+  const rootE = new Entity(c.key), body = new Entity('body'); rootE.addChild(body);
+  const top = cm(L.top), bot = cm(L.bot), acc = cm(L.acc), shoe = cm(L.shoe), skin = cm(L.skin), glove = cm(L.glove);
+  const chestY = .95 * H, hipY = .62 * H, shY = 1.15 * H, headY = 1.86 * H, fz = .25 * W;   // fz：胸の前の面
+  // 胴体
+  if (has('belly')) {
+    inked(body, 'sphere', top, [0, chestY - .03, 0], [.7 * W, .86 * H, .62 * W]);
+    piece(body, 'sphere', cm('#f4f1ea'), [0, chestY + .02, .14], [.36 * W, .6 * H, .46 * W]);
+    for (const y of [.82, .97, 1.12]) piece(body, 'sphere', M.dark, [0, y * H, .37 * W], [.05, .05, .03]);
+  } else inked(body, 'sphere', top, [0, chestY, 0], [.66 * W, .78 * H, .5 * W]);
+  // 足
+  const legR = W > 1.2 ? .1 : .075;
+  const legs = [-1, 1].map(s => limb(body, [s * .14 * W, hipY, 0], .58 * H, bot, legR));
+  legs.forEach(l => inked(l, 'box', shoe, [0, -.58 * H - .02, .06], has('boots') ? [.2, .16, .3] : [.17, .1, .27], null, .02));
+  if (has('boots')) legs.forEach(l => piece(l, 'cylinder', shoe, [0, -.42 * H, 0], [.2, .3, .2]));
+  if (has('kneepads')) legs.forEach(l => inked(l, 'box', M.dark, [0, -.3 * H, .08], [.16, .14, .06], null, .015));
+  if (has('track')) legs.forEach(l => piece(l, 'box', acc, [.07, -.29 * H, 0], [.03, .5 * H, .05]));
+  // スカート（ローブ・はかま）
+  if (has('robe')) inked(body, 'cone', top, [0, .48 * H, 0], [.86 * W, 1.0 * H, .74 * W]);
+  if (has('hakama')) inked(body, 'cone', bot, [0, .44 * H, 0], [.78 * W, .9 * H, .66 * W]);
+  // 腕
+  const sleeve = has('bare') ? skin : top, sx = (W > 1.2 ? .46 : .38) * W;
+  const arms = [-1, 1].map(s => limb(body, [s * sx, shY, 0], .52 * H, sleeve, W > 1.2 ? .11 : .065));
+  arms.forEach(a => inked(a, 'sphere', glove, [0, -.55 * H, 0], W > 1.2 ? [.24, .24, .24] : [.15, .15, .15], null, .02));
+  if (has('bare')) arms.forEach(a => inked(a, 'sphere', skin, [0, -.2, .02], [.28, .32, .28], null, .02));
+  if (has('track')) arms.forEach(a => piece(a, 'box', acc, [.06, -.26 * H, 0], [.03, .44 * H, .05]));
   // 顔（正面にステッカーの板・うしろにシルエット）
   const ft = faceTextures(c.img);
   const fh = c.img === 'HOUSE' ? 1.0 : 1.12, fw = fh * ft.aspect;
-  const head = new Entity('head'); head.setLocalPosition(0, 1.86, 0); body.addChild(head);
+  const head = new Entity('head'); head.setLocalPosition(0, headY, 0); body.addChild(head);
   const pf = new Entity(); pf.addComponent('render', { type: 'plane', material: ft.front, castShadows: true }); pf.setLocalEulerAngles(90, 0, 0); pf.setLocalScale(fw, 1, fh); pf.setLocalPosition(0, 0, .03); head.addChild(pf);
   const pb = new Entity(); pb.addComponent('render', { type: 'plane', material: ft.back, castShadows: false }); pb.setLocalEulerAngles(-90, 180, 0); pb.setLocalScale(fw, 1, fh); pb.setLocalPosition(0, 0, -.01); head.addChild(pb);
+  const HT = .5;   // 頭のてっぺん（head からの高さ）
+  // ---- つける物 ----
+  if (has('belt')) piece(body, 'cylinder', M.dark, [0, .78 * H, 0], [.67 * W, .1, .51 * W]);
+  if (has('belt')) piece(body, 'box', acc, [0, .78 * H, fz + .01], [.16, .1, .03]);
+  if (has('scarf')) {
+    piece(body, torusMesh(.2, .08), cm('#e0503c'), [0, 1.36 * H, 0], null, [0, 0, 0]);
+    inked(body, 'box', cm('#e0503c'), [-.12, 1.18 * H, -.3 * W], [.12, .46, .04], [25, 0, 14]); inked(body, 'box', cm('#e0503c'), [.02, 1.12 * H, -.32 * W], [.12, .56, .04], [30, 0, -8]);
+  }
+  if (has('flamepads')) for (const s of [-1, 1]) { inked(body, 'sphere', M.dark, [s * .34 * W, 1.26 * H, 0], [.26, .18, .26]); piece(body, 'cone', cm('#f0a040', { emissive: '#f07a20', ei: .7 }), [s * .36 * W, 1.42 * H, 0], [.18, .28, .18]); }
+  if (has('fur')) { piece(body, torusMesh(.34, .14), cm('#8a6a44'), [0, 1.3 * H, -.02], null, [8, 0, 0]); }
+  if (has('spikes')) for (const s of [-1, 1]) for (const dz of [-.08, .08]) inked(body, 'cone', M.steel, [s * .5 * W, 1.38 * H, dz], [.12, .26, .12], [0, 0, -s * 25]);
+  if (has('vest')) { inked(body, 'box', cm('#4a5a3a'), [0, chestY, fz - .02], [.5 * W, .52 * H, .1], null, .015); for (const [x, y] of [[-.12, .88], [.12, .88], [-.12, 1.04], [.12, 1.04]]) inked(body, 'box', cm('#3a4632'), [x * W, y * H, fz + .05], [.14, .12, .06], null, .012); }
+  if (has('helmet')) { inked(head, 'sphere', cm('#56603f'), [0, HT + .1, -.1], [.84, .48, .6]); piece(head, 'box', cm('#56603f'), [0, HT - .04, .1], [.86, .05, .26]); }
+  if (has('hood')) { inked(head, 'sphere', top, [0, .06, -.36], [1.16, 1.26, .5]); piece(head, torusMesh(.5, .07), top, [0, .06, -.08], null, [90, 0, 0]); }
+  if (has('stars')) for (const [x, y] of [[-.18, .5], [.2, .62], [.05, .3], [-.25, .25], [.24, .2]]) piece(body, 'sphere', cm(L.acc, { emissive: L.acc, ei: .8 }), [x * W, y * H, .36 * W], [.07, .07, .03]);
+  if (has('headband')) { piece(head, 'box', acc, [0, .34, .05], [fw * .92, .1, .02]); inked(head, 'box', acc, [.12, .3, -.08], [.06, .3, .03], [0, 0, 40]); }
+  if (has('tails')) for (const s of [-1, 1]) inked(body, 'box', top, [s * .13 * W, .5 * H, -.24 * W], [.18, .62 * H, .05], [12, 0, s * 6]);
+  if (has('tophat')) { inked(head, 'cylinder', M.dark, [0, HT + .28, -.04], [.48, .56, .48]); inked(head, 'cylinder', M.dark, [0, HT + .02, -.04], [.78, .04, .78]); piece(head, 'cylinder', acc, [0, HT + .1, -.04], [.5, .08, .5]); }
+  if (has('bowtie')) for (const s of [-1, 1]) inked(body, 'cone', acc, [s * .07, 1.36 * H, fz + .14], [.1, .14, .1], [0, 0, s * 90]);
+  if (has('cloak')) inked(body, 'box', top, [0, .92 * H, -.27 * W], [.72 * W, 1.05 * H, .05], [8, 0, 0], .015);
+  if (has('quiver')) { const q = inked(body, 'cylinder', cm('#5a3f25'), [.12, 1.12 * H, -.36 * W], [.18, .7, .18], [0, 0, -25]); for (const dx of [-.04, .04, 0]) piece(body, 'cone', cm('#d9d4c5'), [.27 + dx, 1.5 * H, -.36 * W], [.07, .14, .07], [0, 0, -25]); }
+  if (has('neckscarf')) piece(body, torusMesh(.19, .07), acc, [0, 1.36 * H, 0]);
+  if (has('stripes')) for (const y of [.74, .88, 1.02, 1.16]) piece(body, 'cylinder', acc, [0, y * H, 0], [.67 * W, .06, .51 * W]);
+  if (has('sailor')) { inked(head, 'cylinder', cm('#f4f1ea'), [0, HT + .08, -.04], [.52, .16, .52]); piece(head, torusMesh(.28, .045), cm('#f4f1ea'), [0, HT + .01, -.04]); inked(body, 'box', acc, [0, 1.28 * H, -.22 * W], [.5 * W, .28, .04], [-15, 0, 0]); }
+  if (has('cape')) { inked(body, 'box', cm('#a9402f'), [0, .9 * H, -.28 * W], [.92 * W, 1.3 * H, .05], [6, 0, 0], .015); piece(body, torusMesh(.24, .07), cm('#d9a838', { gloss: .7 }), [0, 1.34 * H, 0]); }
+  if (has('crown')) { const g = cm('#e8c24a', { gloss: .8, spec: .6 }); inked(head, 'cylinder', g, [0, HT + .06, -.04], [.5, .14, .5]); for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; piece(head, 'cone', g, [Math.sin(a) * .22, HT + .2, -.04 + Math.cos(a) * .22], [.1, .16, .1]); } piece(head, 'sphere', cm('#a9402f'), [0, HT + .08, .2], [.08, .08, .04]); }
+  if (has('sequins')) for (let i = 0; i < 8; i++) piece(body, 'sphere', cm('#fff3b0', { emissive: '#ffd84a', ei: .5 }), [Math.sin(i * 2.4) * .18 * W, (.78 + (i % 4) * .12) * H, fz + .03], [.05, .05, .02]);
+  if (has('leaf')) { for (const a of [-40, 0, 40]) inked(head, 'cone', acc, [Math.sin(a * Math.PI / 180) * .1, HT + .14, -.08], [.12, .3, .06], [0, 0, -a]); piece(head, 'sphere', cm('#c23a3a'), [0, HT, -.08], [.16, .12, .12]); }
+  if (has('sash')) piece(body, 'cylinder', acc, [0, .8 * H, 0], [.68 * W, .14, .52 * W]);
+  if (has('swirlhat')) { const br = cm('#7a5432'); [[.36, 0], [.28, .14], [.2, .26], [.12, .36]].forEach(([r, y]) => piece(head, torusMesh(r, r * .45), br, [0, HT + y, -.06])); piece(head, 'sphere', acc, [0, HT + .46, -.06], [.12, .14, .12]); }
+  if (has('dots')) for (const [x, y] of [[-.2, .36], [.18, .48], [0, .22], [.24, .16], [-.22, .12]]) piece(body, 'sphere', acc, [x * W, y * H, .37 * W], [.08, .08, .03]);
+  if (has('toolbelt')) { piece(body, 'cylinder', cm('#5a3f25'), [0, .78 * H, 0], [.68 * W, .12, .52 * W]); for (const x of [-.18, .18]) inked(body, 'box', cm('#7a5432'), [x * W, .7 * H, fz], [.12, .16, .08], null, .012); }
+  if (has('goggles')) { piece(head, 'box', M.dark, [0, .36, .05], [fw * .9, .07, .02]); for (const x of [-.13, .13]) { inked(head, 'cylinder', M.steel, [x, .36, .08], [.16, .06, .16], [90, 0, 0]); piece(head, 'cylinder', cm('#7fc4e0', { emissive: '#7fc4e0', ei: .3 }), [x, .36, .115], [.11, .02, .11], [90, 0, 0]); } }
+  if (has('pack')) { inked(body, 'box', M.steel, [0, 1.0 * H, -.36 * W], [.46, .56, .24], null, .02); bar(M.dark, [.14, 1.2 * H, -.4 * W], [.2, 1.85 * H, -.42 * W], .025, body); piece(body, 'sphere', cm('#e0503c', { emissive: '#e0503c', ei: .8 }), [.2, 1.88 * H, -.42 * W], [.08, .08, .08]); }
+  // ---- 進化：背中の光る輪と胸のしるし ----
+  if (evo) {
+    const gm = cm(L.acc, { emissive: L.acc, ei: 1.1 });
+    const halo = piece(body, torusMesh(.5, .035), gm, [0, 1.5 * H, -.42 * W], null, [90, 0, 0]); halo.render.castShadows = false;
+    for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; piece(body, 'cone', gm, [Math.sin(a) * .62, 1.5 * H + Math.cos(a) * .62, -.42 * W], [.06, .16, .04], [0, 0, -a * 180 / Math.PI]); }
+    piece(body, 'sphere', cm('#fff3b0', { emissive: '#ffd84a', ei: 1.2 }), [0, 1.12 * H, fz + .03], [.12, .12, .04]);
+  }
   // 持ち物（右手）
   const hand = new Entity(); hand.setLocalPosition(0, -.55, 0); arms[1].addChild(hand);
   const P = c.prop;
@@ -1654,7 +1776,7 @@ async function boot() {
   uiInit();
   requestAnimationFrame(titleLoop);
   document.body.dataset.ready = '1';
-  if (new URLSearchParams(location.search).has('debug')) window.__dbg = { app, get player() { return player; }, state, startGame, setPlayer, FH, npcs, openPad, openScreen, interact, save, NET, GA, Snd, BT, startSortie, QUESTS, MV, playSortieMovie };
+  if (new URLSearchParams(location.search).has('debug')) window.__dbg = { app, get player() { return player; }, state, startGame, setPlayer, FH, npcs, openPad, openScreen, interact, save, NET, GA, Snd, BT, startSortie, QUESTS, MV, playSortieMovie , makeChar, CREW, animate};
 }
 
 // =====================================================================
@@ -1815,6 +1937,7 @@ talkEl.onclick = advanceTalk;
 const PAD_TILES = [
   ['nakama', 'なかま', '隊員名簿とメンバー編成。自分で操作するリーダーと、一緒に出動するCPUの隊員を決めます'],
   ['ikusei', 'いくせい', '朕銭を使って、隊員のレベルを上げます（技も自動で強くなります）'],
+  ['gousei', 'ごうせい・しんか', '素材やアイテムを合成します。Lv30 の隊員は「進化の玉」で進化できます'],
   ['mochi', 'もちもの', 'お助けアイテムと素材を確認します。出動セット（2つまで）もここで決めます'],
   ['zukan', 'ずかん', 'ブスイの調査ファイルと、装備の記録です'],
   ['multi', 'マルチ募集', 'オンラインで一緒に出動する隊員を募集・参加します'],
@@ -1829,6 +1952,7 @@ function padIcon(k) {
   if (k === 'nakama') { patch('#3f4a3a', '#ad9d6c'); g.save(); g.translate(70, 66); g.rotate(.06); rect(-34, -40, 68, 82, C.brown, 6); rect(-28, -30, 56, 66, C.paper, 0); rect(-14, -46, 28, 14, C.steel, 3); [[F.HOMURA, -18], [F.NAGATA, 2], [F.FACE, 22]].forEach(([im, y]) => { face(im, -16, y - 6, 8); g.lineWidth = 3; g.beginPath(); g.moveTo(-4, y - 8); g.lineTo(20, y - 8); g.moveTo(-4, y - 2); g.lineTo(12, y - 2); g.stroke(); }); g.restore(); }
   else if (k === 'ikusei') { patch('#2e322c', '#8f8a7a'); g.lineWidth = 12; [[C.crt, Math.PI, 1.55 * Math.PI], [C.yellow, 1.55 * Math.PI, 1.8 * Math.PI], [C.red, 1.8 * Math.PI, 2 * Math.PI]].forEach(([c, a, b]) => { g.strokeStyle = c; g.beginPath(); g.arc(70, 78, 36, a, b); g.stroke(); }); g.strokeStyle = INK; g.lineWidth = 4; g.beginPath(); g.arc(70, 78, 43, Math.PI, 2 * Math.PI); g.stroke(); g.lineWidth = 5; g.beginPath(); g.moveTo(70, 78); g.lineTo(70 + Math.cos(1.86 * Math.PI) * 38, 78 + Math.sin(1.86 * Math.PI) * 38); g.stroke(); g.fillStyle = C.paper; g.beginPath(); g.arc(70, 78, 7, 0, 7); g.fill(); g.stroke(); g.fillStyle = C.crt; g.font = '900 17px monospace'; g.textAlign = 'center'; g.fillText('Lv UP', 70, 104); }
   else if (k === 'soubi') { patch('#3e4a52', '#ad9d6c'); rect(46, 22, 48, 74, C.steel, 8); rect(54, 32, 32, 16, C.steel2, 0); [C.crt, C.yellow, C.red].forEach((c, i) => { g.fillStyle = c; g.beginPath(); g.arc(61 + i * 9, 40, 3, 0, 7); g.fill(); }); rect(54, 56, 32, 30, '#a8c25a', 6); g.lineWidth = 7; g.beginPath(); g.moveTo(94, 76); g.bezierCurveTo(116, 80, 114, 104, 104, 112); g.stroke(); g.lineWidth = 4; rect(94, 106, 20, 12, C.red, 3); }
+  else if (k === 'gousei') { patch('#3a2e4a', '#ad9d6c'); g.fillStyle = '#f0c048'; for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; g.beginPath(); g.moveTo(70 + Math.cos(a) * 18, 52 + Math.sin(a) * 18); g.lineTo(70 + Math.cos(a + .2) * 34, 52 + Math.sin(a + .2) * 34); g.lineTo(70 + Math.cos(a - .2) * 34, 52 + Math.sin(a - .2) * 34); g.fill(); } rect(36, 62, 68, 40, '#4a4f47', 16); rect(30, 58, 80, 12, '#8b9188', 6); g.fillStyle = '#a9402f'; g.beginPath(); g.arc(70, 48, 14, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#fffbe0'; g.beginPath(); g.arc(65, 44, 4, 0, 7); g.fill(); }
   else if (k === 'mochi') { patch('#5a4430', '#ad9d6c'); rect(48, 22, 14, 28, '#a8c25a'); rect(66, 26, 14, 24, '#8fb6c9'); rect(32, 44, 76, 56, C.olive, 10); rect(32, 44, 76, 22, C.olive2, 10); rect(62, 58, 16, 12, '#c9b27a', 0); }
   else if (k === 'zukan') { patch('#33414c', '#8f8a7a'); g.fillStyle = '#c9a44f'; g.beginPath(); g.moveTo(32, 34); g.lineTo(56, 34); g.lineTo(62, 28); g.lineTo(106, 28); g.lineTo(106, 104); g.lineTo(32, 104); g.closePath(); g.fill(); g.stroke(); rect(46, 42, 48, 44, C.paper, 0); g.fillStyle = '#16210f'; g.fillRect(51, 47, 38, 28); g.fillStyle = '#a8c25a'; g.beginPath(); g.arc(70, 64, 9, Math.PI, 0); g.lineTo(79, 72); g.lineTo(61, 72); g.closePath(); g.fill(); g.lineWidth = 2.5; g.stroke(); g.save(); g.translate(84, 96); g.rotate(-.18); g.strokeStyle = C.red; g.lineWidth = 3; g.strokeRect(-24, -12, 48, 18); g.fillStyle = C.red; g.font = '900 13px sans-serif'; g.textAlign = 'center'; g.fillText('調査済', 0, 2); g.restore(); }
   else if (k === 'multi') { patch('#4a2a24', '#ad9d6c'); g.strokeStyle = C.yellow; for (const r of [14, 24, 34]) { g.beginPath(); g.arc(80, 30, r, -2.4, -.7); g.stroke(); } g.strokeStyle = INK; g.beginPath(); g.moveTo(80, 30); g.lineTo(80, 50); g.stroke(); rect(52, 48, 44, 58, C.steel2, 6); g.fillStyle = '#16210f'; g.fillRect(59, 55, 30, 16); g.fillStyle = C.crt; g.font = '900 10px monospace'; g.textAlign = 'center'; g.fillText('2/4', 74, 67); for (let r = 0; r < 2; r++) for (let cc = 0; cc < 3; cc++) { g.fillStyle = C.paper; g.fillRect(59 + cc * 11, 78 + r * 11, 8, 7); } }
@@ -1852,6 +1976,7 @@ function padAlerts() {
   const tiles = $('padTiles').children;
   const ti = (k) => tiles[PAD_TILES.findIndex(t => t[0] === k)];
   ti('ikusei').querySelector('.alert').style.display = canUp ? '' : 'none';
+  ti('gousei').querySelector('.alert').style.display = ownedCrew().some(c => canEvo(c.key)) ? '' : 'none';
   ti('multi').querySelector('.alert').style.display = NET.on ? '' : 'none';
 }
 function updateCoins() { document.querySelectorAll('.coinsTxt').forEach(e => e.textContent = save.settings.demo ? '∞' : fmt(save.coins)); }
@@ -2035,7 +2160,7 @@ function pvCopy() {
 const STAT_COL = { hp: '#5f8a45', chi: '#a9402f', waz: '#6f4f96', mam: '#4f6f86', sub: '#3f7f78', kai: '#8b7d55' };
 function cpHead(key) {
   const c = crewByKey[key], cs = chOf(key);
-  return `<span class="role big" style="background:${ROLE[c.role][1]}">${c.role}</span><b class="cpname">${c.name}</b>
+  return `<span class="role big" style="background:${ROLE[c.role][1]}">${c.role}</span><b class="cpname">${esc(cname(key))}${isEvo(key) ? '<span class="evtag">進化</span>' : ''}</b>
     <span class="cplv"><small>レベル</small>${cs.lv}</span><span class="cprole" style="color:${ROLE[c.role][1]}">${ROLE[c.role][0]}</span>`;
 }
 function cpStats(key, next) {
@@ -2046,7 +2171,7 @@ function cpStats(key, next) {
 }
 function cpMoves(key) {
   const c = crewByKey[key], ml = moveLv(chOf(key).lv);
-  return c.moves.map((m, i) => `<div class="mv2">${icSk(i, c.role, 34)}<div><small>${MOVE_TYPES[i]}</small><b>${m}</b></div><span>Lv${ml}</span></div>`).join('');
+  return c.moves.map((m0, i) => { const m = mvName(key, i); return `<div class="mv2">${icSk(i, c.role, 34)}<div><small>${MOVE_TYPES[i]}</small><b>${m}</b></div><span>Lv${ml}</span></div>`; }).join('');
 }
 function charPanel(key, o = {}) {
   return `<div class="card cp"><div class="cphead" id="cpHead">${cpHead(key)}</div>
@@ -3411,6 +3536,127 @@ function interact(n) {
 }
 
 // =====================================================================
+//  ごうせい・しんか
+//  合成：素材やアイテムを組み合わせて、べつの物をつくる（★素材アップ・アイテム・進化の玉）
+//  進化：Lv30 ＋ 進化の玉 ＋ 朕銭 で、隊員が進化する（名前・必殺技・見た目が変わり、能力が 1.2 倍）
+// =====================================================================
+const RECIPES = [
+  { key: 'orb', grp: '特別', out: { mat: 'x_evo', n: 1 }, ins: [{ anyR: 3, n: 2 }, { anyR: 2, n: 4 }], coins: 1000 },
+  { key: 'curry', grp: 'アイテム', out: { item: 'curry', n: 1 }, ins: [{ item: 'onigiri', n: 3 }], coins: 0 },
+  { key: 'sashi', grp: 'アイテム', out: { item: 'sashi', n: 1 }, ins: [{ item: 'curry', n: 2 }, { item: 'ume', n: 1 }], coins: 0 },
+  { key: 'candy', grp: 'アイテム', out: { item: 'candy', n: 1 }, ins: [{ item: 'drink', n: 1 }, { item: 'gum', n: 1 }], coins: 0 },
+  { key: 'clock', grp: 'アイテム', out: { item: 'clock', n: 1 }, ins: [{ anyR: 2, n: 3 }, { item: 'drink', n: 1 }], coins: 100 },
+  { key: 'assist', grp: 'アイテム', out: { item: 'assist', n: 1 }, ins: [{ item: 'bakuchiku', n: 2 }, { item: 'candy', n: 1 }], coins: 200 },
+  { key: 'onigiri', grp: 'アイテム', out: { item: 'onigiri', n: 2 }, ins: [{ anyR: 1, n: 5 }], coins: 0 },
+];
+// 素材アップ：同じ素材の ★n を3つで ★n+1 を1つ（持っている素材だけ出す）
+function matUpRecipes() {
+  return Object.values(MATS).filter(m => m.r < 3 && m.id !== 'x_evo' && have(m.id) > 0).map(m => {
+    const nid = m.id.slice(0, -1) + (m.r + 1);
+    return MATS[nid] ? { key: 'up:' + m.id, grp: '素材アップ', out: { mat: nid, n: 1 }, ins: [{ mat: m.id, n: 3 }], coins: 50 * m.r } : null;
+  }).filter(Boolean);
+}
+const allRecipes = () => [...RECIPES, ...matUpRecipes()];
+const anyMats = (r) => Object.keys(save.mats).filter(id => MATS[id] && MATS[id].r === r && id !== 'x_evo' && have(id) > 0);
+const anyCount = (r) => anyMats(r).reduce((a, id) => a + have(id), 0);
+const inHave = (x) => x.anyR ? anyCount(x.anyR) : x.mat ? have(x.mat) : (save.items[x.item] || 0);
+const recOk = (rc) => save.coins >= rc.coins && rc.ins.every(x => inHave(x) >= x.n);
+const recName = (o) => o.mat ? MATS[o.mat].name : itemByKey[o.item].name;
+const recIcon = (o, size) => o.mat ? icMat(o.mat, size) : o.item ? icIt(o.item, size) : anyIcon(o.anyR, size);
+const anyIcon = (r, size) => `<span class="anyic r${r}" style="width:${size}px;height:${size}px">★${r}</span>`;
+const inLabel = (x) => x.anyR ? `★${x.anyR}素材（どれでも）` : recName(x);
+function recPay(rc) {
+  save.coins -= rc.coins;
+  for (const x of rc.ins) {
+    if (x.mat) save.mats[x.mat] = have(x.mat) - x.n;
+    else if (x.item) save.items[x.item] -= x.n;
+    else { let n = x.n; for (const id of anyMats(x.anyR).sort((a, b) => have(b) - have(a))) { const t = Math.min(n, have(id)); save.mats[id] -= t; n -= t; if (!n) break; } }
+  }
+  const o = rc.out; if (o.mat) save.mats[o.mat] = have(o.mat) + o.n; else save.items[o.item] = (save.items[o.item] || 0) + o.n;
+}
+const canEvo = (k) => !isEvo(k) && chOf(k).lv >= EVO_NEED.lv && have('x_evo') >= EVO_NEED.orb && save.coins >= EVO_NEED.coins;
+S.gs = { tab: 0, sel: 0, key: null };
+SCREENS.gousei = () => {
+  const G = S.gs;
+  const tabs = `<div style="display:flex;gap:6px;align-items:center">${['合成', '進化'].map((t, i) => `<button class="pill ${G.tab === i ? 'on' : ''}" data-act="gsTab:${i}">${t}</button>`).join('')}<span class="mono" style="margin-left:auto">L／R でタブ</span></div>`;
+  if (G.tab === 0) {
+    const L = allRecipes(); G.sel = Math.min(G.sel, L.length - 1); const rc = L[G.sel], ok = recOk(rc);
+    let grp = '';
+    const rows = L.map((r, i) => { const h = r.grp !== grp ? `<div class="gshd">${(grp = r.grp)}</div>` : ''; return h + `<div class="row ${i === G.sel ? 'on' : ''} ${recOk(r) ? '' : 'ng'}" data-act="gsSel:${i}">${recIcon(r.out, 32)}<b>${recName(r.out)}${r.out.n > 1 ? ' ×' + r.out.n : ''}</b><span class="small" style="margin-left:auto">${r.ins.map(x => inLabel(x) + '×' + x.n).join('＋')}</span></div>`; }).join('');
+    return {
+      title: 'ごうせい・しんか', sub: 'FUSION / 素材とアイテムを組み合わせる', cols: '1.05fr 1fr',
+      html: `<div class="card gsbox">
+          <div class="gspot" id="gsPot">${rc.ins.map(x => `<div class="gsin ${inHave(x) >= x.n ? 'ok' : 'ng'}">${recIcon(x, 56)}<small>${inLabel(x)}</small><b>${inHave(x)}/${x.n}</b></div>`).join('<span class="gsplus">＋</span>')}
+            <span class="gsarrow">▶</span><div class="gsout">${recIcon(rc.out, 84)}<b>${recName(rc.out)}${rc.out.n > 1 ? ' ×' + rc.out.n : ''}</b></div></div>
+          <div class="b15" style="margin-top:6px">${rc.out.mat ? (rc.out.mat === 'x_evo' ? '隊員を進化させるのに使う、ふしぎな玉。「進化」タブで使います' : `素材 ${'★'.repeat(MATS[rc.out.mat].r)}（${MATS[rc.out.mat].src}）`) : itemByKey[rc.out.item].desc}</div>
+          <div class="mono" style="margin-top:4px">合成の費用 ${rc.coins ? fmt(rc.coins) + ' 朕銭' : 'なし'}　／　持っている数 ${rc.out.mat ? have(rc.out.mat) : save.items[rc.out.item] || 0}</div>
+          <button class="btn go huge" style="margin-top:auto" data-act="gsMake" ${ok ? '' : 'disabled'}><span class="key">Enter</span>${ok ? '合成する！' : '材料が足りない'}</button>
+        </div>
+        <div class="card" style="padding:10px 12px;display:flex;flex-direction:column;gap:8px;min-height:0">${tabs}<div class="rows">${rows}</div></div>`,
+      desc: '★の素材は3つで1つ上の★に。★3と★2の素材を集めて「進化の玉」をつくると、隊員を進化させられます',
+      foot: '',
+    };
+  }
+  // ---- 進化 ----
+  const list = ownedCrew(); if (!G.key || !owned(G.key)) G.key = list[0].key;
+  const k = G.key, c = crewByKey[k], cs = chOf(k), ev = isEvo(k);
+  const need = [[`レベル ${EVO_NEED.lv} 以上`, cs.lv >= EVO_NEED.lv, `いま Lv${cs.lv}`], [`進化の玉 ×${EVO_NEED.orb}`, have('x_evo') >= EVO_NEED.orb, `持っている ${have('x_evo')}`], [`朕銭 ${fmt(EVO_NEED.coins)}`, save.coins >= EVO_NEED.coins, '']];
+  return {
+    title: 'ごうせい・しんか', sub: 'EVOLUTION / 隊員を進化させる', cols: '1.12fr 1fr',
+    html: charPanel(k) + `<div class="card" style="padding:10px 12px;display:flex;flex-direction:column;gap:8px;min-height:0">${tabs}
+      <div class="rows" style="flex:1">${list.map(x => `<div class="row ${x.key === k ? 'on' : ''}" data-act="gsPick:${x.key}" data-pv="${x.key}">${faceImg(x.key, 32)}<b>${esc(cname(x.key))}</b><span class="small" style="margin-left:auto">${isEvo(x.key) ? '<span class="evtag">進化ずみ</span>' : canEvo(x.key) ? '<span class="evtag can">進化できる！</span>' : 'Lv' + chOf(x.key).lv}</span></div>`).join('')}</div>
+      <div class="evbox">${ev ? `<b>${esc(EVO[k].name)}</b><div class="small">進化ずみ。必殺技「${esc(EVO[k].ult)}」・能力 1.2 倍</div>`
+        : `<div class="evarrow"><b>${esc(c.name)}</b><span>▶</span><b class="to">${esc(EVO[k].name)}</b></div>
+           <div class="evneed">${need.map(([t, o, n]) => `<span class="${o ? 'ok' : 'ng'}">${o ? '✔' : '✖'} ${t}<small>${n}</small></span>`).join('')}</div>
+           <button class="btn go huge" data-act="gsEvo" ${canEvo(k) ? '' : 'disabled'}><span class="key">Enter</span>進化する！</button>`}</div></div>`,
+    desc: ev ? '進化した隊員は、名前と必殺技が変わり、背中に光る輪がつきます' : '進化すると能力が 1.2 倍になり、必殺技が強い技に変わります。進化の玉は「合成」タブでつくれます（ガシャやボスからも出ます）',
+    foot: '',
+    after() { pvShow(k, $('pv3d')); },
+  };
+};
+Object.assign(ACT, {
+  gsTab(i) { S.gs.tab = +i; S.gs.sel = 0; Snd.move(); renderScreen(); },
+  gsSel(i) { S.gs.sel = +i; Snd.move(); renderScreen(); },
+  gsPick(k) { S.gs.key = k; Snd.move(); renderScreen(); },
+  gsMake() {
+    const rc = allRecipes()[S.gs.sel]; if (!rc) return;
+    if (!recOk(rc)) { Snd.err(); toast('材料が足りません'); return; }
+    const ins = rc.ins.map(x => recIcon(x, 64)), out = recIcon(rc.out, 110);
+    recPay(rc); dirty(); writeSave(); updateCoins();
+    fuseFx(ins, out, recName(rc.out) + (rc.out.n > 1 ? ' ×' + rc.out.n : ''));
+  },
+  gsEvo() {
+    const k = S.gs.key; if (!canEvo(k)) { Snd.err(); toast('進化の条件がそろっていません'); return; }
+    const before = crewByKey[k].name;
+    save.coins -= EVO_NEED.coins; save.mats.x_evo = have('x_evo') - EVO_NEED.orb; chOf(k).evo = 1; dirty(); writeSave(); updateCoins();
+    PV.key = null;                                              // 3Dモデルを作り直す
+    if (save.team[0] === k && typeof setPlayer === 'function') setPlayer(k);
+    evoFx(k, before);
+  },
+});
+// ---- 合成の演出：材料がまん中に吸いこまれて光り、できた物がポンと出る ----
+function fuseFx(ins, out, name) {
+  const el = $('fxLayer'); el.className = 'fuse';
+  el.innerHTML = `<div class="fxc">${ins.map((h, i) => `<div class="fin" style="--a:${i / ins.length * 360}deg">${h}</div>`).join('')}<div class="fflash"></div><div class="fout">${out}<b>${esc(name)}</b><small>合成成功！</small></div></div>`;
+  void el.offsetWidth; el.classList.add('on');
+  [523, 659, 784].forEach((f, i) => setTimeout(() => Snd.beep(f, .08, 'triangle', .7), 150 + i * 120));
+  setTimeout(() => { Snd.up(); }, 820);
+  S.fxClose = window.__fxClose = () => { el.classList.remove('on'); S.fxClose = null; renderScreen(); };
+  setTimeout(() => el.classList.add('done'), 900);
+}
+// ---- 進化の演出：顔のまわりに光が回って、白く光ってから新しい名前 ----
+function evoFx(k, before) {
+  const c = crewByKey[k], el = $('fxLayer'); el.className = 'evo';
+  el.innerHTML = `<div class="fxc"><div class="erays"></div><div class="eface"><img src="${F[c.img].src}"></div><div class="fflash"></div>
+    <div class="etxt"><small>しんか！</small><div><span>${esc(before)}</span> ▶ <b>${esc(EVO[k].name)}</b></div><em>能力 1.2 倍　／　必殺技「${esc(EVO[k].ult)}」</em><i>Enter／クリック</i></div></div>`;
+  void el.offsetWidth; el.classList.add('on');
+  for (let i = 0; i < 12; i++) setTimeout(() => Snd.beep(300 + i * 70, .06, 'square', .4), i * 110);
+  setTimeout(() => { Snd.up(); setTimeout(() => Snd.up(), 240); setTimeout(() => [1047, 1319, 1568, 2093].forEach((f, i) => setTimeout(() => Snd.beep(f, .12, 'triangle', .9), i * 90)), 500); }, 1400);
+  S.fxClose = window.__fxClose = () => { el.classList.remove('on'); S.fxClose = null; renderScreen(); };
+  setTimeout(() => el.classList.add('done'), 1500);
+}
+
+// =====================================================================
 //  出動（戦闘）
 //  救急車に乗ると、受理したクエストの場所へ出動する（いまは「公園」のマップ）。
 //  4人（リーダー＝自分＋CPU 3人）で、ザコのブスイを倒しながら奥へ進み、ボスを正気にもどす。
@@ -4071,8 +4317,8 @@ function btDo(m, what) {
   if (what === 'dodge') { if (m.cd[3] > 0) return false; m.cd[3] = .7; m.dodge = { t: .22, ang: m.moveAng ?? m.aim }; m.inv = .35; se('swish2', .35); return true; }
   const R = ROLE_ACT[m.role];
   if (what === 'atk') { R.atk(m); return true; }
-  if (what === 's1' || what === 's2') { const i = what === 's1' ? 1 : 2; if (m.cd[i] > 0) return false; m.cd[i] = MOVE_CD[m.role][i] * (m.cpu ? 1.15 : 1); R[what](m); btSkillName(m, m.c.moves[i]);
-    if (m.cpu && Math.random() < .35) btSay(m, m.c.moves[i] + '！');
+  if (what === 's1' || what === 's2') { const i = what === 's1' ? 1 : 2; if (m.cd[i] > 0) return false; m.cd[i] = MOVE_CD[m.role][i] * (m.cpu ? 1.15 : 1); R[what](m); btSkillName(m, mvName(m.key, i));
+    if (m.cpu && Math.random() < .35) btSay(m, mvName(m.key, i) + '！');
     if (m === BT.leader && BT.mm && BT.mm.kind === 'skill') BT.mm.got++; m.gauge = Math.min(100, m.gauge + 3); return true; }
   if (what === 'ult') { if (m.gauge < 100) return false; m.gauge = 0; btCutin(m); BT.freeze = .55; btLater(.0, () => R.ult(m)); return true; }
   return false;
@@ -4317,7 +4563,7 @@ function btBanner(a, b) { const el = $('btBanner'); el.innerHTML = `<b>${esc(a)}
 function btSkillName(m, name) { if (m !== BT.leader) return; const el = $('btSkill'); el.textContent = name; el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); }
 function btBossName(b, name) { const el = $('btBossSkill'); el.textContent = name; el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); }
 function btCutin(m) {
-  const el = $('btCut'); el.innerHTML = `<div class="band" style="--c:${ROLE[m.role][1]}"><img src="${F[m.c.img].src}"><div><small>必殺技</small><b>${esc(m.c.moves[3])}</b><span>${esc(m.c.name)}</span></div></div>`;
+  const el = $('btCut'); el.innerHTML = `<div class="band" style="--c:${ROLE[m.role][1]}"><img src="${F[m.c.img].src}"><div><small>必殺技</small><b>${esc(mvName(m.key, 3))}</b><span>${esc(cname(m.key))}</span></div></div>`;
   el.className = ''; void el.offsetWidth; el.className = 'on'; se('iai1', .6);
 }
 
@@ -4326,13 +4572,13 @@ function btCutin(m) {
 // ---------------------------------------------------------------------
 function btHudInit() {
   $('bt').classList.add('on');
-  $('btParty').innerHTML = BT.party.map((m, i) => `<div class="pm ${i ? '' : 'me'}" id="pm${i}"><span class="face"><img src="${F[m.c.img].src}"></span><div class="pi"><b>${esc(m.c.name)}<em>Lv${m.lv}</em></b><div class="hp"><i></i></div><div class="gg"><i></i></div></div><span class="dn">ダウン</span></div>`).join('');
+  $('btParty').innerHTML = BT.party.map((m, i) => `<div class="pm ${i ? '' : 'me'}" id="pm${i}"><span class="face"><img src="${F[m.c.img].src}"></span><div class="pi"><b>${esc(cname(m.key))}<em>Lv${m.lv}</em></b><div class="hp"><i></i></div><div class="gg"><i></i></div></div><span class="dn">ダウン</span></div>`).join('');
   const L = BT.leader, items = save.set.map((k, i) => k ? `<div class="sk it" id="sk-i${i}">${icIt(k, 34)}<span class="kk">${i + 1}</span><em id="sk-n${i}">${save.items[k] || 0}</em></div>` : `<div class="sk it off"><span class="kk">${i + 1}</span></div>`).join('');
   $('btSkills').innerHTML = `${items}
     <div class="sk" id="sk0"><span class="nm">${esc(L.c.moves[0])}</span><span class="kk">J</span></div>
     <div class="sk" id="sk1"><span class="nm">${esc(L.c.moves[1])}</span><span class="kk">K</span><i class="cd"></i></div>
     <div class="sk" id="sk2"><span class="nm">${esc(L.c.moves[2])}</span><span class="kk">L</span><i class="cd"></i></div>
-    <div class="sk ult" id="sk3"><span class="nm">${esc(L.c.moves[3])}</span><span class="kk">U</span><i class="cd"></i></div>
+    <div class="sk ult" id="sk3"><span class="nm">${esc(mvName(L.key, 3))}</span><span class="kk">U</span><i class="cd"></i></div>
     <div class="sk dg"><span class="nm">回避</span><span class="kk">Space</span></div>`;
   $('btTags').innerHTML = ''; BT.enemies.forEach(e => $('btTags').appendChild(e.bar)); BT.party.forEach(m => $('btTags').appendChild(m.bub));
   $('btBossBar').innerHTML = `<span>BOSS　${esc(BT.boss.c.name)}</span><div class="bb"><i></i></div><div class="bk"><i></i></div><em>ブレイク</em>`;
@@ -4432,7 +4678,7 @@ function btResult(win) {
   let coins = BT.bonusCoins || 0; const mats = [...BT.loot];
   if (win) {
     coins += q.reward; if (BT.kills >= 15) coins += 500;
-    mats.push('b_' + bk + 1, 'b_' + bk + 1, 'b_' + bk + 1); if (Math.random() < .6) mats.push('b_' + bk + 2); if (Math.random() < .15) mats.push('b_' + bk + 3);
+    mats.push('b_' + bk + 1, 'b_' + bk + 1, 'b_' + bk + 1); if (Math.random() < .6) mats.push('b_' + bk + 2); if (Math.random() < .15) mats.push('b_' + bk + 3); if (Math.random() < .3) mats.push('x_evo');
     save.seen['b_' + bk] = (save.seen['b_' + bk] || 0) + 1; save.cleared = save.cleared || {}; save.cleared[q.key] = (save.cleared[q.key] || 0) + 1; save.quest = null;
   }
   save.coins += coins;
@@ -4623,6 +4869,7 @@ addEventListener('keydown', (e) => {
   if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) { if (e.code === 'Escape' || e.code === 'Enter') e.target.blur(); return; }
   if (titleOn) { if (e.code === 'Enter' || e.code === 'Space') startGame(); return; }
   if (MV.on) { e.preventDefault(); if (e.code === 'Enter' || e.code === 'Space' || e.code === 'Escape') mvSkip(); return; }
+  if (S.fxClose) { if (['Enter', 'Space', 'Escape', 'KeyE'].includes(e.code)) { e.preventDefault(); if ($('fxLayer').classList.contains('done')) S.fxClose(); } return; }
   if (BT.on) { if (state.ui === 'talk') { if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); advanceTalk(); } return; } battleKey(e); return; }
   if (state.busy) return;
   const k = e.code;
@@ -4642,8 +4889,8 @@ addEventListener('keydown', (e) => {
       const foot = [...$('scrFoot').querySelectorAll('[data-act]')];
       const byKey = (label) => foot.find(b => (b.querySelector('.key') || {}).textContent === label);
       const map = { Enter: 'Enter', ShiftLeft: 'Shift', ShiftRight: 'Shift', KeyX: 'X', KeyQ: 'Q', KeyR: 'R', KeyY: 'Y', KeyZ: 'Z', KeyC: 'C' };
-      if (S.cur === 'mochi' || S.cur === 'zukan' || S.cur === 'workshop') {
-        const tabKey = S.cur === 'mochi' ? 'mo' : S.cur === 'zukan' ? 'zk' : 'ws', n = S.cur === 'mochi' ? 2 : 3;
+      if (S.cur === 'mochi' || S.cur === 'zukan' || S.cur === 'workshop' || S.cur === 'gousei') {
+        const tabKey = S.cur === 'mochi' ? 'mo' : S.cur === 'zukan' ? 'zk' : S.cur === 'gousei' ? 'gs' : 'ws', n = S.cur === 'mochi' || S.cur === 'gousei' ? 2 : 3;
         if (k === 'KeyL' || k === 'KeyR' && S.cur !== 'multi') { const T = S[tabKey]; T.tab = (T.tab + (k === 'KeyR' ? 1 : n - 1)) % n; if (tabKey !== 'ws') T.sel = 0; Snd.move(); renderScreen(); return; }
       }
       if (S.cur === 'gacha' && (k === 'Enter' || k === 'Space')) return ACT.gcSpin();
