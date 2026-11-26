@@ -59,7 +59,7 @@
   .pfoot { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
   .btn { white-space:nowrap; border:4px solid var(--ink); border-radius:8px; padding:4px 14px; font-weight:900; font-size:16px; color:var(--ink); background:linear-gradient(#cfcab9,#9c978a); box-shadow:0 4px 0 var(--ink); cursor:pointer; display:inline-flex; align-items:center; gap:4px; }
   /* メンバー編成・いくせい：左＝3Dモデルと性能、右＝サークル／リスト */
-  .cp { display:grid; grid-template-rows:auto 1fr auto; gap:10px; padding:0 0 10px; }
+  .cp { display:grid; grid-template-rows:auto minmax(0,1fr) auto; gap:8px; padding:0 0 10px; }
   .cphead { display:flex; align-items:center; gap:10px; padding:8px 14px; background:linear-gradient(90deg,#3a4232,#565a51 70%,#6b6a52); color:var(--cream); border-bottom:4px solid var(--ink); }
   .role.big { min-width:34px; height:34px; font-size:20px; }
   .cpname { font-size:26px; letter-spacing:.04em; text-shadow:0 2px 0 var(--ink); }
@@ -71,15 +71,15 @@
   .cpstage canvas { position:absolute; inset:0; width:100%; height:100%; }
   .cpstage::after { content:""; position:absolute; inset:0; pointer-events:none; box-shadow:inset 0 0 40px #0006; }
   .cpstage .tac { position:absolute; left:6px; top:6px; z-index:1; background:#1f1d1a; color:#e6dfcd; font-weight:900; font-size:12px; padding:2px 8px; }
-  .cpstats { display:flex; flex-direction:column; gap:5px; justify-content:center; }
+  .cpstats { display:flex; flex-direction:column; gap:4px; justify-content:center; min-height:0; overflow:hidden; }
   .srow { display:flex; align-items:center; gap:8px; background:#efe7cd; border:2px solid var(--ink); border-radius:6px; padding:1px 8px 1px 0; }
-  .srow .k { color:#f4ecd8; font-weight:900; font-size:14px; padding:3px 18px 3px 10px; min-width:104px; clip-path:polygon(0 0,88% 0,100% 50%,88% 100%,0 100%); }
-  .srow b { margin-left:auto; font:900 22px "Courier New",monospace; }
+  .srow .k { color:#f4ecd8; font-weight:900; font-size:13px; padding:2px 18px 2px 10px; min-width:104px; clip-path:polygon(0 0,88% 0,100% 50%,88% 100%,0 100%); }
+  .srow b { margin-left:auto; font:900 19px "Courier New",monospace; line-height:1.15; }
   .srow .up { color:#3f7a2c; font:900 13px monospace; width:40px; text-align:right; }
   .eqline { display:flex; align-items:center; gap:8px; margin-top:2px; } .eqline small { display:block; font-size:10px; font-weight:900; color:#5a5446; } .eqline b { font-size:13px; }
   .noeq { width:34px; height:34px; display:grid; place-items:center; border:2px dashed #8a826a; border-radius:8px; font-size:10px; font-weight:900; color:#8a826a; }
   .cpmoves { display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:0 12px; }
-  .mv2 { display:flex; align-items:center; gap:8px; background:#efe7cd; border:2px solid var(--ink); border-radius:8px; padding:3px 8px; }
+  .mv2 { display:flex; align-items:center; gap:8px; background:#efe7cd; border:2px solid var(--ink); border-radius:8px; padding:2px 8px; min-width:0; } .mv2 b { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; } .mv2 > div { min-width:0; }
   .mv2 small { display:block; font-size:10px; font-weight:900; color:#5a5446; } .mv2 b { font-size:15px; } .mv2 > span { margin-left:auto; font:900 12px monospace; }
   .ringcard { display:flex; flex-direction:column; padding:10px 12px; gap:6px; }
   .ringhead { display:flex; align-items:center; justify-content:space-between; }
@@ -280,7 +280,7 @@
   <div id="padScreen" style="display:none;flex-direction:column;gap:12px;height:100%">
     <div class="phead"><h2 class="htitle" id="padTitle"></h2><span class="hsub" id="padSub"></span><div class="counter"><span class="coin"></span><span class="coinsTxt"></span></div></div>
     <div id="scr"></div>
-    <div class="crt">&gt; <span id="padScreenDesc"></span><span class="cur"></span></div>
+    <span id="padScreenDesc" hidden></span>
     <div class="pfoot" id="scrFoot"></div>
   </div>
 </div></div></div>
@@ -1655,7 +1655,6 @@ talkEl.onclick = advanceTalk;
 const PAD_TILES = [
   ['nakama', 'なかま', '隊員名簿とメンバー編成。自分で操作するリーダーと、一緒に出動するCPUの隊員を決めます'],
   ['ikusei', 'いくせい', '朕銭を使って、隊員のレベルを上げます（技も自動で強くなります）'],
-  ['soubi', 'そうび', '装備をつけかえます（1人1つまで）'],
   ['mochi', 'もちもの', 'お助けアイテムと素材を確認します。出動セット（2つまで）もここで決めます'],
   ['zukan', 'ずかん', 'ブスイの調査ファイルと、装備の記録です'],
   ['multi', 'マルチ募集', 'オンラインで一緒に出動する隊員を募集・参加します'],
@@ -1691,8 +1690,9 @@ function padAlerts() {
   // いくせい：朕銭が足りる隊員がいれば「!」
   const canUp = ownedCrew().some(c => chOf(c.key).lv < 99 && save.coins >= lvCost(chOf(c.key).lv));
   const tiles = $('padTiles').children;
-  tiles[1].querySelector('.alert').style.display = canUp ? '' : 'none';
-  tiles[5].querySelector('.alert').style.display = NET.on ? '' : 'none';
+  const ti = (k) => tiles[PAD_TILES.findIndex(t => t[0] === k)];
+  ti('ikusei').querySelector('.alert').style.display = canUp ? '' : 'none';
+  ti('multi').querySelector('.alert').style.display = NET.on ? '' : 'none';
 }
 function updateCoins() { document.querySelectorAll('.coinsTxt').forEach(e => e.textContent = save.settings.demo ? '∞' : fmt(save.coins)); }
 function openPad() { if ($('popLayer')) $('popLayer').style.display = 'none'; state.ui = 'pad'; Snd.menu(); $('pad').classList.add('on'); $('padHome').style.display = 'flex'; $('padScreen').style.display = 'none'; S.cur = null; updateCoins(); padAlerts(); padSelect(padSel); }
@@ -1927,8 +1927,7 @@ SCREENS.nakama = () => {
           <span class="rtag" style="background:${sl.kind === 'me' ? '#a9402f' : sl.kind === 'net' ? '#5f8a45' : '#4f6f86'}">${sl.kind === 'me' ? 'リーダー' : sl.kind === 'net' ? esc(sl.name) : 'CPU'}</span>
           ${sl.key ? faceImg(sl.key, 70) : '<span class="face empty" style="width:70px;height:70px">＋</span>'}
           <span class="rlv">${sl.key ? crewByKey[sl.key].role + ' Lv' + (sl.lv ?? chOf(sl.key).lv) : 'あき'}${NET.on && sl.kind !== 'cpu' ? (sl.ready ? ' ✔' : '') : ''}</span></div>`).join('')}
-      </div></div>
-      <div class="mono" style="text-align:center">隊員をえらんで Enter かクリック</div></div>`;
+      </div></div></div>`;
     desc = N.slot === 0 ? 'リーダーは自分が操作する隊員です' : 'CPU の隊員がいっしょに出動します';
     if (N.pop === 'menu') {
       const k = cur.key, isMe = N.slot === 0, canEdit = cur.kind !== 'net';
