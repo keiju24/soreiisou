@@ -291,6 +291,15 @@
   .btn.huge { font-size:21px; padding:8px 18px; justify-content:center; }
 
   /* ===== 出動（戦闘） ===== */
+  .bbub { position:absolute; left:0; top:0; display:none; background:#fff6df; color:var(--ink); border:3px solid var(--ink); border-radius:12px; padding:2px 10px; font-weight:900; font-size:14px; white-space:nowrap; }
+  .bbub.on { display:block; } .bbub.sos { background:#ffd6cc; color:#a9402f; animation:b 1s steps(1) infinite; }
+  #btMission .mm { color:#ffd84a; } #btMission .mm b { font:900 15px monospace; color:#fff; background:#a9402f; padding:0 6px; border-radius:4px; }
+  #btBossBar .bk { height:6px; width:60%; margin:3px auto 0; background:#1d1b19; border:2px solid var(--ink); border-radius:4px; overflow:hidden; }
+  #btBossBar .bk i { display:block; height:100%; background:#dcbc55; }
+  #btBossBar em { font-style:normal; font:900 10px monospace; color:#dcbc55; letter-spacing:.2em; }
+  #btBossBar.broken .bk i { background:#fff3b0; animation:b .3s steps(1) infinite; } #btBossBar.rage .bb i { background:linear-gradient(#ff8a6a,#a9402f); }
+  .rp .rank { float:right; width:70px; height:70px; margin:-6px -6px 0 0; display:grid; place-items:center; border:5px solid var(--red); border-radius:50%; color:var(--red); font:900 44px "Courier New",monospace; transform:rotate(-12deg); background:#fff6df; }
+  .rp .rank.rS { border-color:#b5862a; color:#b5862a; box-shadow:0 0 18px #ffd84a; } .rp .rank.rA { border-color:#a9402f; color:#a9402f; } .rp .rank.rB { border-color:#4f6f86; color:#4f6f86; } .rp .rank.rC { border-color:#6a6452; color:#6a6452; }
   body.battle .hud, body.battle #prompt { display:none !important; }
   #bt { display:none; position:fixed; inset:0; pointer-events:none; z-index:15; color:var(--cream); }
   #bt.on { display:block; }
@@ -1496,6 +1505,7 @@ function setPlayer(key) {
 // ---------------------------------------------------------------------
 const angleTo = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
 function animate(a, moving, run, dt, t) {
+  if (!Number.isFinite(a.face)) a.face = 0;     // 向きが数でないと、体が描かれなくなる
   a.walk += ((moving ? 1 : 0) - a.walk) * Math.min(1, dt * 10);
   a.phase += dt * (run ? 13 : 9) * (moving ? 1 : 0);
   const sw = Math.sin(a.phase) * a.walk;
@@ -3550,7 +3560,7 @@ function startSortie(q) {
     const f = 1 + (q.lv - 1) * .12;
     Object.assign(BT, {
       on: true, q, map: P, f, t: 0, left: BT_TIME, phase: 'play', phaseT: 0, paused: false, freeze: 0, quake: 0,
-      party: [], enemies: [], proj: [], fx: [], tele: [], timers: [], nums: [], loot: [], kills: 0, kira: 0, taunt: null, boss: null, done: false,
+      party: [], enemies: [], proj: [], fx: [], tele: [], timers: [], nums: [], loot: [], kills: 0, kira: 0, taunt: null, boss: null, done: false, mm: null, mmNext: 30, mmDone: 0, downs: 0,
       cam: new Vec3(PARK.start[0], 0, PARK.start[1]),
     });
     btSpawnParty(); btSpawnEnemies(); btSpawnKira(); btSpawnBoss();
@@ -3560,7 +3570,7 @@ function startSortie(q) {
 }
 function btEnd() {
   fade(() => {
-    BT.party.forEach(m => m.a.root.destroy()); BT.enemies.forEach(e => { e.root.destroy(); e.bar && e.bar.remove(); });
+    BT.party.forEach(m => { m.a.root.destroy(); m.ring.destroy(); m.bub.remove(); }); BT.enemies.forEach(e => { e.root.destroy(); e.bar && e.bar.remove(); });
     BT.proj.forEach(p => p.e.destroy()); BT.fx.forEach(f => f.e.destroy()); BT.tele.forEach(t => t.e.destroy()); BT.kiras.forEach(k => k.e.destroy());
     BT.nums.forEach(n => n.el.remove()); if (BT.wall) { BT.wall.destroy(); BT.wall = null; }
     if (BT.boss) BT.boss.motes.forEach(o => o.e.destroy());
@@ -3584,7 +3594,10 @@ function btSpawnParty() {
     const c = crewByKey[k], a = makeChar(c), st = totalStats(k), lv = chOf(k).lv;
     a.pos = new Vec3(PARK.start[0] + [0, -1.6, 1.6, 0][i], 0, PARK.start[1] + [0, 1.4, 1.4, 2.6][i]); a.face = Math.PI;
     const m = { kind: 'ally', i, key: k, c, a, pos: a.pos, role: c.role, st, lv, ml: moveLv(lv), hp: st.hp, hpMax: st.hp, cpu: i > 0, down: false, rev: 0,
-      cd: [0, 0, 0, 0], gauge: 0, combo: 0, comboT: 0, act: 0, swing: 0, swingKind: 'melee', dodge: null, dash: null, inv: 0, buf: { atk: 0, waz: 0, guard: 0, shield: 0, regen: 0, slow: 0 }, think: rand(0, .3), aim: Math.PI };
+      cd: [0, 0, 0, 0], gauge: 0, combo: 0, comboT: 0, act: 0, swing: 0, swingKind: 'melee', dodge: null, dash: null, inv: 0, buf: { atk: 0, waz: 0, guard: 0, shield: 0, regen: 0, slow: 0 }, think: rand(0, .3), aim: Math.PI, face: Math.PI };
+    // 足もとの役割の色の輪（リーダーは黄色）
+    m.ring = piece(app.root, torusMesh(.55, i ? .04 : .07), fxMat(i ? ROLE[c.role][1] : '#ffd84a', 1, .8), [a.pos.x, .05, a.pos.z]); m.ring.render.castShadows = false;
+    m.bub = document.createElement('div'); m.bub.className = 'bbub'; $('btTags').appendChild(m.bub);
     BT.party.push(m);
   });
   BT.leader = BT.party[0];
@@ -3611,8 +3624,10 @@ function btHitEnemy(e, m, mult, kind = 'chi', o = {}) {
   if (e.dead || e.inv > 0) return;
   const crit = Math.random() * 100 < m.st.kai;
   let dmg = btPow(m, kind) * mult * rand(.9, 1.1) * (crit ? 1.5 : 1) * (100 / (100 + e.def));
+  if (e.broken > 0) dmg *= 1.5;
   dmg = Math.max(1, Math.round(dmg));
-  e.hp -= dmg; e.flash = .12; e.aggro = true; if (!e.boss) e.target = m;
+  e.hp -= dmg;
+  if (e.boss && !(e.broken > 0)) { e.brk += mult * 5; if (e.brk >= e.brkMax) btBreak(e); } e.flash = .12; e.aggro = true; if (!e.boss) e.target = m;
   if (o.stun && !e.boss) e.stun = Math.max(e.stun, o.stun);
   if (!e.boss) { const a = dirTo(m.pos, e.pos), k = o.kb ?? .35; e.kb.x += Math.sin(a) * k * 8; e.kb.z += Math.cos(a) * k * 8; }
   m.gauge = Math.min(100, m.gauge + (o.g ?? 2.2));
@@ -3639,7 +3654,8 @@ function btHurt(m, raw, o = {}) {
   if (o.slow) m.buf.slow = Math.max(m.buf.slow, o.slow);
   btNum(m.pos, dmg, '#ff6a5a', 2.2);
   if (m === BT.leader) { se(['flesh1', 'flesh2'][Math.floor(Math.random() * 2)], .35); BT.quake = Math.max(BT.quake, .15); }
-  if (m.hp <= 0) { m.hp = 0; m.down = true; m.rev = 0; m.dodge = m.dash = null; se('danger1', .4); btLog(`${m.c.name}がダウン！ 近くで E を長押しして起こそう`); }
+  if (BT.mm && BT.mm.kind === 'nohit' && m === BT.leader) btMmEnd(false);
+  if (m.hp <= 0) { m.hp = 0; m.down = true; BT.downs = (BT.downs || 0) + 1; m.rev = 0; m.dodge = m.dash = null; se('danger1', .4); btLog(`${m.c.name}がダウン！ 近くで E を長押しして起こそう`); }
 }
 function btHeal(m, v, src) {
   if (m.down) return;
@@ -3693,7 +3709,9 @@ function btDo(m, what) {
   if (what === 'dodge') { if (m.cd[3] > 0) return false; m.cd[3] = .7; m.dodge = { t: .22, ang: m.moveAng ?? m.aim }; m.inv = .35; se('swish2', .35); return true; }
   const R = ROLE_ACT[m.role];
   if (what === 'atk') { R.atk(m); return true; }
-  if (what === 's1' || what === 's2') { const i = what === 's1' ? 1 : 2; if (m.cd[i] > 0) return false; m.cd[i] = MOVE_CD[m.role][i] * (m.cpu ? 1.15 : 1); R[what](m); btSkillName(m, m.c.moves[i]); m.gauge = Math.min(100, m.gauge + 3); return true; }
+  if (what === 's1' || what === 's2') { const i = what === 's1' ? 1 : 2; if (m.cd[i] > 0) return false; m.cd[i] = MOVE_CD[m.role][i] * (m.cpu ? 1.15 : 1); R[what](m); btSkillName(m, m.c.moves[i]);
+    if (m.cpu && Math.random() < .35) btSay(m, m.c.moves[i] + '！');
+    if (m === BT.leader && BT.mm && BT.mm.kind === 'skill') BT.mm.got++; m.gauge = Math.min(100, m.gauge + 3); return true; }
   if (what === 'ult') { if (m.gauge < 100) return false; m.gauge = 0; btCutin(m); BT.freeze = .55; btLater(.0, () => R.ult(m)); return true; }
   return false;
 }
@@ -3724,9 +3742,23 @@ function btSpawnEnemy(type, x, z) {
   e.bar = document.createElement('div'); e.bar.className = 'ebar'; e.bar.innerHTML = '<i></i>'; $('btTags').appendChild(e.bar);
   BT.enemies.push(e); return e;
 }
+// ブスイは群れごとにかくれていて、隊員が近づくと けむりと一緒に あらわれる
 function btSpawnEnemies() {
-  for (const g of PARK_GROUPS) g.list.forEach((t, i) => { const a = i / g.list.length * Math.PI * 2, r = g.ring || 2.2 + (i % 2); btSpawnEnemy(t, g.c[0] + Math.sin(a) * r, g.c[1] + Math.cos(a) * r); });
+  BT.groups = PARK_GROUPS.map((g, gi) => {
+    const list = g.list.map((t, i) => { const a = i / g.list.length * Math.PI * 2, r = g.ring || 2.2 + (i % 2), e = btSpawnEnemy(t, g.c[0] + Math.sin(a) * r, g.c[1] + Math.cos(a) * r); e.active = false; e.root.enabled = false; e.appear = 0; return e; });
+    return { c: g.c, on: false, list };
+  });
   BT.zakoTotal = BT.enemies.length;
+}
+function btEncounter() {
+  for (const g of BT.groups) {
+    if (g.on) continue;
+    if (!alive().some(m => Math.hypot(m.pos.x - g.c[0], m.pos.z - g.c[1]) < 14)) continue;
+    g.on = true;
+    g.list.forEach((e, i) => btLater(i * .12, () => { e.active = true; e.root.enabled = true; e.aggro = true; btPuff(e.pos.x, .4, e.pos.z, '#8a5cc0'); }));
+    btLog('ブスイがあらわれた！'); se('slime1', .5);
+    const cpu = BT.party.find(m => m.cpu && !m.down); if (cpu && Math.random() < .6) btSay(cpu, ['きたぞ！', 'いくよー！', 'まとめてやっつけよう！'][Math.floor(Math.random() * 3)]);
+  }
 }
 function btKill(e, m) {
   e.dead = true; e.deadT = 0; e.bar.style.display = 'none';
@@ -3737,10 +3769,12 @@ function btKill(e, m) {
   const r = Math.random(), mr = r < .06 ? 3 : r < .3 ? 2 : r < .9 ? 1 : 0;
   if (mr) { const id = e.type + mr; BT.loot.push(id); btNum(e.pos, MATS[id].name, ['', '#e6dcc0', '#b7c0c4', '#ffd84a'][mr], 1.6, false, true); }
   save.seen['e_' + e.type] = (save.seen['e_' + e.type] || 0) + 1;
+  if (BT.mm && BT.mm.kind === 'kill') BT.mm.got++;
   if (BT.kills === 15) btLog('サブミッション達成！ ブスイを15体たおした（報酬 ＋500朕銭）');
 }
 function btEnemyAI(e, dt) {
   if (e.dead) { e.deadT += dt; const s = Math.max(0, 1 - e.deadT * 3); e.root.setLocalScale(s, s, s); if (s <= 0) e.root.enabled = false; return; }
+  if (!e.active) return;                 // まだかくれている
   e.flash = Math.max(0, e.flash - dt); e.inv = Math.max(0, e.inv - dt);
   // ふっとび
   if (e.kb.x || e.kb.z) { btMove(e, e.kb.x, e.kb.z, dt); e.kb.x *= Math.pow(.02, dt); e.kb.z *= Math.pow(.02, dt); if (Math.abs(e.kb.x) + Math.abs(e.kb.z) < .1) e.kb.set(0, 0, 0); }
@@ -3773,11 +3807,12 @@ function btEnemyAI(e, dt) {
   btEnemyPose(e, dt, mv);
 }
 function btEnemyPose(e, dt, mv) {
-  e.bob += dt * (mv ? 14 : 4);
+  e.bob += dt * (mv ? 14 : 4); if (e.appear < 1) e.appear = Math.min(1, e.appear + dt * 2.5);
   const w = e.wind > 0 ? Math.sin(e.bob * 6) * .06 : 0, l = e.lunge > 0 ? (e.lunge -= dt, .3) : 0, f = e.flash > 0 ? 1.15 : 1;
   e.root.setLocalPosition(e.pos.x + Math.sin(e.face) * l, e.pos.y + Math.abs(Math.sin(e.bob)) * (mv ? .12 : .03), e.pos.z + Math.cos(e.face) * l);
   e.root.setLocalEulerAngles(0, e.face * 180 / Math.PI, (mv ? Math.sin(e.bob) * 6 : 0));
-  e.body.setLocalScale(f + w, f - w, f + w);
+  const ap = e.appear ?? 1, k = ap < 1 ? ease(ap) * (1 + Math.sin(ap * Math.PI) * .25) : 1;
+  e.body.setLocalScale((f + w) * k, (f - w) * k, (f + w) * k);
 }
 
 // ---------------------------------------------------------------------
@@ -3788,7 +3823,7 @@ function btSpawnBoss() {
   a.root.setLocalScale(1.45, 1.45, 1.45); a.pos = new Vec3(PARK.boss[0], 0, PARK.boss[1]); a.face = 0;
   const aura = piece(a.root, 'sphere', fxMat('#7a2ccc', .22, 1), [0, 1.2, 0], [2.0, 2.6, 2.0]); aura.render.castShadows = false;
   const hp = Math.round(4200 * BT.f);
-  const b = { boss: true, type: 'boss', c, a, root: a.root, body: a.body, h: 3.4, pos: a.pos, face: 0, hp, hpMax: hp, atk: 22, def: 30, r: .8, active: false, dead: false, flash: 0, inv: 0, stun: 0, kb: new Vec3(), next: 2.2, cur: null, retreat: 0, aura, motes: [] };
+  const b = { boss: true, type: 'boss', c, a, root: a.root, body: a.body, h: 3.4, pos: a.pos, face: 0, hp, hpMax: hp, brk: 0, brkMax: 100, broken: 0, rage: false, atk: 22, def: 30, r: .8, active: false, dead: false, flash: 0, inv: 0, stun: 0, kb: new Vec3(), next: 2.2, cur: null, retreat: 0, aura, motes: [] };
   b.bar = document.createElement('div'); b.bar.className = 'ebar'; $('btTags').appendChild(b.bar); b.bar.style.display = 'none';
   for (let i = 0; i < 10; i++) { const e = new Entity(); e.addComponent('render', { type: 'sphere', material: fxMat('#9a4cff', .7, 1.6), castShadows: false }); app.root.addChild(e); b.motes.push({ e, ph: Math.random(), a: Math.random() * 6.28 }); }
   BT.enemies.push(b); BT.boss = b;
@@ -3803,6 +3838,7 @@ function btBossIntro() {
   BT.party.forEach((m, i) => { if (m.cpu) { m.pos.set(BT.leader.pos.x + [-1.8, 1.8, 0][i - 1], 0, BT.leader.pos.z + 1.2); } });
   $('btBoss').innerHTML = `<div class="band"><img src="${F[b.c.img].src}"><div><small>BOSS</small><b>${esc(b.c.name)}</b><span>ブスイに取りつかれている！</span></div></div>`;
   $('btBoss').className = 'on'; se('danger1', .6); setTimeout(() => se('meteor1', .5), 400);
+  const cpu = BT.party.find(m => m.cpu && !m.down); if (cpu) setTimeout(() => btSay(cpu, '正気にもどしてあげよう！', 2.4), 2700);
 }
 function btBossAI(b, dt) {
   // むらさきのもや
@@ -3810,6 +3846,10 @@ function btBossAI(b, dt) {
   if (b.dead) { b.deadT += dt; const k = Math.min(1, b.deadT / .6); b.a.body.setLocalPosition(0, -.35 * k, 0); b.aura.setLocalScale(2 * (1 - k), 2.6 * (1 - k), 2 * (1 - k)); animate(b.a, false, false, dt, time); b.a.head.setLocalEulerAngles(-20, 0, 0); return; }
   b.flash = Math.max(0, b.flash - dt); b.inv = Math.max(0, b.inv - dt);
   const L = alive(); if (!L.length || !b.active) { animate(b.a, false, false, dt, time); return; }
+  // ブレイク中：ひざをついて動けない
+  if (b.broken > 0) { b.broken -= dt; animate(b.a, false, false, dt, time); b.a.body.setLocalPosition(0, -.3 + Math.sin(time * 8) * .03, 0); b.a.head.setLocalEulerAngles(-10, 0, Math.sin(time * 6) * 10); return; }
+  // HP が 30% を切ると いかりモード（赤いもや・攻撃が速い）
+  if (!b.rage && b.hp < b.hpMax * .3) { b.rage = true; b.aura.render.material = fxMat('#e0503c', .25, 1); b.motes.forEach(o => o.e.render.material = fxMat('#ff5a3a', .7, 1.6)); btLog(`${b.c.name}が いかりモードになった！`); BT.quake = .5; se('danger1', .6); }
   let tg = L[0], nd = 1e9; for (const m of L) { const d = d2(m.pos, b.pos); if (d < nd) { nd = d; tg = m; } }
   const ang = dirTo(b.pos, tg.pos), ph2 = b.hp < b.hpMax * .5;
   let mv = false;
@@ -3825,7 +3865,7 @@ function btBossAI(b, dt) {
   } else if (b.next <= 0) {
     const opts = ph2 ? ['volley', 'rain', 'rain', 'pin', 'sky', 'sky'] : ['volley', 'volley', 'rain', 'pin'];
     const k = opts[Math.floor(Math.random() * opts.length)];
-    b.next = (ph2 ? 1.5 : 2.1) + rand(0, 1);
+    b.next = ((ph2 ? 1.5 : 2.1) + rand(0, 1)) * (b.rage ? .7 : 1);
     if (k === 'volley') b.cur = { t: 0, wind: .55, fire() { const n = ph2 ? 5 : 3; for (let i = 0; i < n; i++) btShot(b, b.face + (i - (n - 1) / 2) * .2, { enemy: true, arrow: true, speed: 17, dmg: b.atk, color: '#d9b3ff', life: 1.5, y: 1.6 }); se('bowdraw1', .5); btBossName(b, b.c.moves[0]); } };
     if (k === 'pin') b.cur = { t: 0, wind: .45, fire() { btShot(b, ang, { enemy: true, arrow: true, speed: 26, dmg: b.atk * .8, color: '#5a2a8a', life: 1.4, y: 1.6, slow: 3 }); se('pierce1', .5); btBossName(b, b.c.moves[1]); } };
     if (k === 'rain') { const spots = []; for (const m of L) { spots.push([m.pos.x, m.pos.z]); if (ph2) spots.push([m.pos.x + rand(-3, 3), m.pos.z + rand(-3, 3)]); } spots.push([b.pos.x + rand(-6, 6), b.pos.z + rand(2, 8)]);
@@ -3845,6 +3885,11 @@ function btBossAI(b, dt) {
   b.a.face = b.face; animate(b.a, mv, false, dt, time); b.a.head.setLocalEulerAngles(-20, 0, 0);
   if (b.cur && !b.cur.fired && b.cur.kind !== 'dash') { b.a.arms[1].setLocalEulerAngles(-90, 0, 10); b.a.arms[0].setLocalEulerAngles(-80, 0, -10); }
   b.a.body.setLocalScale(b.flash > 0 ? 1.06 : 1, b.flash > 0 ? .95 : 1, b.flash > 0 ? 1.06 : 1);
+}
+function btBreak(b) {
+  b.brk = 0; b.brkMax *= 1.35; b.broken = 4; b.cur = null; BT.tele.forEach(t => t.e.destroy()); BT.tele = [];
+  btNum(b.pos, 'BREAK!', '#ffd84a', 3.8, true); BT.quake = .6; se('glass1', .7); btLog(`${b.c.name}がくずれた！ いまのうちに こうげきだ（ダメージ1.5倍）`);
+  const cpu = BT.party.find(m => m.cpu && !m.down); if (cpu) btSay(cpu, 'いまだ！');
 }
 function btBossDown(b) {
   b.deadT = 0; BT.phase = 'clear'; BT.phaseT = 0; se('gameset1', .6);
@@ -3872,7 +3917,7 @@ function btSpawnKira() {
   });
 }
 function btSearch(k) {
-  k.done = true; k.e.enabled = false; BT.kira++; se('glass2', .5);
+  k.done = true; k.e.enabled = false; BT.kira++; se('glass2', .5); if (BT.mm && BT.mm.kind === 'kira') BT.mm.got++;
   const r = Math.random();
   if (r < .5) { const en = ENEMIES[Math.floor(Math.random() * ENEMIES.length)], id = en.key + (Math.random() < .3 ? 2 : 1); BT.loot.push(id); btNum(new Vec3(k.x, 0, k.z), MATS[id].name + ' を見つけた', '#fff4b0', 1.4, false, true); }
   else if (r < .8) { const c = 100 + Math.floor(Math.random() * 5) * 50; BT.bonusCoins = (BT.bonusCoins || 0) + c; btNum(new Vec3(k.x, 0, k.z), c + '朕銭 を見つけた', '#ffd84a', 1.4, false, true); }
@@ -3891,7 +3936,7 @@ function btSpark(x, y, z, col, n = 4) {
 }
 function btRing(x, z, r, col, life = .35) { const e = piece(app.root, torusMesh(1, .06), fxMat(col, .8, 1.6), [x, .15, z]); e.render.castShadows = false; BT.fx.push({ e, t: 0, life, kind: 'ring', r }); }
 function btArc(m, r, col) { const e = piece(app.root, torusMesh(1, .05), fxMat(col, .7, 1.8), [m.pos.x + Math.sin(m.aim) * r * .45, 1.0, m.pos.z + Math.cos(m.aim) * r * .45]); e.render.castShadows = false; e.setLocalEulerAngles(70, m.aim * 180 / Math.PI, 0); BT.fx.push({ e, t: 0, life: .16, kind: 'arc', r: r * .5 }); }
-function btPuff(x, y, z) { for (let i = 0; i < 6; i++) { const e = new Entity(); e.addComponent('render', { type: 'sphere', material: fxMat('#cfc6e0', .7, .5), castShadows: false }); e.setLocalPosition(x + rand(-.4, .4), y + rand(0, .6), z + rand(-.4, .4)); app.root.addChild(e); BT.fx.push({ e, t: 0, life: .5, kind: 'puff', s: rand(.5, .9) }); } }
+function btPuff(x, y, z, col = '#cfc6e0') { for (let i = 0; i < 6; i++) { const e = new Entity(); e.addComponent('render', { type: 'sphere', material: fxMat(col, .7, .5), castShadows: false }); e.setLocalPosition(x + rand(-.4, .4), y + rand(0, .6), z + rand(-.4, .4)); app.root.addChild(e); BT.fx.push({ e, t: 0, life: .5, kind: 'puff', s: rand(.5, .9) }); } }
 function btFx(dt) {
   BT.fx = BT.fx.filter(f => {
     f.t += dt; const k = f.t / f.life;
@@ -3904,6 +3949,7 @@ function btFx(dt) {
     return true;
   });
 }
+function btSay(m, text, dur = 1.8) { if (!m.bub) return; m.bub.textContent = text; m.bub.classList.add('on'); m.sayT = dur; }
 function btLog(msg) { const el = $('btLog'); el.textContent = msg; el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); }
 function btBanner(a, b) { const el = $('btBanner'); el.innerHTML = `<b>${esc(a)}</b><span>${esc(b)}</span>`; el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); }
 function btSkillName(m, name) { if (m !== BT.leader) return; const el = $('btSkill'); el.textContent = name; el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); }
@@ -3926,8 +3972,8 @@ function btHudInit() {
     <div class="sk" id="sk2"><span class="nm">${esc(L.c.moves[2])}</span><span class="kk">L</span><i class="cd"></i></div>
     <div class="sk ult" id="sk3"><span class="nm">${esc(L.c.moves[3])}</span><span class="kk">U</span><i class="cd"></i></div>
     <div class="sk dg"><span class="nm">回避</span><span class="kk">Space</span></div>`;
-  $('btTags').innerHTML = ''; BT.enemies.forEach(e => $('btTags').appendChild(e.bar));
-  $('btBossBar').innerHTML = `<span>BOSS　${esc(BT.boss.c.name)}</span><div class="bb"><i></i></div>`;
+  $('btTags').innerHTML = ''; BT.enemies.forEach(e => $('btTags').appendChild(e.bar)); BT.party.forEach(m => $('btTags').appendChild(m.bub));
+  $('btBossBar').innerHTML = `<span>BOSS　${esc(BT.boss.c.name)}</span><div class="bb"><i></i></div><div class="bk"><i></i></div><em>ブレイク</em>`;
   $('btResult').onclick = () => { if (BT.done) btEnd(); };
 }
 function btHud() {
@@ -3941,9 +3987,9 @@ function btHud() {
   $('sk3').querySelector('.cd').style.height = (100 - L.gauge) + '%'; $('sk3').classList.toggle('ready', L.gauge >= 100);
   save.set.forEach((k, i) => { const n = $('sk-n' + i); if (n) n.textContent = save.items[k] || 0; });
   const s = Math.max(0, Math.ceil(BT.left)); $('btTime').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; $('btTime').classList.toggle('low', s < 60);
-  $('btMission').innerHTML = `<div class="${BT.phase === 'clear' ? 'ok' : ''}">★ ${esc(crewByKey[BT.q.boss].name)}を正気にもどせ</div><div class="${BT.kills >= 15 ? 'ok' : ''}">・ブスイを15体たおす（${Math.min(15, BT.kills)}/15）</div><div class="${BT.kira >= 3 ? 'ok' : ''}">・キラキラを3つしらべる（${Math.min(3, BT.kira)}/3）</div>`;
+  $('btMission').innerHTML = `<div class="${BT.phase === 'clear' ? 'ok' : ''}">★ ${esc(crewByKey[BT.q.boss].name)}を正気にもどせ</div><div class="${BT.kills >= 15 ? 'ok' : ''}">・ブスイを15体たおす（${Math.min(15, BT.kills)}/15）</div><div class="${BT.kira >= 3 ? 'ok' : ''}">・キラキラを3つしらべる（${Math.min(3, BT.kira)}/3）</div>${BT.mm ? `<div class="mm">ミニ：${esc(BT.mm.text)}${BT.mm.need ? `（${BT.mm.got}/${BT.mm.need}）` : ''}　<b>${Math.ceil(BT.mm.left)}</b></div>` : ''}`;
   const b = BT.boss, on = b && b.active && !b.dead;
-  $('btBossBar').classList.toggle('on', !!on); if (on) $('btBossBar').querySelector('i').style.width = (b.hp / b.hpMax * 100) + '%';
+  $('btBossBar').classList.toggle('on', !!on); if (on) { $('btBossBar').querySelector('i').style.width = (b.hp / b.hpMax * 100) + '%'; $('btBossBar').querySelector('.bk i').style.width = (b.broken > 0 ? b.broken / 4 * 100 : b.brk / b.brkMax * 100) + '%'; $('btBossBar').classList.toggle('broken', b.broken > 0); $('btBossBar').classList.toggle('rage', b.rage); }
 }
 const scrTmp = new Vec3(), wTmp = new Vec3();
 function btTags(dt) {
@@ -3958,6 +4004,13 @@ function btTags(dt) {
     n.el.style.transform = `translate(${scrTmp.x}px,${scrTmp.y}px) translate(-50%,-50%) scale(${n.t < .08 ? 1.6 - n.t * 7 : 1})`; n.el.style.opacity = Math.min(1, (n.life - n.t) * 4);
     return true;
   });
+  // 隊員のふきだしと足もとの輪
+  for (const m of BT.party) {
+    m.ring.setLocalPosition(m.pos.x, .05, m.pos.z); m.ring.enabled = !m.down;
+    if (m.down) { m.bub.textContent = m.rev > 0 ? `たすけて！ ${Math.round(m.rev / 2.2 * 100)}%` : 'たすけて〜！'; m.bub.classList.add('on', 'sos'); }
+    else { m.bub.classList.remove('sos'); if ((m.sayT = (m.sayT || 0) - dt) <= 0) m.bub.classList.remove('on'); }
+    if (m.bub.classList.contains('on')) { wTmp.set(m.pos.x, m.down ? 1.2 : 2.9, m.pos.z); camera.camera.worldToScreen(wTmp, scrTmp); m.bub.style.transform = `translate(${scrTmp.x}px,${scrTmp.y}px) translate(-50%,-100%)`; }
+  }
   // ダウンした仲間・キラキラの案内
   const L = BT.leader; let tip = '';
   const dn = BT.party.find(m => m.down && m !== L && d2(m.pos, L.pos) < 1.8);
@@ -3970,6 +4023,47 @@ function btTags(dt) {
 // ---------------------------------------------------------------------
 //  リザルト
 // ---------------------------------------------------------------------
+// ---- ミニミッション（ときどき出る、時間つきのおだい）----
+const MM_TYPES = [
+  () => ({ kind: 'kill', need: 4, got: 0, time: 40, text: '40秒以内にブスイを4体たおせ！' }),
+  () => ({ kind: 'nohit', time: 25, text: '25秒間、リーダーがダメージを受けるな！' }),
+  () => ({ kind: 'skill', need: 3, got: 0, time: 30, text: '30秒以内にスキルを3回つかえ！' }),
+  () => BT.kiras.some(k => !k.done) ? { kind: 'kira', need: 1, got: 0, time: 60, text: '60秒以内にキラキラを1つ調べろ！' } : null,
+];
+function btMmTick(dt) {
+  if (BT.phase !== 'play' || (BT.boss && BT.boss.active)) { if (BT.mm) btMmEnd(false, true); return; }
+  if (!BT.mm) {
+    if (BT.t < BT.mmNext) return;
+    let m = null; for (let i = 0; i < 6 && !m; i++) m = MM_TYPES[Math.floor(Math.random() * MM_TYPES.length)]();
+    if (!m) return;
+    if (m.kind === 'kill' && BT.enemies.filter(e => !e.boss && !e.dead).length < 4) return;
+    BT.mm = m; m.left = m.time; btBanner('ミニミッション！', m.text); se('cdthree1', .5);
+    return;
+  }
+  const m = BT.mm; m.left -= dt;
+  if (m.need && m.got >= m.need) return btMmEnd(true);
+  if (m.left <= 0) btMmEnd(m.kind === 'nohit');
+}
+function btMmEnd(ok, quiet) {
+  const m = BT.mm; if (!m) return; BT.mm = null; BT.mmNext = BT.t + 40;
+  if (quiet) return;
+  if (ok) {
+    BT.mmDone = (BT.mmDone || 0) + 1; BT.bonusCoins = (BT.bonusCoins || 0) + 300;
+    const en = ENEMIES[Math.floor(Math.random() * ENEMIES.length)]; BT.loot.push(en.key + 2);
+    btLog(`ミニミッション成功！ ＋300朕銭・${MATS[en.key + 2].name}`); Snd.up();
+    const cpu = BT.party.find(o => o.cpu && !o.down); if (cpu) btSay(cpu, 'ナイス！');
+  } else { btLog('ミニミッション失敗…'); se('danger1', .3); }
+}
+// ---- クリアランク ----
+function btRank(win, used) {
+  if (!win) return null;
+  let p = 0;
+  p += used < 180 ? 3 : used < 300 ? 2 : 1;
+  p += (BT.downs || 0) === 0 ? 2 : (BT.downs || 0) <= 2 ? 1 : 0;
+  p += Math.min(2, BT.mmDone || 0);
+  p += BT.kills >= 15 ? 1 : 0;
+  return p >= 7 ? 'S' : p >= 5 ? 'A' : p >= 3 ? 'B' : 'C';
+}
 function btResult(win) {
   if (BT.done) return; BT.done = true; BT.phase = win ? 'result' : 'fail';
   const q = BT.q, used = BT_TIME - BT.left, bk = q.boss;
@@ -3983,9 +4077,9 @@ function btResult(win) {
   const cnt = {}; mats.forEach(id => { cnt[id] = (cnt[id] || 0) + 1; save.mats[id] = have(id) + 1; });
   dirty(); writeSave();
   $('btResult').innerHTML = `<div class="rp ${win ? 'win' : 'lose'}">
-    <h2>${win ? 'ミッションクリア！' : '出動失敗…'}</h2>
+    ${win ? `<div class="rank r${btRank(win, used)}">${btRank(win, used)}</div>` : ''}<h2>${win ? 'ミッションクリア！' : '出動失敗…'}</h2>
     <div class="rq">${esc(q.name)}　／　${PARK.name}</div>
-    <div class="rs"><span>タイム <b>${Math.floor(used / 60)}:${String(Math.floor(used % 60)).padStart(2, '0')}</b></span><span>たおしたブスイ <b>${BT.kills}</b></span><span>キラキラ <b>${BT.kira}</b></span></div>
+    <div class="rs"><span>タイム <b>${Math.floor(used / 60)}:${String(Math.floor(used % 60)).padStart(2, '0')}</b></span><span>たおしたブスイ <b>${BT.kills}</b></span><span>キラキラ <b>${BT.kira}</b></span><span>ミニミッション <b>${BT.mmDone || 0}</b></span><span>ダウン <b>${BT.downs || 0}</b></span></div>
     <div class="rr"><div class="rc"><span class="coin"></span> ${fmt(coins)} 朕銭${win && BT.kills >= 15 ? '（サブミッション ＋500 をふくむ）' : ''}</div>
       <div class="rm">${Object.entries(cnt).map(([id, n]) => `<span>${icMat(id, 34)}${esc(MATS[id].name)} ×${n}</span>`).join('') || '<span class="small">素材はなし</span>'}</div></div>
     <small>${win ? '' : '持ち帰れたのは、拾った素材とキラキラのものだけ。　'}Enter／クリックで本部にもどる</small></div>`;
@@ -4029,7 +4123,7 @@ function battleUpdate(dt) {
   for (const m of BT.party) {
     if (!m.down) continue;
     const helper = BT.party.find(o => !o.down && d2(o.pos, m.pos) < 1.8 && (o.cpu ? o.reviving === m : keys.has('KeyE') || keys.has('Enter')));
-    if (helper) { m.rev += dt; if (m.rev >= 2.2) btRevive(m); } else m.rev = Math.max(0, m.rev - dt * .5);
+    if (helper) { m.rev += dt; if (m.rev >= 2.2) { btRevive(m); helper.saidRev = 0; btSay(m, 'ありがとう！'); } } else m.rev = Math.max(0, m.rev - dt * .5);
   }
   // ---- 弾 ----
   BT.proj = BT.proj.filter(p => {
@@ -4047,6 +4141,7 @@ function battleUpdate(dt) {
   // ---- てき ----
   for (const e of BT.enemies) { if (e.boss) btBossAI(e, dt); else btEnemyAI(e, dt); }
   // ---- 場面 ----
+  btEncounter(); btMmTick(dt);
   if (BT.phase === 'play' && !BT.boss.active && L.pos.z < PARK.arenaZ) btBossIntro();
   if (BT.phase === 'intro') { $('btBossBar').classList.add('on'); if (BT.phaseT > 2.6) { BT.phase = 'play'; BT.boss.active = true; BT.boss.bar.style.display = 'none'; $('btBoss').className = ''; btLog(`${BT.boss.c.name}は近づくと逃げる。予告の赤い円と線からはなれよう！`); } }
   if (BT.phase === 'clear' && BT.phaseT > 3.2) { $('btBoss').className = ''; btResult(true); }
@@ -4097,6 +4192,7 @@ function btCpu(m, dt) {
   if (dn && (m.role === 'H' || m.role === 'T' || BT.party.filter(o => !o.down && o.cpu).indexOf(m) === 0)) {
     if (m.role === 'H' && m.gauge >= 100) { m.face = m.aim; return btDo(m, 'ult'), false; }
     if (d2(dn.pos, m.pos) > 1.3) { const a = dirTo(m.pos, dn.pos); btMove(m, Math.sin(a) * 6, Math.cos(a) * 6, dt); m.face = a; return true; }
+    if (m.reviving !== dn && !m.saidRev) { btSay(m, 'いま起こすよ！'); m.saidRev = 1; }
     m.reviving = dn; return false;
   }
   if (m.act > 0) return false;
