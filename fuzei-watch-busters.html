@@ -18,13 +18,13 @@
   .mvbar { position:absolute; left:0; right:0; height:9vh; background:#000; } .mvbar.t { top:0; } .mvbar.b { bottom:0; }
   #mvFlash { position:absolute; inset:0; background:radial-gradient(ellipse at center,#ff2a1a00 30%,#ff2a1acc 100%); opacity:0; }
   #mvFlash.on { animation:mvfl .6s ease-in-out; } @keyframes mvfl { 0% { opacity:0; } 25% { opacity:.6; } 100% { opacity:0; } }
-  .mvcut { position:absolute; left:-5%; right:-5%; top:22%; text-align:center; opacity:0; transform:translateX(-14%) rotate(-4deg); clip-path:inset(0 100% 0 0); transition:transform .5s cubic-bezier(.2,.9,.25,1), opacity .35s ease-out, clip-path .45s cubic-bezier(.2,.9,.25,1); }
+  .mvcut { position:absolute; left:-5%; right:-5%; top:11%; text-align:center; opacity:0; transform:translateX(-14%) rotate(-4deg); clip-path:inset(0 100% 0 0); transition:transform .5s cubic-bezier(.2,.9,.25,1), opacity .35s ease-out, clip-path .45s cubic-bezier(.2,.9,.25,1); }
   .mvcut.on { opacity:1; transform:translateX(0) rotate(-4deg); clip-path:inset(0 0 0 0); }
   .mvcut.sub { transform:translateX(14%) rotate(-4deg); clip-path:inset(0 0 0 100%); } .mvcut.sub.on { transform:translateX(0) rotate(-4deg); clip-path:inset(0 0 0 0); }
   .mvcut span { display:inline-block; padding:4px 60px; font:900 84px/1.1 "Arial Black",Impact,sans-serif; letter-spacing:.12em; color:#fff3d6; text-shadow:0 0 18px #ff2a1a;
     background:repeating-linear-gradient(135deg,#c8261a 0 26px,#8a1810 26px 52px); border-top:8px solid #1d1b19; border-bottom:8px solid #1d1b19; box-shadow:0 0 0 6px #cfae45; }
-  .mvcut.sub { top:44%; } .mvcut.off { opacity:0 !important; transform:translateY(-12px) rotate(-4deg) !important; transition:opacity .3s, transform .3s; } .mvcut.sub span { font:900 60px/1.2 "Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif; background:#1d1b19; color:#cfae45; text-shadow:none; box-shadow:0 0 0 5px #cfae45; transform:rotate(3deg); }
-  .mvcut.sub2 { top:60%; } .mvcut.sub2 span { font:900 64px/1.2 "Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif; background:#cfae45; color:#1d1b19; text-shadow:none; box-shadow:0 0 0 5px #1d1b19; }
+  .mvcut.sub { top:64%; } .mvcut.off { opacity:0 !important; transform:translateY(-12px) rotate(-4deg) !important; transition:opacity .3s, transform .3s; } .mvcut.sub span { font:900 60px/1.2 "Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif; background:#1d1b19; color:#cfae45; text-shadow:none; box-shadow:0 0 0 5px #cfae45; transform:rotate(3deg); }
+  .mvcut.sub2 { top:76%; } .mvcut.sub2 span { font:900 64px/1.2 "Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif; background:#cfae45; color:#1d1b19; text-shadow:none; box-shadow:0 0 0 5px #1d1b19; }
   #mvLogo { position:absolute; left:50%; top:46%; transform:translate(-50%,-50%) scale(3); opacity:0; display:flex; flex-direction:column; align-items:center; }
   #mvLogo.on { opacity:1; transform:translate(-50%,-50%) scale(1); transition:transform .16s cubic-bezier(.2,1.7,.5,1), opacity .05s; }
   #mvLogo .burst { position:absolute; left:50%; top:50%; width:720px; height:720px; transform:translate(-50%,-50%); background:conic-gradient(from 0deg,#cfae45 0 8deg,transparent 8deg 22deg); border-radius:50%; opacity:.55; animation:mvspin 6s linear infinite; z-index:-1;
@@ -1735,7 +1735,7 @@ const Snd = {
     } catch (e) { }
   },
   // 効果音のファイルは先に読みこんで WebAudio で鳴らす（Audio 要素より再生の遅れが少ない）
-  SE: { menu: 'se/fwb-menu.mp3', move: 'se/fwb-move.mp3', ok: 'se/fwb-ok.mp3', back: 'se/fwb-back.mp3' },
+  SE: { menu: 'se/fwb-menu.mp3', move: 'se/fwb-move.mp3', ok: 'se/fwb-ok.mp3', back: 'se/fwb-back.mp3', dopen: 'se/fwb-door-open.mp3', dclose: 'se/fwb-door-close.mp3' },
   bufs: {}, files: {}, lock: false, failed: false,
   load() {
     try { this.ctx ??= new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
@@ -2576,9 +2576,9 @@ Object.assign(ACT, {
     if (q.area !== '公園') { startSortie(q); return; }
     if (NET.on && NET.host) {
       // 全員に同じメンバー・同じ乗りこみ方を送って、そろって再生する
-      const crew = teamView().map(sl => sl.key).filter(Boolean), routes = ['pole', 'stairs', 'lobby', 'shop'].sort(() => Math.random() - .5);
-      bcast({ t: 'movie', q: q.key, crew, routes });
-      setTimeout(() => playSortieMovie(q, { crew, routes }), 250);
+      const crew = teamView().map(sl => sl.key).filter(Boolean), plan = [0, 1, 2, 3].sort(() => Math.random() - .5);
+      bcast({ t: 'movie', q: q.key, crew, plan });
+      setTimeout(() => playSortieMovie(q, { crew, plan }), 250);
     } else playSortieMovie(q);
   },
   dspReady() { NET.myReady = !NET.myReady; netSendMe(true); renderScreen(); },
@@ -3286,7 +3286,7 @@ async function netJoin(target) {
 }
 function guestData(d, timer) {
   let m; try { m = JSON.parse(d); } catch (e) { return; }
-  if (m.t === 'movie') { const q = QUESTS.find(x => x.key === m.q); if (q && !MV.on && !BT.on) { if (state.ui === 'talk') advanceTalk(); closePad(true); playSortieMovie(q, { crew: Array.isArray(m.crew) ? m.crew.slice(0, 4) : null, routes: Array.isArray(m.routes) && m.routes.every(r => MV_IDLE[r]) ? m.routes.slice(0, 4) : null }); } return; }
+  if (m.t === 'movie') { const q = QUESTS.find(x => x.key === m.q); if (q && !MV.on && !BT.on) { if (state.ui === 'talk') advanceTalk(); closePad(true); playSortieMovie(q, { crew: Array.isArray(m.crew) ? m.crew.slice(0, 4) : null, plan: Array.isArray(m.plan) && m.plan.length === 4 && [0, 1, 2, 3].every(n => m.plan.includes(n)) ? m.plan : null }); } return; }
   if (m.t === 'welcome') {
     clearTimeout(timer); Object.assign(NET, { on: true, host: false, me: m.you, busy: '', myReady: false });
     if (m.ch !== save.team[0]) { const j = save.team.indexOf(m.ch); if (j > 0) save.team[j] = save.team[0]; save.team[0] = m.ch; setPlayer(m.ch); }
@@ -3592,7 +3592,7 @@ const MVT = {
   hits: [.07, .65, 1.42, 1.62, 2.2],         // 区切れた強い音（アラート）
   shot2: 2.3,                                 // ポールへ
   land: [3.75, 4.15, 4.7, 5.3],              // 1人ずつ救急車に乗りこむ拍
-  doorOpen: 2.55, door: 5.75,                 // ドアが開く・閉まる
+  doorOpen: 2.9, door: 5.75,                  // ドアが開く・閉まる
   shot3: 6.05,                                // 斜め前のローアングル
   head: 6.67, lamp: 6.87, boost: 7.65,        // ヘッドライト・パトランプ・ブースト炎
   shutter: [7.85, 9.3],                       // シャッターが上がる
@@ -3601,7 +3601,7 @@ const MVT = {
   black: 13.05, end: 13.75,
 };
 const MV = { on: false, buf: null, loading: null };
-const POLE_P = { x: 10.6, z: -3.3 }, DOOR_P = { x: 12.35, y: 1.25, z: -6.1 }, CAR = { x: 18.6, z: -6.1 };
+const POLE_P = { x: 9.2, z: -3.3 }, DOOR_P = { x: 12.35, y: 1.25, z: -6.1 }, CAR = { x: 18.6, z: -6.1 };
 function mvLoad() {
   if (MV.buf || MV.loading) return MV.loading;
   try { Snd.ctx ??= new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; }
@@ -3634,8 +3634,14 @@ function sfxTone(type, f, dur, v, at = 0) {
   (MV.nodes ||= []).push(o);
 }
 const MVS = {
-  doorOpen() { sfxOsc('sine', 220, 120, .18, .25); sfxNoise(.35, 700, 1500, .18, 1.5); },
-  door() { sfxOsc('sine', 120, 40, .3, .5); sfxNoise(.18, 1200, 300, .3, .8); },
+  doorOpen() { Snd.file('dopen'); },
+  door() { Snd.file('dclose'); },
+  // エマージェンシーコール：警報の「ビーッ・ビーッ」（拍ごと）。最初の拍は通信の呼び出し音つき
+  call(i) {
+    for (let k = 0; k < 2; k++) { sfxTone('square', 1040, .1, .05, k * .14); sfxTone('sawtooth', 520, .1, .03, k * .14); }
+    if (i === 0) { [0, .08, .16].forEach((a, j) => sfxOsc('sine', 1500 + j * 300, 1500 + j * 300, .07, .1, a + .3)); }
+    if (i === 4) sfxTone('sawtooth', 440, .5, .04, .05);
+  },
   // エンジンがかかる：セルモーターの「キュキュキュ」→「ブォン」→ アイドリング
   ignite() {
     for (let i = 0; i < 6; i++) { sfxNoise(.07, 900, 600, .22, 3, i * .085); sfxOsc('square', 140, 110, .07, .08, i * .085); }
@@ -3658,7 +3664,8 @@ function mvBuild() {
   // ポール（2F から 1F へ）
   cyl(cm('#d9dce0', { spec: .75, gloss: .92 }), POLE_P.x, FH / 2, POLE_P.z, .06, FH + .4);
   cyl(M.yellow, POLE_P.x, .01, POLE_P.z, .55, .02);
-  // 2F の足場（ポールのまわり・階段の上）：ここから降りてくる
+  // 2F の足場（ポールのまわり・階段の上）：1F に切りかわってから出す（2F のときは本物の 2F の床）
+  const LG = new Entity('ledge'); G.addChild(LG); MV.ledge = LG; root = LG;
   const fl = tmat(T.wood, 1, 1), H0 = FH - SL, px = POLE_P.x, pz = POLE_P.z, h = .5;
   box(fl, px - 1.6, px - h, H0, FH, pz - 1.6, pz + 1.4, false); box(fl, px + h, px + 1.6, H0, FH, pz - 1.6, pz + 1.4, false);
   box(fl, px - h, px + h, H0, FH, pz - 1.6, pz - h, false); box(fl, px - h, px + h, H0, FH, pz + h, pz + 1.4, false);
@@ -3666,6 +3673,12 @@ function mvBuild() {
   for (let x = px - 1.5; x <= px + 1.51; x += .5) cyl(M.red, x, FH + .5, pz + 1.36, .03, 1.0);
   bar(M.red, [px - 1.5, FH + 1.0, pz + 1.36], [px + 1.5, FH + 1.0, pz + 1.36], .06);
   box(fl, ST.x1, ST.x1 + 1.6, H0, FH, -RD, -10.5, false);
+  // 2F の床の、ポールの穴
+  const F2 = new Entity('f2hole'); G.addChild(F2); MV.f2 = F2; root = F2;
+  cyl(cm('#0e0e12'), POLE_P.x, FH + .012, POLE_P.z, .5, .02); cyl(M.yellow, POLE_P.x, FH + .008, POLE_P.z, .62, .02);
+  for (let a = 30; a <= 330; a += 30) { const r = a * Math.PI / 180; cyl(M.steel, POLE_P.x + Math.sin(r) * .9, FH + .55, POLE_P.z + Math.cos(r) * .9, .025, 1.1); }
+  for (const x of [3, 12, 19]) ball(cm('#e0503c', { emissive: '#ff3a2a', ei: 2 }), x, FH + WH - .2, -RD + .2, .3, .3, .3);
+  root = G;
   // 右の壁：出動口をあけた壁にする
   MV.wall = floors[0].children.find(e => { const p = e.getLocalPosition(), sc = e.getLocalScale(); return Math.abs(p.x - (RW + .15)) < .02 && sc.z > RD - .2 && p.y < FH; });
   box(tmat(T.wall, 1, 1), RW, RW + .3, 0, WH, -RD, -9.6, false, false);
@@ -3698,43 +3711,43 @@ function mvBuild() {
   // しまブラの4人
   MV.crew = (MV.opt.crew || save.team.filter(Boolean)).filter(k => crewByKey[k]).slice(0, 4).map((k, i) => { const a = makeChar(crewByKey[k]); a.root.enabled = false; return a; });
   MV.smoke = [];
-  // ルートは毎回シャッフル（ポール・階段・ロビー・工房）
-  MV.routes = MV.opt.routes || ['pole', 'stairs', 'lobby', 'shop'].sort(() => Math.random() - .5);
+  // だれが何番目に乗りこむか（0・1番目はポール、2・3番目は階段）を毎回シャッフル
+  MV.plan = MV.opt.plan || [0, 1, 2, 3].sort(() => Math.random() - .5);
+  MV.capt = npcs.find(n => n.talk && n.talk.kind === 'quest');
 }
 // 乗りこみのルート：時間 t のときの位置と姿勢（L はドアに入る拍）
 const MV_A = { x: 10.5, z: -5.55 }, MV_J = .5;
 const stairY = (x) => (x - ST.x0) / (ST.x1 - ST.x0) * FH;
-const MV_IDLE = {
-  pole: () => ({ x: POLE_P.x - .9, y: FH, z: POLE_P.z + .3, face: 90 }),
-  stairs: () => ({ x: ST.x1 + .8, y: FH, z: -11.25, face: -90 }),
-  lobby: () => ({ x: 4.4, y: 0, z: -1.3, face: 140 }),
-  shop: () => ({ x: 11.0, y: 0, z: -9.9, face: 200 }),
-};
-function mvRoute(r, t, L) {
+const MV_LINE = [9.0, 10.4, 14.6, 16.0];           // 2F：隊長の机の前に、左右に分かれて並ぶ（隊長が見えるように）
+// 折れ線にそって走る（k：0〜1）
+function mvPath(pts, k, y) {
+  const len = []; let tot = 0; for (let j = 1; j < pts.length; j++) { const d = Math.hypot(pts[j][0] - pts[j - 1][0], pts[j][1] - pts[j - 1][1]); len.push(d); tot += d; }
+  let d = k * tot;
+  for (let j = 0; j < len.length; j++) { if (d <= len[j] || j === len.length - 1) { const u = len[j] ? Math.min(1, d / len[j]) : 1; return { x: mvL(pts[j][0], pts[j + 1][0], u), y, z: mvL(pts[j][1], pts[j + 1][1], u), pose: 'run', sc: 1 }; } d -= len[j]; }
+}
+function mvRoute(i, slot, t, L) {
   const seg = (a, b) => Math.min(1, Math.max(0, (t - a) / (b - a)));
   const run = (x0, z0, x1, z1, k, y = 0) => ({ x: mvL(x0, x1, k), y, z: mvL(z0, z1, k), pose: 'run', sc: 1 });
-  const J0 = L - MV_J, I = MV_IDLE[r]();
-  const idle = () => ({ x: I.x, y: I.y, z: I.z, pose: 'stand', sc: 1, yaw: I.face });
+  const r = slot < 2 ? 'pole' : 'stairs', J0 = L - MV_J;
+  const lx = MV_LINE[i], lz = -5.4, w0 = 1.0 + i * .12;
   if (t > L + .02) return null;
   if (t >= J0) {   // 最後は放物線でドアへ吸いこまれる
     const k = seg(J0, L), sc = k > .8 ? 1 - (k - .8) / .2 * .7 : 1;
-    return { x: mvL(MV_A.x, DOOR_P.x, k), y: mvL(0, DOOR_P.y, k) + Math.sin(k * Math.PI) * 1.5, z: mvL(MV_A.z, DOOR_P.z, k), pose: 'jump', sc, flip: r === 'pole' || r === 'stairs' ? -k * 360 : 0 };
+    return { x: mvL(MV_A.x, DOOR_P.x, k), y: mvL(0, DOOR_P.y, k) + Math.sin(k * Math.PI) * 1.5, z: mvL(MV_A.z, DOOR_P.z, k), pose: 'jump', sc, flip: -k * 360 };
   }
-  if (r === 'pole') {          // 2F の足場からポールへ → すべり降りる → 走る
-    const s = L - 1.8; if (t < s) return idle();
-    const hx = POLE_P.x - .32;
-    if (t < s + .3) return run(I.x, I.z, hx, POLE_P.z, seg(s, s + .3), FH);
-    if (t < s + .9) { const k = seg(s + .3, s + .9); return { x: hx, y: mvL(FH, 0, k * k), z: POLE_P.z, pose: 'hug', sc: 1 }; }
-    return run(hx, POLE_P.z, MV_A.x, MV_A.z, seg(s + .9, J0));
+  if (t < w0) return { x: lx, y: FH, z: lz, pose: 'stand', sc: 1, yaw: Math.atan2(12.5 - lx, -6.9 - lz) * 57.3 };   // 隊長の話を聞いている
+  if (r === 'pole') {          // 2F の穴へ走って、ポールをすべり降りる → 1F を走る
+    const s = L - 1.5, hx = POLE_P.x - .32;
+    if (t < s) return mvPath([[lx, lz], [hx + .2, -5.2], [hx, POLE_P.z]], seg(w0, s), FH);   // 作戦テーブルの奥を通る
+    if (t < s + .6) { const k = seg(s, s + .6); return { x: hx, y: mvL(FH, 0, k * k), z: POLE_P.z, pose: 'hug', sc: 1 }; }
+    return run(hx, POLE_P.z, MV_A.x, MV_A.z, seg(s + .6, J0));
   }
-  if (r === 'stairs') {        // 2F から階段をかけ降りる → 1F を走る
-    const s = L - 2.65; if (t < s) return idle();
-    if (t < s + 1.05) { const k = seg(s, s + 1.05), x = mvL(I.x, ST.x0, k); return { x, y: x >= ST.x1 ? FH : Math.max(0, (x - ST.x0) / (ST.x1 - ST.x0) * FH), z: -11.25, pose: 'run', sc: 1 }; }
-    if (t < s + 1.35) return run(ST.x0, -11.25, ST.x0 + .4, -9.9, seg(s + 1.05, s + 1.35));
-    return run(ST.x0 + .4, -9.9, MV_A.x, MV_A.z, seg(s + 1.35, J0));
-  }
-  const s = L - (r === 'lobby' ? 1.35 : 1.2); if (t < s) return idle();
-  return run(I.x, I.z, MV_A.x, MV_A.z, seg(s, J0));
+  // 2F の階段の上へ走って、かけ降りる → 1F を走る
+  const s = L - 2.4, tx = ST.x1 + .3;
+  if (t < s) return mvPath([[lx, lz], [9.4, -6.6], [9.3, -10.0], [tx, -11.25]], seg(w0, s), FH);   // 机をよけて階段の上へ
+  if (t < s + 1.0) { const k = seg(s, s + 1.0), x = mvL(tx, ST.x0, k); return { x, y: x >= ST.x1 ? FH : Math.max(0, (x - ST.x0) / (ST.x1 - ST.x0) * FH), z: -11.25, pose: 'run', sc: 1 }; }
+  if (t < s + 1.3) return run(ST.x0, -11.25, ST.x0 + .4, -9.9, seg(s + 1.0, s + 1.3));
+  return run(ST.x0 + .4, -9.9, MV_A.x, MV_A.z, seg(s + 1.3, J0));
 }
 function mvClear() {
   MV.crew.forEach(a => a.root.destroy()); MV.smoke.forEach(p => p.e.destroy()); MV.g.destroy();
@@ -3756,21 +3769,32 @@ function mvTick() {
   const once = (k, at, fn) => { if (t >= at && !MV.done[k]) { MV.done[k] = 1; fn(); } };
   T.hits.forEach((h, i) => once('h' + i, h, () => { MV.shake = .06; mvFlash(); if (i === 0) mvCut('em'); if (i === 2) mvCut('nm'); if (i === 4) mvCut('rq'); }));
   once('s2', T.shot2 + .45, () => mvCut(null));
-  MV.crew.forEach((a, i) => once('ld' + i, T.land[i], () => { MV.shake = .1; }));
+  MV.crew.forEach((a, i) => once('ld' + i, T.land[MV.plan[i]], () => { MV.shake = .1; }));
   once('dopen', T.doorOpen, MVS.doorOpen);
-  once('door', T.door, () => { MVS.door(); MV.shake = .25; });
+  T.hits.forEach((h, i) => once('call' + i, h, () => MVS.call(i)));
+  once('door', T.door - .1, () => { MVS.door(); MV.shake = .25; });
   once('ign', T.shot3, MVS.ignite);
   once('siren', T.lamp, () => MVS.siren(T.black - T.lamp)); once('shut', T.shutter[0], () => MVS.shutter(T.shutter[1] - T.shutter[0])); once('boost', T.boost, () => { MVS.boost(); MV.shake = .2; });
   once('go', T.go, () => { MVS.go(); MV.shake = .3; });
   once('logo', T.logo, () => { MV.shake = .6; mvLogo(); });
   once('black', T.black, () => $('mvBlack').classList.add('on'));
   if (t >= T.end) { mvFinish(); return; }
+  // 2F（隊長の前）→ 1F（ガレージ）
+  const up = t < T.shot2;
+  if (MV.up !== up) { MV.up = up; floors[1].enabled = up; floors[0].enabled = !up; MV.ledge.enabled = !up; MV.f2.enabled = up; if (MV.capt) MV.capt.root.enabled = up; }
+  if (up && MV.capt) {   // ヘンリー隊長：拍で指をさして号令 → みんなが走り出すと手をふって見送る
+    const c = MV.capt; c.root.setLocalPosition(12.5, FH, -6.9); c.root.setLocalEulerAngles(0, 0, 0);
+    const hk = Math.max(0, ...T.hits.map(h => t >= h ? Math.exp(-(t - h) * 6) : 0));
+    if (t < 1.0) { c.arms[1].setLocalEulerAngles(-90 - hk * 20, 0, 20); c.arms[0].setLocalEulerAngles(0, 0, -28); }
+    else { c.arms[1].setLocalEulerAngles(0, 0, 150 + Math.sin(t * 14) * 22); c.arms[0].setLocalEulerAngles(0, 0, -28); }
+    c.body.setLocalPosition(0, hk * .05, 0);
+  }
   // 赤い警告ランプ（アラートの拍で明滅）
   const hitK = Math.max(0, ...T.hits.map(h => t >= h ? Math.exp(-(t - h) * 5) : 0));
   MV.alarmM.emissiveIntensity = .2 + (t < T.shot2 + .3 ? hitK * 5 : (Math.sin(t * 9) > 0 ? 2 : .3)); MV.alarmM.update();
   // 4人：それぞれのルートで救急車へ（ポール・階段から飛びおりる・ロビーから走る・工房から走る）
   MV.crew.forEach((a, i) => {
-    const L = T.land[i], r = MV.routes[i], st = mvRoute(r, t, L);
+    const L = T.land[MV.plan[i]], st = mvRoute(i, MV.plan[i], t, L);
     if (!st) { a.root.enabled = false; return; }
     a.root.enabled = true;
     a.root.setLocalPosition(st.x, st.y, st.z); a.root.setLocalScale(st.sc, st.sc, st.sc);
@@ -3812,8 +3836,8 @@ function mvTick() {
   MV.smoke = MV.smoke.filter(p => { if (p.life > 1.4) { p.e.destroy(); return false; } return true; });
   // カメラ
   if (t < T.shot2) {           // ① ガレージ全体の引き（拍ごとに少し寄る）
-    const k = mvE(t / (T.shot2 + .4));
-    mvCam(mvL(9.5, 11.0, k), mvL(7.5, 6.4, k), mvL(10, 7.8, k), 14, .8, -5.5, 44);
+    const k = mvE(t / (T.shot2 + .4));   // 2F：隊長と4人を見下ろして、ゆっくり寄る
+    mvCam(12.0, FH + mvL(5.4, 4.4, k), mvL(4.2, 2.4, k), 12.2, FH + 1.0, -7.4, mvL(54, 50, k));
   } else if (t < T.shot3) {    // ② ポールの上にズーム → ポールとドアが入る構図へ
     // 階段・ポール・ロビー・工房と、救急車の後ろのドアがぜんぶ入る構図へ、ゆっくり寄っていく
     const k = mvE((t - T.shot2) / (T.shot3 - T.shot2));
@@ -3838,7 +3862,7 @@ async function playSortieMovie(q, opt = {}) {
   await (mvLoad() || Promise.resolve());
   bgm.pause();
   // 本部を 1F だけにして、ムービーのセットを置く
-  floors[0].enabled = true; floors[1].enabled = false;
+  MV.up = null;
   player.root.enabled = false; if (player.ring) player.ring.enabled = false; actors.forEach(a => a.root.enabled = false);
   HQ_GATE.forEach(e => e.enabled = false);
   mvBuild(); if (MV.wall) MV.wall.enabled = false;
@@ -3869,6 +3893,7 @@ function mvFinish() {
   try { MV.src && MV.src.stop(); } catch (e) { } MV.src = null;
   (MV.nodes || []).forEach(o => { try { o.stop(); } catch (e) { } }); MV.nodes = [];
   $('mvBlack').classList.add('on');
+  if (MV.capt) { MV.capt.root.setLocalPosition(MV.capt.pos); MV.capt.arms[1].setLocalEulerAngles(0, 0, 28); MV.capt.arms[0].setLocalEulerAngles(0, 0, -28); MV.capt.body.setLocalPosition(0, 0, 0); }
   mvClear(); HQ_GATE.forEach(e => e.enabled = true); if (MV.wall) MV.wall.enabled = true;
   camera.camera.clearColor = MV.clear; camera.camera.fov = 40;
   player.root.enabled = true; if (player.ring) player.ring.enabled = true;
