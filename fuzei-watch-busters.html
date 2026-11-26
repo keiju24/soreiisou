@@ -144,6 +144,29 @@
   .codebox { font:900 22px monospace; background:#10150e; color:var(--crt); padding:0 10px; border:3px solid var(--ink); letter-spacing:.2em; }
   .chip { display:inline-block; background:#efe7cd; color:var(--ink); padding:1px 6px; border-radius:4px; margin-top:4px; }
   .eqn { font-weight:900; font-size:16px; margin-top:4px; }
+  /* まだ仲間になっていない隊員（シルエット） */
+  .face.lock img { filter:brightness(0) opacity(.45); }
+  /* 朕銭ガシャ */
+  .gcStage { padding:0; background:#1b1712; }
+  .gcStage canvas { position:absolute; inset:0; width:100%; height:100%; cursor:pointer; }
+  .gcBanner { position:absolute; left:10px; top:10px; z-index:2; display:flex; align-items:baseline; gap:6px; padding:4px 30px 6px 12px; background:linear-gradient(#2b2621,#151210); color:#f4ecd8; border:4px solid var(--ink); clip-path:polygon(0 0,100% 0,calc(100% - 18px) 100%,0 100%); pointer-events:none; }
+  .gcBanner small { font-weight:900; font-size:15px; letter-spacing:.06em; }
+  .gcBanner b { font:900 44px "Courier New",monospace; color:var(--hazard); line-height:1; }
+  .gcBanner span { font-weight:900; font-size:18px; }
+  .gcAmt { display:flex; align-items:center; gap:8px; margin-top:8px; }
+  .gcAmt .val { flex:1; display:flex; align-items:center; gap:10px; justify-content:center; background:#10150e; color:var(--crt); border:3px solid var(--ink); border-radius:8px; font:900 32px "Courier New",monospace; padding:2px 10px; }
+  .gcArrow { width:44px; height:44px; border:4px solid var(--ink); border-radius:8px; background:linear-gradient(#d9bd5c,#b39436); font:900 20px sans-serif; cursor:pointer; box-shadow:0 3px 0 var(--ink); color:var(--ink); }
+  .gcArrow:active { transform:translateY(2px); box-shadow:0 1px 0 var(--ink); }
+  input.gcRange { -webkit-appearance:none; appearance:none; width:100%; height:18px; margin:10px 0 2px; border:3px solid var(--ink); border-radius:9px; background:linear-gradient(90deg,#d9662e var(--p,0%),#3a3530 var(--p,0%)); cursor:pointer; }
+  input.gcRange::-webkit-slider-thumb { -webkit-appearance:none; width:28px; height:28px; border-radius:50%; background:radial-gradient(circle at 40% 35%,#ffd27a,#c9532a 70%); border:3px solid var(--ink); }
+  input.gcRange::-moz-range-thumb { width:22px; height:22px; border-radius:50%; background:#c9532a; border:3px solid var(--ink); }
+  .gcRates { display:flex; flex-direction:column; gap:5px; margin-top:8px; overflow:auto; min-height:0; }
+  .gcRate { display:grid; grid-template-columns:136px 1fr 66px; align-items:center; gap:8px; border:3px solid var(--ink); border-radius:7px; padding:2px 8px; background:#efe7cd; }
+  .gcRate .t { font-weight:900; font-size:13px; line-height:1.2; white-space:nowrap; } .gcRate .t i { font-style:normal; color:#b5862a; letter-spacing:-.1em; }
+  .gcRate .fc { display:flex; gap:3px; flex-wrap:wrap; align-items:center; font-size:11px; font-weight:800; }
+  .gcRate .pc { font:900 18px "Courier New",monospace; text-align:right; }
+  .gcRate.r3 { background:linear-gradient(90deg,#f3dc8c,#efe7cd); } .gcRate.r2 { background:linear-gradient(90deg,#c5dde9,#efe7cd); }
+  .btn.huge { font-size:21px; padding:8px 18px; justify-content:center; }
 </style>
 <script type="importmap">{ "imports": { "playcanvas": "./lib/playcanvas.min.mjs" } }</script>
 </head>
@@ -210,6 +233,10 @@ const CREW = [
   { key: 'kenshin', name: 'Kenshin', img: 'KENSHIN', role: 'R', prop: 'wrench', moves: ['レンチ打ち', '砲台設置', 'バリア展開', '試作機起動'] },
 ];
 const crewByKey = Object.fromEntries(CREW.map(c => [c.key, c]));
+// 最初からいる隊員。ほかの隊員は屋上の朕銭ガシャで仲間になる
+const STARTERS = ['homura', 'berserker', 'nagata', 'shimarin'];
+// ガシャのレア度（1 ノーマル・2 レア・3 ウルトラレア）
+const CREW_RARE = { homura: 1, berserker: 1, nagata: 1, shimarin: 1, imai: 2, ichigo: 2, unko: 2, kenshin: 2, henry: 3, kotan: 3, archer: 3, chinta: 3 };
 const TACTICS = ['おまかせ', 'ガンガンいこう', 'みんなを守って', '回復優先'];
 
 // ---- 敵（ザコのブスイ と ブスイに取りつかれた隊員） ----
@@ -435,8 +462,8 @@ const icSk = (i, role, size = 30) => `<img class="ic" style="width:${size}px;hei
 
 // =====================================================================
 //  風情ウォッチバスターズ
-//  タイトル（クリックでスタート）→ 本部（2階建ての消防署）。本部から外へは出られない。
-//  1F：受付・工房（職人ヘンリー）・出動用の救急車　／　2F：指令室（ヘンリー隊長）
+//  タイトル（クリックでスタート）→ 本部（2階建ての消防署＋屋上）。本部から外へは出られない。
+//  1F：受付・工房（職人ヘンリー）・出動用の救急車　／　2F：指令室（ヘンリー隊長）　／　屋上：朕銭ガシャ
 //  Esc / M で Hu-jo Pad（隊員用端末）を開く
 // =====================================================================
 const F = {};                                   // 顔の画像（window.FACES から読みこむ）
@@ -598,6 +625,7 @@ const T = {
   wall: makeTex('wall', 512, 512, (g, w, h) => { g.fillStyle = '#d9cfb3'; g.fillRect(0, 0, w, h); g.fillStyle = '#6f7a5e'; g.fillRect(0, h * .72, w, h * .28); g.fillStyle = '#3b3f35'; g.fillRect(0, h * .7, w, h * .03); grime(g, w, h, 30); }),
   wall2: makeTex('wall2', 512, 512, (g, w, h) => { g.fillStyle = '#c9c4ad'; g.fillRect(0, 0, w, h); g.fillStyle = '#4f6f86'; g.fillRect(0, h * .74, w, h * .26); g.fillStyle = '#2e3a44'; g.fillRect(0, h * .72, w, h * .03); grime(g, w, h, 30); }),
   hazard: makeTex('hazard', 256, 64, (g, w, h) => { g.fillStyle = '#cfae45'; g.fillRect(0, 0, w, h); g.fillStyle = INK; for (let x = -h; x < w; x += 48) { g.beginPath(); g.moveTo(x, h); g.lineTo(x + 24, h); g.lineTo(x + 24 + h, 0); g.lineTo(x + h, 0); g.fill(); } }),
+  roof: makeTex('roof', 256, 256, (g, w, h) => { g.fillStyle = '#a3a596'; g.fillRect(0, 0, w, h); grime(g, w, h, 14); g.strokeStyle = 'rgba(40,40,30,.35)'; g.lineWidth = 3; g.strokeRect(0, 0, w, h); g.strokeStyle = 'rgba(255,255,240,.12)'; g.lineWidth = 2; g.strokeRect(4, 4, w - 8, h - 8); }),
   shutter: makeTex('shutter', 256, 256, (g, w, h) => { g.fillStyle = '#8c9187'; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 16) { g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(0, y + 12, w, 4); g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(0, y, w, 3); } grime(g, w, h, 10); }),
 };
 const TMC = {};
@@ -688,9 +716,13 @@ function paper(x, y, z, w, h, face = '+z', col = '#ece4cc') {
 const RW = 22, RD = 12, FH = 4.6, SL = 0.3, WH = FH - SL;
 const ST = { x0: 1.4, x1: 7.8, z0: -RD, z1: -10.5, n: 16 };     // 階段：x0（1F）→ x1（2F）
 ST.run = (ST.x1 - ST.x0) / ST.n; ST.rise = FH / ST.n;
-const floors = [new Entity('1F'), new Entity('2F')];
-const stairsG = new Entity('stairs');
-floors.forEach(f => app.root.addChild(f)); app.root.addChild(stairsG);
+// 2F → 屋上：奥の壁の手前を、右（xb・2F）から左（xa・屋上）へのぼる。段は板だけなので下をくぐれる
+const S2 = { xa: 2.2, xb: 8.6, z0: -10.3, z1: -8.5, n: 16 };
+S2.run = (S2.xb - S2.xa) / S2.n; S2.rise = FH / S2.n;
+const RY = FH * 2;                                                // 屋上の床の高さ
+const floors = [new Entity('1F'), new Entity('2F'), new Entity('RF')];
+const stairsG = new Entity('stairs'), stairs2G = new Entity('stairs2');
+floors.forEach(f => app.root.addChild(f)); app.root.addChild(stairsG); app.root.addChild(stairs2G);
 const M = {
   ink: cm('#1d1b19', { gloss: .3 }), dark: cm('#2c2d2a'), steel: cm('#7d8279', { spec: .3, gloss: .5 }), steel2: cm('#565a51'),
   chrome: cm('#c9ccc4', { spec: .5, gloss: .7 }), khaki: cm('#b3a477'), khaki2: cm('#8b7d55'), red: cm('#a9402f'), red2: cm('#7a2a1e'),
@@ -873,6 +905,189 @@ function build2F() {
   box(M.white, 4.4, 7.2, y + 1.2, y + 2.6, -RD, -RD + .06, false);
   decal((g, W, H) => { g.fillStyle = '#efeadb'; g.fillRect(0, 0, W, H); g.strokeStyle = '#2e3a44'; g.lineWidth = 5; g.font = `800 34px ${JP}`; g.fillStyle = '#2e3a44'; g.fillText('本日のブスイ反応', 20, 50); g.fillStyle = '#a9402f'; g.fillText('公園：大', 30, 110); g.fillStyle = '#2e3a44'; g.fillText('商店街：中', 30, 160); g.fillText('繁華街：？', 30, 210); }, 400, 240, 5.8, y + 1.9, -RD + .07, 2.6, 1.3, '+z');
 }
+// ===== 2F → 屋上の階段（2F と屋上にいるときだけ見える）=====
+function stairs2() {
+  root = stairs2G;
+  const y = FH;
+  for (let k = 0; k < S2.n; k++) {
+    const x1 = S2.xb - S2.run * k, x0 = x1 - S2.run, top = y + S2.rise * (k + 1);
+    box(cm('#8d8f86'), x0, x1, top - .14, top, S2.z0, S2.z1);
+    box(M.yellow, x0, x0 + .06, top - .02, top + .004, S2.z0, S2.z1, false, false);
+    // 横から落ちないように（段ごとの見えない壁。下をくぐるときはじゃましない）
+    addCol(x0, x1, top, top + 1.2, S2.z0 - .1, S2.z0); addCol(x0, x1, top, top + 1.2, S2.z1, S2.z1 + .1);
+  }
+  for (const z of [S2.z0 + .06, S2.z1 - .06]) bar(M.steel2, [S2.xb, y, z], [S2.xa, y + FH, z], .16);   // 側げた
+  for (const z of [S2.z0 - .02, S2.z1 + .02]) {
+    bar(M.yellow, [S2.xb, y + 1.0, z], [S2.xa, y + FH + 1.0, z], .07);
+    for (let k = 0; k <= S2.n; k += 4) { const x = S2.xb - S2.run * k; bar(M.steel, [x, y + S2.rise * k, z], [x, y + S2.rise * k + 1.0, z], .05); }
+  }
+  bar(M.steel, [9.2, y, -8.25], [9.2, y + 2.25, -8.25], .07);
+  sign('屋上へ ↑', 9.2, y + 2.45, -8.2, 1.3, .42, '+z', '#cfae45');
+}
+
+// ===== 屋上：さび色の手すり・ホース乾燥塔・足場・朕銭ガシャ =====
+const RUST = () => cm('#a5452a', { gloss: .35, spec: .1 });
+function railing(a, b, y, post = 1.6) {
+  const m = RUST(), len = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.round(len / post));
+  bar(m, [a[0], y + 1.1, a[1]], [b[0], y + 1.1, b[1]], .08);
+  bar(m, [a[0], y + .62, a[1]], [b[0], y + .62, b[1]], .05);
+  for (let i = 0; i <= n; i++) { const x = a[0] + (b[0] - a[0]) * i / n, z = a[1] + (b[1] - a[1]) * i / n; bar(m, [x, y, z], [x, y + 1.1, z], .06); }
+}
+function hoseTower(x0, z0, w, h, y) {
+  const m = RUST(), x1 = x0 + w, z1 = z0 + w, seg = h / 6;
+  for (const [x, z] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) bar(m, [x, y, z], [x, y + h + 1.1, z], .15);
+  for (let i = 1; i <= 6; i++) {
+    const yy = y + seg * i, y0 = yy - seg;
+    for (const [a, b] of [[[x0, z0], [x1, z0]], [[x0, z1], [x1, z1]], [[x0, z0], [x0, z1]], [[x1, z0], [x1, z1]]]) bar(m, [a[0], yy, a[1]], [b[0], yy, b[1]], .09);
+    // すじかい（前と左右の面）
+    bar(m, [x0, y0, z1], [x1, yy, z1], .05); bar(m, [x1, y0, z1], [x0, yy, z1], .05);
+    bar(m, [x0, y0, z0], [x0, yy, z1], .05); bar(m, [x1, y0, z1], [x1, yy, z0], .05);
+  }
+  // てっぺんの見張り台と手すり
+  box(cm('#7a3420'), x0 - .35, x1 + .35, y + h, y + h + .14, z0 - .35, z1 + .35, false);
+  for (const [a, b] of [[[x0 - .35, z0 - .35], [x1 + .35, z0 - .35]], [[x0 - .35, z1 + .35], [x1 + .35, z1 + .35]], [[x0 - .35, z0 - .35], [x0 - .35, z1 + .35]], [[x1 + .35, z0 - .35], [x1 + .35, z1 + .35]]]) bar(m, [a[0], y + h + 1.0, a[1]], [b[0], y + h + 1.0, b[1]], .07);
+  // 干してあるホース（白・灰色）
+  for (let i = 0; i < 4; i++) { const x = x0 + .45 + i * .43; bar(cm(['#e9e6dc', '#c9c6bb'][i % 2]), [x, y + h - .1, (z0 + z1) / 2], [x, y + h - 5.2 + (i % 2) * .8, (z0 + z1) / 2 + .1], .11); }
+  bar(M.steel2, [x0 + .2, y + h - .1, (z0 + z1) / 2], [x1 - .2, y + h - .1, (z0 + z1) / 2], .09);
+  // はしご（前の面）
+  for (const x of [(x0 + x1) / 2 - .28, (x0 + x1) / 2 + .28]) bar(M.steel, [x, y, z1 + .12], [x, y + h, z1 + .12], .05);
+  for (let yy = y + .35; yy < y + h; yy += .35) bar(M.steel, [(x0 + x1) / 2 - .28, yy, z1 + .12], [(x0 + x1) / 2 + .28, yy, z1 + .12], .04);
+  addCol(x0 - .1, x1 + .1, y, y + h, z0 - .1, z1 + .25);
+}
+// 外から見た本部（屋上にいるときだけ。写真の白い出張所がもと）
+function facade() {
+  const k = 1024 / (RW + .6), X = (m) => (m + .3) * k, Y = (m) => (RY - SL - m) * k;
+  decal((g, W, H) => {
+    g.fillStyle = '#e9e7df'; g.fillRect(0, 0, W, H); grime(g, W, H, 18);
+    g.strokeStyle = INK; g.lineWidth = 4;
+    // 2F の窓
+    for (const [a, b] of [[1.0, 4.4], [5.2, 8.6], [10.0, 15.6], [16.6, 20.8]]) {
+      g.fillStyle = '#7d97a8'; g.fillRect(X(a), Y(7.7), (b - a) * k, 1.9 * k); g.strokeRect(X(a), Y(7.7), (b - a) * k, 1.9 * k);
+      g.fillStyle = '#f2efe6'; for (let x = a; x < b - .1; x += 1.1) { g.fillRect(X(x) + 4, Y(7.6), .45 * k, 1.5 * k); g.strokeStyle = '#5d6b74'; g.lineWidth = 2; g.strokeRect(X(x), Y(7.7), 1.1 * k, 1.9 * k); }
+      g.strokeStyle = INK; g.lineWidth = 4;
+    }
+    // 階のさかいの帯
+    g.fillStyle = '#d4d1c7'; g.fillRect(0, Y(4.75), W, .3 * k); g.beginPath(); g.moveTo(0, Y(4.45)); g.lineTo(W, Y(4.45)); g.stroke();
+    // 看板の文字
+    g.fillStyle = '#3b4750'; g.font = `900 ${Math.round(.62 * k)}px ${JP}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('風情ウォッチバスターズ 本部', X(5.2), Y(4.05));
+    // 車庫（左：道具置き場、右：消防車と救急車）
+    const bay = (a, b) => { g.fillStyle = '#2b2925'; g.fillRect(X(a), Y(3.6), (b - a) * k, 3.6 * k); g.strokeRect(X(a), Y(3.6), (b - a) * k, 3.6 * k); };
+    bay(.6, 8.2); bay(12.6, 21.4);
+    g.fillStyle = '#cfae45'; g.fillRect(X(1.4), Y(2.2), .7 * k, 1.2 * k); g.fillStyle = '#4f6f86'; g.fillRect(X(2.4), Y(2.0), .6 * k, 1.0 * k); g.fillStyle = '#5f8a45'; g.fillRect(X(6.6), Y(3.4), .5 * k, 3.4 * k);
+    // 消防車（赤）
+    g.fillStyle = '#b7362a'; g.beginPath(); g.roundRect(X(13.4), Y(2.6), 3.3 * k, 2.4 * k, 8); g.fill(); g.stroke();
+    g.fillStyle = '#9fb4c2'; g.fillRect(X(13.7), Y(2.4), 2.7 * k, .9 * k); g.strokeRect(X(13.7), Y(2.4), 2.7 * k, .9 * k);
+    g.fillStyle = '#e8c24a'; g.fillRect(X(13.6), Y(.9), .5 * k, .3 * k); g.fillRect(X(16.0), Y(.9), .5 * k, .3 * k);
+    // 救急車（白に赤い線）
+    g.fillStyle = '#efece3'; g.beginPath(); g.roundRect(X(17.2), Y(2.5), 3.4 * k, 2.3 * k, 8); g.fill(); g.stroke();
+    g.fillStyle = '#9fb4c2'; g.fillRect(X(17.5), Y(2.3), 2.8 * k, .8 * k); g.fillStyle = '#c23a2c'; g.fillRect(X(17.2), Y(1.25), 3.4 * k, .22 * k); g.fillRect(X(18.3), Y(2.65), 1.2 * k, .2 * k);
+    // 入口と窓（まん中）
+    g.fillStyle = '#9aa7ad'; g.fillRect(X(9.0), Y(2.6), 1.4 * k, 2.6 * k); g.strokeRect(X(9.0), Y(2.6), 1.4 * k, 2.6 * k);
+    g.fillStyle = '#7d97a8'; g.fillRect(X(10.8), Y(2.6), 1.3 * k, 1.2 * k); g.strokeRect(X(10.8), Y(2.6), 1.3 * k, 1.2 * k);
+    g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, H - 2); g.lineTo(W, H - 2); g.stroke();
+  }, 1024, Math.round((RY - SL) * k), RW / 2, (RY - SL) / 2, .23, RW + .6, RY - SL, '+z');
+  const wm = cm('#dedbd2');
+  box(wm, -.3, 0, 0, RY - SL, -RD - .3, .2, false, false); box(wm, RW, RW + .3, 0, RY - SL, -RD - .3, .2, false, false);
+  // 地面（アスファルト）と、となりの建物
+  box(cm('#6c6b66'), -40, RW + 40, -.3, -.04, -RD - 30, 30, false, false);
+  box(cm('#8a877f'), -40, RW + 40, -.04, -.02, 2.6, 2.9, false, false);
+  const bld = (x0, x1, h, z0, z1, col, win) => {
+    box(cm(col), x0, x1, 0, h, z0, z1, false, false);
+    for (let yy = 1.2; yy < h - 1; yy += 2.8) for (let x = x0 + .8; x < x1 - 1.2; x += 2.2) box(cm(win), x, x + 1.3, yy, yy + 1.3, z1, z1 + .04, false, false);
+  };
+  bld(-12, -2.2, 6.5, -RD - 1, -1, '#d6d0c2', '#5b6b77');
+  bld(RW + 1.6, RW + 12, 14, -RD - 2, -1.2, '#b3946f', '#efe9da');
+  bld(-8, 9, 18, -RD - 16, -RD - 9, '#a3abb0', '#6d7a84');
+  bld(11, 30, 13, -RD - 13, -RD - 7, '#c7bca7', '#5b6b77');
+}
+let gachaFx = null;
+// 朕銭ガシャ：古い鉄の釜（ボイラー）に、朕銭を入れて回すオリジナルの機械
+function gachaMachine(cx, cz, y) {
+  const P = floors[2];
+  const iron = cm('#3b322e', { gloss: .35, spec: .15 }), brass = cm('#c9a545', { gloss: .6, spec: .4 });
+  const glow = mat('#ff8a2a', { emissive: '#ff8a2a', ei: 1.3 }), ember = mat('#ff6a2a', { emissive: '#ff6a2a', ei: 1.2 });
+  box(tmat(T.hazard, 3, 1), cx - 1.3, cx + 1.3, y, y + .35, cz - 1.15, cz + 1.15, false);
+  box(M.ink, cx - 1.32, cx + 1.32, y + .35, y + .38, cz - 1.17, cz + 1.17, false, false);
+  inked(P, 'cylinder', iron, [cx, y + 1.5, cz], [1.9, 2.3, 1.9]);
+  inked(P, 'sphere', iron, [cx, y + 2.62, cz], [1.75, 1.2, 1.75]);
+  for (const yy of [.62, 2.45]) piece(P, torusMesh(.97, .08), brass, [cx, y + yy, cz]);
+  for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; ball(brass, cx + Math.sin(a) * .98, y + .78, cz + Math.cos(a) * .98, .08, .08, .08); }
+  // 炉の窓（光る）
+  piece(P, 'cylinder', glow, [cx, y + 1.6, cz + .9], [1.05, .1, 1.05], [90, 0, 0]);
+  piece(P, torusMesh(.56, .08), brass, [cx, y + 1.6, cz + .96], null, [90, 0, 0]);
+  for (const dx of [-.22, 0, .22]) box(M.ink, cx + dx - .025, cx + dx + .025, y + 1.12, y + 2.08, cz + .96, cz + 1.0, false, false);
+  // 名札・取り出し口・投入口
+  decal((g, W, H) => { g.fillStyle = '#e6dcc0'; g.fillRect(0, 0, W, H); g.strokeStyle = INK; g.lineWidth = 10; g.strokeRect(5, 5, W - 10, H - 10); g.fillStyle = INK; g.font = `900 52px ${JP}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('朕銭ガシャ', W / 2, H / 2 + 3); }, 320, 90, cx, y + .98, cz + .97, .95, .27);
+  box(cm('#120e0c'), cx - .34, cx + .34, y + .38, y + .66, cz + .7, cz + .99, false, false);
+  box(brass, cx - .4, cx + .4, y + .66, y + .71, cz + .7, cz + 1.0, false, false);
+  box(cm('#2b2421'), cx - .86, cx - .56, y + 1.5, y + 1.95, cz + .4, cz + .72, false, false);
+  box(M.ink, cx - .73, cx - .69, y + 1.58, y + 1.87, cz + .72, cz + .74, false, false);
+  // ハンドル（右）
+  cyl(brass, cx + 1.0, y + 1.6, cz, .16, .2, 'x');
+  bar(brass, [cx + 1.1, y + 1.6, cz], [cx + 1.12, y + 1.15, cz + .3], .08);
+  ball(M.red, cx + 1.12, y + 1.12, cz + .32, .22, .22, .22);
+  // 煙突と、てっぺんで回る朕銭
+  cyl(iron, cx + .5, y + 3.25, cz - .25, .15, .9); cyl(brass, cx + .5, y + 3.68, cz - .25, .19, .1);
+  ball(ember, cx + .5, y + 3.74, cz - .25, .24, .1, .24);
+  const coin = new Entity(); coin.setLocalPosition(cx, y + 3.55, cz); P.addChild(coin);
+  piece(coin, 'cylinder', cm('#dcbc55', { gloss: .7, spec: .5 }), [0, 0, 0], [.7, .09, .7], [90, 0, 0]);
+  piece(coin, 'box', M.ink, [0, 0, 0], [.17, .17, .11]);
+  piece(coin, 'cylinder', outline, [0, 0, 0], [.76, .07, .76], [90, 0, 0]);
+  // ちょうちん（風情）
+  const lan = mat('#e0503c', { emissive: '#e0503c', ei: .7 });
+  for (const x of [cx - 3.2, cx + 3.2]) bar(M.wood2, [x, y, cz - 1.3], [x, y + 3.6, cz - 1.3], .1);
+  bar(M.ink, [cx - 3.2, y + 3.5, cz - 1.3], [cx + 3.2, y + 3.5, cz - 1.3], .025);
+  for (let i = 0; i < 5; i++) { const x = cx - 2.4 + i * 1.2, yy = y + 3.05 - Math.sin(i / 4 * Math.PI) * .2; ball(lan, x, yy, cz - 1.3, .36, .46, .36); box(M.ink, x - .1, x + .1, yy + .2, yy + .3, cz - 1.4, cz - 1.2, false, false); box(M.ink, x - .1, x + .1, yy - .3, yy - .22, cz - 1.4, cz - 1.2, false, false); }
+  addCol(cx - 1.3, cx + 1.3, y, y + 3.6, cz - 1.15, cz + 1.15);
+  gachaFx = { glow, ember, coin };
+}
+function buildRoof() {
+  root = floors[2];
+  const y = RY, fm = tmat(T.roof, RW / 2.5, RD / 2.5);
+  // 床（2F からの階段の穴をあける）
+  box(fm, -.3, RW + .3, y - SL, y, S2.z1, .2);
+  box(fm, -.3, RW + .3, y - SL, y, -RD - .3, S2.z0);
+  box(fm, -.3, S2.xa, y - SL, y, S2.z0, S2.z1);
+  box(fm, S2.xb, RW + .3, y - SL, y, S2.z0, S2.z1);
+  // ふちの立ち上がりと、さび色の手すり（写真の手すりがもと）
+  const par = cm('#d4d0c5');
+  box(par, -.3, RW + .3, y, y + .4, -RD - .3, -RD, false); box(par, -.3, 0, y, y + .4, -RD, .2, false); box(par, RW, RW + .3, y, y + .4, -RD, .2, false);
+  box(par, -.3, RW + .3, y, y + .4, -.1, .2, false);
+  box(M.ink, -.32, RW + .32, y + .4, y + .43, -.12, .22, false, false);
+  railing([-.15, -RD - .15], [RW + .15, -RD - .15], y + .4); railing([-.15, -RD - .15], [-.15, .05], y + .4); railing([RW + .15, -RD - .15], [RW + .15, .05], y + .4);
+  railing([-.15, .05], [RW + .15, .05], y + .4, 2.2);
+  addCol(-.6, RW + .6, y - 1, y + 1.5, -.1, .8); addCol(-.6, RW + .6, y - 1, y + 1.5, -RD - .8, -RD);
+  addCol(-.8, 0, y - 1, y + 1.5, -RD, .2); addCol(RW, RW + .8, y - 1, y + 1.5, -RD, .2);
+  // 階段の穴のまわりの柵（左があき口）
+  railing([S2.xa + .5, S2.z1 + .05], [S2.xb + .05, S2.z1 + .05], y, 1.3); railing([S2.xa + .5, S2.z0 - .05], [S2.xb + .05, S2.z0 - .05], y, 1.3); railing([S2.xb + .05, S2.z0 - .05], [S2.xb + .05, S2.z1 + .05], y, 1.3);
+  addCol(S2.xa + .4, S2.xb, y, y + 1.2, S2.z1, S2.z1 + .12); addCol(S2.xa + .4, S2.xb, y, y + 1.2, S2.z0 - .12, S2.z0); addCol(S2.xb, S2.xb + .12, y, y + 1.2, S2.z0, S2.z1);
+  sign('↓ 2F', S2.xa + .9, y + 1.6, S2.z1 + .1, .9, .36, '+z', '#cfae45');
+  // ホース乾燥塔（右の奥）
+  hoseTower(17.8, -11.4, 2.3, 8.4, y);
+  // 足場の枠（左の手前。白いパイプ）
+  const pipe = cm('#d9d7cf', { gloss: .4 });
+  for (const x of [.8, 3.0, 5.2]) for (const z of [-6.4, -4.2]) { bar(pipe, [x, y, z], [x, y + 2.6, z], .07); addCol(x - .06, x + .06, y, y + 2.6, z - .06, z + .06); }
+  for (const yy of [1.3, 2.6]) { for (const z of [-6.4, -4.2]) bar(pipe, [.8, y + yy, z], [5.2, y + yy, z], .06); for (const x of [.8, 3.0, 5.2]) bar(pipe, [x, y + yy, -6.4], [x, y + yy, -4.2], .06); }
+  box(M.wood, .8, 5.2, y + 2.6, y + 2.66, -6.3, -5.3, false);
+  crate(1.2, -5.9, .8, .8, .6, y); crate(1.3, -5.8, .6, .6, .45, y + .6, cm('#b7c0c4'));
+  // 室外機・物干し・ベンチ（右の手前）
+  for (const x of [19.4, 20.6]) { box(cm('#dad8d0'), x, x + 1.0, y, y + .75, -1.6, -.9); cyl(M.dark, x + .45, y + .4, -.88, .26, .03, 'z'); }
+  bench(14.6, 17.0, -1.6, y, '#a9402f');
+  plant(13.8, -1.4, y); plant(17.6, -1.3, y);
+  for (const x of [7.8, 10.2]) bar(M.steel, [x, y, -2.2], [x, y + 1.8, -2.2], .06);
+  bar(M.steel, [7.8, y + 1.75, -2.2], [10.2, y + 1.75, -2.2], .04);
+  for (const [x, c] of [[8.3, '#cfae45'], [8.9, '#e9e6dc'], [9.5, '#4f6f86']]) box(cm(c), x - .22, x + .22, y + 1.05, y + 1.72, -2.24, -2.16, false);
+  // 朕銭ガシャと看板
+  gachaMachine(12.5, -7.4, y);
+  for (const x of [10.9, 14.1]) bar(M.wood2, [x, y, -9.1], [x, y + 4.2, -9.1], .12);
+  decal((g, W, H) => {
+    g.fillStyle = '#2a211c'; g.fillRect(0, 0, W, H); g.strokeStyle = '#c9a545'; g.lineWidth = 12; g.strokeRect(10, 10, W - 20, H - 20);
+    g.fillStyle = '#f0c048'; g.font = `900 78px ${JP}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('朕銭ガシャ', W / 2 + 40, H / 2 + 4);
+    g.fillStyle = '#dcbc55'; g.strokeStyle = INK; g.lineWidth = 8; g.beginPath(); g.arc(96, H / 2, 46, 0, 7); g.fill(); g.stroke(); g.fillStyle = INK; g.fillRect(80, H / 2 - 16, 32, 32);
+  }, 640, 150, 12.5, y + 4.0, -9.05, 3.4, .8, '+z');
+  facade();
+}
 function drawMonitor(t) {
   if (!monitor) return;
   const g = monitor.ctx, W = 768, H = 240;
@@ -1048,6 +1263,7 @@ function placeNpcs() {
   npcs.push({ pos: new Vec3(19.3, 0, -.6), floor: 0, thing: true, talk: { name: '救急車', kind: 'ambulance' } });
   npcs.push({ pos: new Vec3(3.6, FH, -6.4), floor: 1, thing: true, talk: { name: '結成ボード', kind: 'form' } });
   npcs.push({ pos: new Vec3(17.4, FH, -2.6), floor: 1, thing: true, talk: { name: '募集端末', kind: 'multi' } });
+  npcs.push({ pos: new Vec3(12.5, RY, -6.2), floor: 2, thing: true, talk: { name: '朕銭ガシャ', kind: 'gacha' } });
 }
 let ring = null;
 function setPlayer(key) {
@@ -1077,7 +1293,9 @@ function animate(a, moving, run, dt, t) {
   if (a.ring) a.ring.setLocalPosition(a.pos.x, a.pos.y + .03, a.pos.z);
 }
 let time = 0;
-function floorOf(y) { return y > FH * .5 ? 1 : 0; }
+function floorOf(y) { return y > FH * 1.5 ? 2 : y > FH * .5 ? 1 : 0; }
+const FLOOR_TAG = ['1F<small>受付・工房・出動口</small>', '2F<small>指令室</small>', '屋上<small>朕銭ガシャ</small>'];
+const BG_IN = new Color(.09, .085, .08), BG_SKY = new Color(.62, .78, .9);
 app.on('update', (dt) => {
   if (titleOn || !player) return;
   dt = Math.min(dt, .05); time += dt;
@@ -1123,8 +1341,10 @@ app.on('update', (dt) => {
   const fl = floorOf(p.y + .2);
   if (fl !== state.floor || !floorEl.dataset.init) {
     state.floor = fl; floorEl.dataset.init = 1;
-    floors[0].enabled = fl === 0; floors[1].enabled = fl === 1;
-    floorEl.innerHTML = fl === 0 ? '1F<small>受付・工房・出動口</small>' : '2F<small>指令室</small>';
+    floors.forEach((f, i) => f.enabled = i === fl);
+    stairsG.enabled = fl <= 1; stairs2G.enabled = fl >= 1;
+    camera.camera.clearColor = fl === 2 ? BG_SKY : BG_IN;
+    floorEl.innerHTML = FLOOR_TAG[fl];
   }
   for (const a of actors) a.root.enabled = a.floor === fl;
   // 話しかけられる相手
@@ -1142,6 +1362,12 @@ app.on('update', (dt) => {
   // 救急車の赤色灯
   ambLights.forEach((m, i) => { m.emissiveIntensity = .3 + (Math.sin(time * 9 + i * Math.PI) > 0 ? 2.2 : 0); m.update(); });
   if (fl === 1 && Math.floor(time * 20) % 2 === 0) drawMonitor(time * 1000);
+  // 朕銭ガシャ：炉の火がゆらぎ、てっぺんの朕銭が回る
+  if (fl === 2 && gachaFx) {
+    gachaFx.coin.setLocalEulerAngles(0, time * 80, 0);
+    gachaFx.glow.emissiveIntensity = 1.2 + Math.sin(time * 6) * .3 + Math.sin(time * 13.7) * .15; gachaFx.glow.update();
+    gachaFx.ember.emissiveIntensity = 1 + Math.sin(time * 4.3) * .4; gachaFx.ember.update();
+  }
   player.floor = fl;
   uiTick(dt);
 });
@@ -1162,7 +1388,7 @@ function startGame() {
 tcv.addEventListener('click', startGame);
 async function boot() {
   await Promise.all(Object.keys(window.FACES).map(k => new Promise(res => { const im = new Image(); im.onload = res; im.onerror = res; im.src = window.FACES[k]; F[k] = im; })));
-  build1F(); build2F(); stairs(); root = app.root;
+  build1F(); build2F(); buildRoof(); stairs(); stairs2(); root = app.root;
   placeNpcs(); setPlayer(crewByKey[save.team[0]] ? save.team[0] : 'homura');
   uiInit();
   requestAnimationFrame(titleLoop);
@@ -1180,18 +1406,25 @@ function newSave() {
     chars: {}, equips: [], nextId: 1, mats: {}, items: {}, set: [null, null], quest: null,
     seen: {}, crafted: {}, settings: { bgm: 3, se: 4, quality: 1, zoom: 1, text: 1, guide: 1 },
     daily: '', gift: false, play: 0,
+    own: Object.fromEntries(STARTERS.map(k => [k, 1])), gacha: 0,
   };
 }
 const save = (() => {
   let s = null;
   try { s = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { }
+  const oldSave = !!s && !s.own;          // ガシャができる前のセーブ
   s = Object.assign(newSave(), s || {});
   s.settings = Object.assign(newSave().settings, s.settings || {});
   for (const c of CREW) s.chars[c.key] = Object.assign({ lv: 1, eq: null }, s.chars[c.key] || {});
-  s.team = (s.team || []).map(k => crewByKey[k] ? k : null); while (s.team.length < 4) s.team.push(null);
+  // 前のセーブでは全員使えたので、育てた・装備した・編成に入れた隊員はそのまま仲間にしておく
+  if (oldSave) for (const c of CREW) { const cs = s.chars[c.key]; if (cs.lv > 1 || cs.eq != null || (s.team || []).includes(c.key)) s.own[c.key] = 1; }
+  for (const k of STARTERS) s.own[k] = 1;
+  s.team = (s.team || []).map(k => crewByKey[k] && s.own[k] ? k : null); while (s.team.length < 4) s.team.push(null);
   if (!s.team[0]) s.team[0] = 'homura';
   return s;
 })();
+const owned = (k) => !!save.own[k];
+const ownedCrew = () => CREW.filter(c => owned(c.key));
 let saveTimer = 0;
 function writeSave() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { } }
 function dirty() { clearTimeout(saveTimer); saveTimer = setTimeout(writeSave, 300); }
@@ -1318,7 +1551,7 @@ function buildPad() {
 function padSelect(i) { if (padSel !== i) Snd.move(); padSel = i; [...$('padTiles').children].forEach((t, j) => t.classList.toggle('sel', j === i)); $('padDesc').textContent = PAD_TILES[i][2]; }
 function padAlerts() {
   // いくせい：朕銭が足りる隊員がいれば「!」
-  const canUp = CREW.some(c => chOf(c.key).lv < 99 && save.coins >= lvCost(chOf(c.key).lv));
+  const canUp = ownedCrew().some(c => chOf(c.key).lv < 99 && save.coins >= lvCost(chOf(c.key).lv));
   const tiles = $('padTiles').children;
   tiles[1].querySelector('.alert').style.display = canUp ? '' : 'none';
   tiles[5].querySelector('.alert').style.display = NET.on ? '' : 'none';
@@ -1377,10 +1610,10 @@ function whoPanel(key, o = {}) {
       <div class="moves">${c.moves.map((m, i) => `<div class="mv">${icSk(i, c.role, 28)}<span class="t">${MOVE_TYPES[i]}</span>${m}<span class="lv">Lv${ml}</span></div>`).join('')}</div>
     </div></div>`;
 }
-const faceImg = (key, size, lock) => `<span class="face" style="width:${size}px;height:${size}px"><img src="${F[crewByKey[key].img].src}"></span>`;
+const faceImg = (key, size, lock) => `<span class="face${lock ? ' lock' : ''}" style="width:${size}px;height:${size}px"><img src="${F[crewByKey[key].img].src}"></span>`;
 const roleTag = (r) => `<span class="role" style="background:${ROLE[r][1]}">${r}</span>`;
 const B = (act, label, key = '', cls = '') => `<button class="btn ${cls}" data-act="${act}">${key ? `<span class="key">${key}</span>` : ''}${label}</button>`;
-const charStep = (cur, d) => { const i = CREW.findIndex(c => c.key === cur); return CREW[(i + d + CREW.length) % CREW.length].key; };
+const charStep = (cur, d) => { const L = ownedCrew(), i = L.findIndex(c => c.key === cur); return L[(i + d + L.length) % L.length].key; };
 
 // =====================================================================
 //  なかま（メンバー編成）
@@ -1413,8 +1646,9 @@ SCREENS.nakama = () => {
           <div class="mono">${s.key ? crewByKey[s.key].role + '・Lv' + (s.lv ?? chOf(s.key).lv) : '—'}${NET.on && s.kind !== 'cpu' ? (s.ready ? ' ✔OK' : ' 準備中') : ''}</div></div>`).join('')}</div>
       </div>
       <div class="card" style="padding:10px 12px;display:flex;flex-direction:column;min-height:0">
-        <div style="display:flex;gap:6px;align-items:center"><span class="lbl">隊員名簿</span><span style="margin-left:auto"></span>${[['all', '全員'], ['A', 'A'], ['T', 'T'], ['R', 'R'], ['H', 'H']].map(([f, l]) => `<button class="pill ${N.filter === f ? 'on' : ''}" data-act="filter:${f}">${l}</button>`).join('')}</div>
-        <div class="rows">${list.map(c => { const ti = save.team.indexOf(c.key); return `<div class="row ${N.pick === c.key ? 'on' : ''}" data-act="pick:${c.key}">
+        <div style="display:flex;gap:6px;align-items:center"><span class="lbl">隊員名簿</span><span class="mono" style="margin-left:6px">仲間 ${ownedCrew().length}/${CREW.length}</span><span style="margin-left:auto"></span>${[['all', '全員'], ['A', 'A'], ['T', 'T'], ['R', 'R'], ['H', 'H']].map(([f, l]) => `<button class="pill ${N.filter === f ? 'on' : ''}" data-act="filter:${f}">${l}</button>`).join('')}</div>
+        <div class="rows">${list.map(c => { const ti = save.team.indexOf(c.key); if (!owned(c.key)) return `<div class="row unk" data-act="locked">
+          <span class="mono" style="width:60px"></span>${faceImg(c.key, 30, true)}<b>？？？</b><span style="margin-left:auto" class="small">屋上のガシャで仲間に</span>${roleTag(c.role)}<span class="mono" style="width:54px;text-align:right">${'★'.repeat(CREW_RARE[c.key])}</span></div>`; return `<div class="row ${N.pick === c.key ? 'on' : ''}" data-act="pick:${c.key}">
           <span class="mono" style="width:60px">${ti === 0 ? '★リーダー' : ti > 0 ? 'CPU' : ''}</span>${faceImg(c.key, 30)}<b>${c.name}</b><span style="margin-left:auto"></span>${roleTag(c.role)}<span class="mono" style="width:54px;text-align:right">Lv${chOf(c.key).lv}</span></div>`; }).join('')}</div>
       </div>
     </div>`,
@@ -1427,8 +1661,10 @@ const ACT = {
   slot(i) { S.nk.slot = +i; const k = teamView()[+i].key; if (k) S.nk.pick = k; Snd.move(); renderScreen(); },
   filter(f) { S.nk.filter = f; Snd.move(); renderScreen(); },
   pick(k) { S.nk.pick = k; Snd.move(); renderScreen(); },
+  locked() { Snd.err(); toast('まだ仲間になっていない隊員です。屋上の朕銭ガシャで仲間にしよう'); },
   swap() {
     const N = S.nk, k = N.pick, i = N.slot;
+    if (!owned(k)) { Snd.err(); return; }
     if (NET.on && i > 0) {
       if (!NET.host || teamView()[i].kind !== 'cpu') { Snd.err(); toast('オンラインでは、ほかの隊員の枠は変えられません'); return; }
       if (NET.room.members.some(m => m.ch === k)) { Snd.err(); toast('その隊員は、ほかの人が使っています'); return; }
@@ -1772,6 +2008,281 @@ Object.assign(ACT, {
 });
 
 // =====================================================================
+//  朕銭ガシャ（屋上）
+//  つかう朕銭を 100〜1000 で決める。100朕銭ごとに「大当たり確率」が1倍ずつ上がり、
+//  レア・ウルトラレアの隊員が出やすくなる（そのぶん、おまけが出にくくなる）
+// =====================================================================
+const GC = { min: 100, max: 1000, step: 100 };
+const RARE_NAME = ['おまけ', 'ノーマル', 'レア', 'ウルトラレア'];
+const RARE_COL = ['#e6dcc0', '#ffb347', '#7fd3ff', '#ffd84a'];
+const DUP_LV = [0, 3, 6, 10], DUP_COIN = [0, 100, 300, 1000];   // すでに仲間の隊員が出たとき：Lv アップ（Lv99 なら朕銭）
+// [おまけ, ノーマル, レア, ウルトラレア] の確率
+function gcRates(amt) { const m = amt / 100, p3 = .02 * m, p2 = .10 + .03 * (m - 1), p1 = .25; return [1 - p1 - p2 - p3, p1, p2, p3]; }
+const pct = (p) => (Math.round(p * 1000) / 10).toFixed(1) + '%';
+const pickW = (arr, w) => { let x = Math.random() * w.reduce((a, b) => a + b, 0); for (let i = 0; i < arr.length; i++) { x -= w[i]; if (x < 0) return arr[i]; } return arr[arr.length - 1]; };
+function gcRoll(amt) {
+  const R = gcRates(amt); let x = Math.random(), r = 0;
+  while (r < 3 && x >= R[r]) { x -= R[r]; r++; }
+  if (r === 0) {
+    // おまけ：お助けアイテムか、素材
+    if (Math.random() < .6) {
+      const it = pickW(ITEMS.filter(i => i.price <= 300), ITEMS.filter(i => i.price <= 300).map(i => 400 - i.price)), n = it.price <= 100 ? 2 : 1;
+      save.items[it.key] = (save.items[it.key] || 0) + n;
+      return { r, it: it.key, n, name: it.name, src: iconURL('it', it.key, 64, '#cdbf92') };
+    }
+    const e = ENEMIES[Math.floor(Math.random() * ENEMIES.length)], mr = Math.random() < .25 ? 2 : 1, id = e.key + mr, n = mr === 2 ? 2 : 4;
+    save.mats[id] = have(id) + n;
+    return { r, mat: id, n, name: MATS[id].name, src: iconURL('mat', MATS[id].draw, 64, RAR_BG[mr - 1], mr) };
+  }
+  // 隊員：まだ仲間でない隊員は2倍出やすい
+  const pool = CREW.filter(c => CREW_RARE[c.key] === r), c = pickW(pool, pool.map(c => owned(c.key) ? 1 : 2));
+  const res = { r, ch: c.key, name: c.name };
+  if (!owned(c.key)) { save.own[c.key] = 1; res.isNew = true; }
+  else {
+    const cs = chOf(c.key), up = Math.min(DUP_LV[r], 99 - cs.lv); cs.lv += up; res.lv = up;
+    if (up < DUP_LV[r]) { save.coins += DUP_COIN[r]; res.coins = DUP_COIN[r]; }
+  }
+  return res;
+}
+S.gc = { amt: 100, phase: 'idle', t0: 0, res: null };
+const GC_SPIN = 1.5, GC_DROP = 2.25, GC_OPEN = 2.85;    // 演出の時間（秒）
+function gcResultText(res) {
+  if (!res) return '';
+  if (res.r === 0) return `おまけ：${res.name} ×${res.n}`;
+  if (res.isNew) return `${res.name}が仲間になった！ 2F の結成ボードでメンバーに入れられます`;
+  return `${res.name}（かさなり）：${res.lv ? `Lv ＋${res.lv}` : ''}${res.coins ? `${res.lv ? '・' : ''}朕銭 ＋${fmt(res.coins)}` : ''}`;
+}
+SCREENS.gacha = () => {
+  const G = S.gc, R = gcRates(G.amt);
+  const faces = (r) => CREW.filter(c => CREW_RARE[c.key] === r).map(c => faceImg(c.key, 24, !owned(c.key))).join('');
+  const rows = [[3, `<i>★★★</i> ウルトラレア`, faces(3)], [2, `<i>★★</i> レア`, faces(2)], [1, `<i>★</i> ノーマル`, faces(1)], [0, 'おまけ', 'アイテム・素材']];
+  return {
+    title: '朕銭ガシャ', sub: 'GACHA / つかう朕銭が多いほどレアが出やすい', cols: '1.25fr 1fr',
+    html: `<div class="card gcStage"><div class="gcBanner"><small>大当たり確率</small><b id="gcMul">${G.amt / 100}</b><span>倍</span></div><canvas id="gcCv"></canvas></div>
+      <div class="card" style="padding:10px 12px;display:flex;flex-direction:column;min-height:0">
+        <span class="lbl" style="align-self:flex-start">つかう朕銭</span>
+        <div class="gcAmt"><button class="gcArrow" data-act="hold:gcDown">◀</button><div class="val"><span class="coin"></span><span id="gcAmt">${fmt(G.amt)}</span></div><button class="gcArrow" data-act="hold:gcUp">▶</button></div>
+        <input type="range" class="gcRange" id="gcRange" min="${GC.min}" max="${GC.max}" step="${GC.step}" value="${G.amt}">
+        <div class="mono" style="display:flex;justify-content:space-between"><span>${GC.min}（1倍）</span><span>${GC.max}（${GC.max / 100}倍）</span></div>
+        <div class="gcRates">${rows.map(([r, t, f]) => `<div class="gcRate r${r}"><span class="t">${t}</span><span class="fc">${f}</span><span class="pc" id="gcP${r}">${pct(R[r])}</span></div>`).join('')}</div>
+        <div style="margin-top:auto;padding-top:8px;display:flex;flex-direction:column;gap:6px">
+          <button class="btn go huge" data-act="gcSpin"><span class="key">Enter</span>ガシャをまわす</button>
+          <div class="mono" style="text-align:center">仲間 ${ownedCrew().length}/${CREW.length}　／　まわした回数 ${save.gacha || 0}　／　持っている朕銭 <span class="coinsTxt"></span></div>
+        </div>
+      </div>`,
+    desc: G.phase === 'result' && G.res ? gcResultText(G.res) : 'つかう朕銭が多いほど、レアな隊員が出やすくなります（100朕銭ごとに大当たり確率が1倍ずつ上がる）。すでに仲間の隊員が出たら、その隊員のレベルが上がります',
+    foot: B('hold:gcDown', 'へらす', '◀') + B('hold:gcUp', 'ふやす', '▶'),
+    after() {
+      const rg = $('gcRange');
+      rg.oninput = () => gcSetAmt(+rg.value, true);
+      rg.onchange = () => rg.blur();
+      gcSync();
+      if (!gcRaf) gcRaf = requestAnimationFrame(gcLoop);
+      $('gcCv').onclick = () => { const G = S.gc; if (G.phase === 'spin') G.t0 = performance.now() - GC_OPEN * 1000; else if (G.phase === 'result') { G.phase = 'idle'; renderScreen(); } };
+    },
+  };
+};
+function gcSync() {
+  const G = S.gc, R = gcRates(G.amt);
+  if (!$('gcAmt')) return;
+  $('gcAmt').textContent = fmt(G.amt); $('gcMul').textContent = G.amt / 100;
+  const rg = $('gcRange'); rg.value = G.amt; rg.style.setProperty('--p', ((G.amt - GC.min) / (GC.max - GC.min) * 100) + '%');
+  for (let r = 0; r < 4; r++) $('gcP' + r).textContent = pct(R[r]);
+  $('gcAmt').parentElement.style.color = save.coins >= G.amt ? '' : '#e0503c';
+}
+function gcSetAmt(v, fromRange) {
+  const G = S.gc; if (G.phase === 'spin') { gcSync(); return; }
+  v = Math.max(GC.min, Math.min(GC.max, Math.round(v / GC.step) * GC.step));
+  if (v === G.amt) { if (!fromRange) stopHold(); return; }
+  G.amt = v; Snd.move();
+  if (G.phase === 'result') { G.phase = 'idle'; $('padScreenDesc').textContent = SCREENS.gacha().desc; }
+  gcSync();
+}
+Object.assign(ACT, {
+  gcUp() { gcSetAmt(S.gc.amt + GC.step); },
+  gcDown() { gcSetAmt(S.gc.amt - GC.step); },
+  gcSpin() {
+    const G = S.gc;
+    if (G.phase === 'spin') { G.t0 = Math.min(G.t0, performance.now() - GC_OPEN * 1000); return; }   // 演出をとばす
+    if (save.coins < G.amt) { Snd.err(); toast('朕銭が足りません'); return; }
+    save.coins -= G.amt; save.gacha = (save.gacha || 0) + 1;
+    G.res = gcRoll(G.amt);
+    if (G.res.src) { G.res.img = new Image(); G.res.img.src = G.res.src; }
+    G.phase = 'spin'; G.t0 = performance.now(); G.done = false;
+    writeSave(); updateCoins();
+    // ハンドルを回す音
+    for (let i = 0; i < 9; i++) setTimeout(() => Snd.beep(300 + i * 40, .05, 'square', .5), i * 150);
+    setTimeout(() => Snd.beep(160, .25, 'sawtooth', .7, -60), GC_SPIN * 1000);
+    setTimeout(() => Snd.beep(900, .12, 'triangle', .8, 600), GC_DROP * 1000);
+  },
+});
+function gcFinish() {
+  const G = S.gc, r = G.res.r;
+  G.phase = 'result';
+  if (r === 3) { Snd.up(); setTimeout(() => Snd.up(), 260); setTimeout(() => [1568, 2093].forEach((f, i) => setTimeout(() => Snd.beep(f, .12, 'triangle', .9), i * 90)), 520); }
+  else if (r === 2) { Snd.up(); setTimeout(() => Snd.ok(), 250); }
+  else if (r === 1) Snd.up(); else Snd.buy();
+  dirty(); padAlerts();
+  if (S.cur === 'gacha') renderScreen();
+}
+let gcRaf = 0;
+function gcLoop(now) {
+  if (S.cur !== 'gacha' || !$('pad').classList.contains('on')) { gcRaf = 0; return; }
+  const G = S.gc;
+  if (G.phase === 'spin' && (now - G.t0) / 1000 >= GC_OPEN + .35 && !G.done) { G.done = true; gcFinish(); }
+  const cv = $('gcCv'); if (cv) gcDraw(cv, now);
+  gcRaf = requestAnimationFrame(gcLoop);
+}
+// ---- ガシャの絵（キャンバスに太い線で描く） ----
+function gcDraw(cv, now) {
+  const G = S.gc, dpr = Math.min(2, devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
+  if (!W || !H) return;
+  if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const t = now / 1000, e = G.phase === 'spin' ? (now - G.t0) / 1000 : G.phase === 'result' ? 99 : -1;
+  const res = G.res, tier = res ? res.r : 1, tcol = (k = 0) => tier === 3 ? `hsl(${(t * 220 + k * 60) % 360},95%,62%)` : RARE_COL[tier];
+  // 背景：夕方の屋上
+  const sky = g.createLinearGradient(0, 0, 0, H * .7); sky.addColorStop(0, '#6f9fbe'); sky.addColorStop(.55, '#e8c98a'); sky.addColorStop(1, '#ef9f5c');
+  g.fillStyle = sky; g.fillRect(0, 0, W, H);
+  g.fillStyle = 'rgba(255,250,235,.55)';
+  for (let i = 0; i < 4; i++) { const x = ((i * 170 + t * 8) % (W + 200)) - 100, y = 60 + (i % 2) * 40 + i * 6; g.beginPath(); g.ellipse(x, y, 60, 14, 0, 0, 7); g.ellipse(x + 34, y - 8, 36, 12, 0, 0, 7); g.fill(); }
+  g.fillStyle = '#8c6f68';
+  for (let i = 0; i < 9; i++) { const bw = 50 + (i * 37) % 60, bh = 50 + (i * 53) % 90; g.fillRect(i * W / 8 - 20, H * .62 - bh, bw, bh); }
+  g.fillStyle = '#7a5e58'; for (let i = 0; i < 9; i++) for (let j = 0; j < 3; j++) g.fillRect(i * W / 8 - 8 + (j % 2) * 18, H * .62 - 30 - j * 22, 8, 9);
+  // ホース乾燥塔のシルエット（左）
+  g.strokeStyle = '#8a3a24'; g.lineWidth = 4; const tx = W * .1, tw = 34;
+  for (const x of [tx, tx + tw]) { g.beginPath(); g.moveTo(x, H * .62); g.lineTo(x, H * .08); g.stroke(); }
+  g.lineWidth = 2; for (let y = H * .62; y > H * .1; y -= 30) { g.beginPath(); g.moveTo(tx, y); g.lineTo(tx + tw, y - 30); g.moveTo(tx + tw, y); g.lineTo(tx, y - 30); g.moveTo(tx, y); g.lineTo(tx + tw, y); g.stroke(); }
+  // 屋上の床と、さび色の手すり
+  g.fillStyle = '#9d9e92'; g.fillRect(0, H * .66, W, H); g.strokeStyle = 'rgba(40,40,30,.25)'; g.lineWidth = 2;
+  for (let x = -W; x < W * 2; x += 70) { g.beginPath(); g.moveTo(W / 2 + (x - W / 2) * .5, H * .66); g.lineTo(x, H); g.stroke(); }
+  g.fillStyle = '#d4d0c5'; g.fillRect(0, H * .62, W, H * .04); g.strokeStyle = INK; g.lineWidth = 3; g.strokeRect(-4, H * .62, W + 8, H * .04);
+  g.strokeStyle = '#a5452a'; g.lineWidth = 5; for (const y of [H * .5, H * .56]) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+  for (let x = 20; x < W; x += 80) { g.beginPath(); g.moveTo(x, H * .5); g.lineTo(x, H * .62); g.stroke(); }
+  // ---- 機械 ----
+  const s = Math.min(W / 440, H * .9 / 410), cx = W / 2, base = H * .95;
+  const spin = e >= 0 && e < GC_SPIN ? e : -1;
+  const shake = spin >= 0 ? Math.sin(t * 70) * 2.5 * Math.min(1, spin / .3) : e >= GC_SPIN && e < GC_DROP ? Math.sin(t * 90) * 1.5 : 0;
+  let heat = .85 + Math.sin(t * 6) * .1 + Math.sin(t * 13.7) * .06;
+  if (e >= 0 && e < 90) heat += Math.min(1, e / GC_SPIN) * .9;
+  const hot = e >= 1.0 && e < 90 ? tcol() : '#ff9a2e';
+  g.save(); g.translate(cx + shake, base); g.scale(s, s);
+  g.lineJoin = 'round'; g.lineCap = 'round'; g.strokeStyle = INK;
+  g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(0, 0, 130, 14, 0, 0, 7); g.fill();
+  // ちょうちん
+  g.strokeStyle = INK; g.lineWidth = 2; g.beginPath(); g.moveTo(-190, -300); g.quadraticCurveTo(0, -270, 190, -300); g.stroke();
+  for (const x of [-150, -75, 75, 150]) {
+    const yy = -300 + 30 * (1 - (x / 190) ** 2) + 20, sw = Math.sin(t * 1.6 + x) * 3;
+    g.save(); g.translate(x + sw, yy); g.shadowColor = '#ff6a3a'; g.shadowBlur = 18; g.fillStyle = '#d9472f'; g.lineWidth = 3;
+    g.beginPath(); g.ellipse(0, 0, 15, 20, 0, 0, 7); g.fill(); g.shadowBlur = 0; g.stroke();
+    g.strokeStyle = 'rgba(40,10,0,.4)'; g.lineWidth = 1.5; for (const k of [-8, 0, 8]) { g.beginPath(); g.ellipse(0, k, 14 - Math.abs(k) * .4, 2, 0, 0, Math.PI); g.stroke(); }
+    g.fillStyle = INK; g.fillRect(-6, -24, 12, 5); g.fillRect(-6, 19, 12, 5); g.restore();
+  }
+  g.strokeStyle = INK;
+  // 台座（黄黒しま）
+  g.lineWidth = 5; g.save(); g.beginPath(); g.roundRect(-112, -36, 224, 36, 6); g.fillStyle = '#cfae45'; g.fill(); g.clip();
+  g.fillStyle = INK; for (let x = -150; x < 130; x += 26) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 13, 0); g.lineTo(x + 49, -36); g.lineTo(x + 36, -36); g.fill(); }
+  g.restore(); g.beginPath(); g.roundRect(-112, -36, 224, 36, 6); g.stroke();
+  // 本体（鉄の釜）
+  const bg = g.createLinearGradient(-90, 0, 90, 0); bg.addColorStop(0, '#231d1a'); bg.addColorStop(.35, '#5e5049'); bg.addColorStop(.7, '#3a302c'); bg.addColorStop(1, '#1b1614');
+  rr(g, -90, -244, 180, 210, 20, bg);
+  // ドーム
+  g.beginPath(); g.moveTo(-84, -240); g.bezierCurveTo(-84, -330, 84, -330, 84, -240); g.closePath(); g.fillStyle = bg; g.fill(); g.lineWidth = 5; g.stroke();
+  g.save(); g.globalAlpha = .18; g.fillStyle = '#fff'; g.beginPath(); g.ellipse(-30, -280, 22, 12, -.4, 0, 7); g.fill(); g.restore();
+  // 真ちゅうの帯とびょう
+  for (const y of [-74, -246]) rr(g, -95, y, 190, 16, 5, '#c9a545');
+  g.lineWidth = 2.5; for (let x = -76; x <= 76; x += 25) { circ(g, x, -66, 3.6, '#ead08a'); circ(g, x, -238, 3.6, '#ead08a'); }
+  // 煙突と煙
+  g.lineWidth = 4; rr(g, 34, -350, 24, 70, 3, '#3a302c'); rr(g, 29, -358, 34, 12, 3, '#c9a545');
+  g.save(); g.shadowColor = '#ff7a3a'; g.shadowBlur = 14 * heat; g.fillStyle = '#ff7a3a'; g.beginPath(); g.ellipse(46, -360, 12, 4, 0, 0, 7); g.fill(); g.restore();
+  const puffs = spin >= 0 ? 9 : 5, spd = spin >= 0 ? 1.4 : .35;
+  for (let i = 0; i < puffs; i++) {
+    const ph = (t * spd + i / puffs) % 1, x = 46 + Math.sin(t * 2 + i * 1.7) * 6 + ph * 40, y = -368 - ph * 110, r = 7 + ph * 18;
+    g.fillStyle = `rgba(235,230,220,${.5 * (1 - ph)})`; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+  }
+  // てっぺんの朕銭（回る）
+  const cs = Math.cos(t * (spin >= 0 ? 14 : 2.4));
+  g.save(); g.translate(-18, -332); g.scale(Math.max(.08, Math.abs(cs)), 1); g.lineWidth = 4;
+  circ(g, 0, 0, 26, cs > 0 ? '#dcbc55' : '#b39436'); g.fillStyle = INK; g.fillRect(-8, -8, 16, 16); g.restore();
+  // 炉の窓（光る）
+  g.save(); g.globalCompositeOperation = 'lighter';
+  const halo = g.createRadialGradient(0, -158, 10, 0, -158, 120 + heat * 40); halo.addColorStop(0, hot); halo.addColorStop(1, 'rgba(0,0,0,0)');
+  g.globalAlpha = Math.min(.8, .3 * heat); g.fillStyle = halo; g.beginPath(); g.arc(0, -158, 170, 0, 7); g.fill(); g.restore();
+  const fire = g.createRadialGradient(0, -150, 4, 0, -158, 56); fire.addColorStop(0, '#fff6c8'); fire.addColorStop(.45, hot); fire.addColorStop(1, '#6a1a0c');
+  g.lineWidth = 5; circ(g, 0, -158, 54, fire);
+  // 火のうず（回すと速くなる）
+  g.save(); g.beginPath(); g.arc(0, -158, 50, 0, 7); g.clip(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = 'rgba(255,240,180,.55)'; g.lineWidth = 6;
+  for (let i = 0; i < 3; i++) { const a = t * (spin >= 0 ? 9 : 1.8) + i * 2.1; g.beginPath(); g.arc(0, -158, 18 + i * 11, a, a + 1.6); g.stroke(); }
+  g.restore();
+  g.lineWidth = 6; for (const dx of [-22, 0, 22]) { g.beginPath(); g.moveTo(dx, -206); g.lineTo(dx, -110); g.stroke(); }
+  g.lineWidth = 13; g.strokeStyle = '#c9a545'; g.beginPath(); g.arc(0, -158, 58, 0, 7); g.stroke();
+  g.lineWidth = 4; g.strokeStyle = INK; g.beginPath(); g.arc(0, -158, 65, 0, 7); g.stroke(); g.beginPath(); g.arc(0, -158, 52, 0, 7); g.stroke();
+  g.lineWidth = 2.5; for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; circ(g, Math.cos(a) * 58, -158 + Math.sin(a) * 58, 3.2, '#7a5f22'); }
+  // 名札
+  g.lineWidth = 4; rr(g, -62, -100, 124, 24, 4, '#e6dcc0'); g.fillStyle = INK; g.font = `900 17px ${JP}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('朕銭ガシャ', 0, -87);
+  // 投入口（左）と取り出し口（下）
+  rr(g, -84, -214, 30, 46, 5, '#2b2421'); g.fillStyle = '#000'; g.fillRect(-71, -206, 5, 30);
+  if (spin >= 0 && spin < .5) { const cy = -260 + spin / .5 * 60; g.save(); g.lineWidth = 3; g.translate(-68, cy); g.scale(.45 + Math.abs(Math.cos(t * 20)) * .55, 1); circ(g, 0, 0, 11, '#dcbc55'); g.fillStyle = INK; g.fillRect(-3, -3, 6, 6); g.restore(); }
+  g.fillStyle = '#100c0a'; g.beginPath(); g.ellipse(0, -36, 38, 22, 0, Math.PI, 0); g.fill(); g.lineWidth = 4; g.stroke();
+  // ハンドル（右）
+  const ang = spin >= 0 ? spin / GC_SPIN * Math.PI * 4 : 0;
+  g.save(); g.translate(98, -158); g.lineWidth = 4; circ(g, 0, 0, 16, '#c9a545'); g.rotate(ang);
+  g.lineWidth = 9; g.strokeStyle = INK; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 46); g.stroke(); g.lineWidth = 5; g.strokeStyle = '#c9a545'; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 46); g.stroke();
+  g.strokeStyle = INK; g.lineWidth = 4; circ(g, 0, 50, 12, '#a9402f'); g.restore();
+  g.restore();
+  // ---- カプセル ----
+  if (e >= GC_SPIN && e < GC_OPEN + .4) {
+    const p = Math.min(1, (e - GC_SPIN) / (GC_DROP - GC_SPIN)), ez = 1 - (1 - p) ** 3;
+    const x = cx + Math.sin(p * Math.PI) * 30 * s, y = (base - 36 * s) + (H * .52 - (base - 36 * s)) * ez - Math.sin(p * Math.PI) * 90 * s;
+    const sc = (.6 + ez * 1.3) * s, open = e >= GC_DROP ? Math.min(1, (e - GC_DROP) / (GC_OPEN - GC_DROP)) : 0;
+    g.save(); g.translate(x, y); g.scale(sc, sc); g.rotate(open ? 0 : (1 - p) * 6);
+    if (open) {
+      g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = open;
+      for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2 + t; g.fillStyle = tcol(i); g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, 60 + open * 140, a, a + .14); g.fill(); }
+      g.restore();
+    }
+    g.lineWidth = 4; g.strokeStyle = INK;
+    g.save(); g.translate(0, -open * 26); g.beginPath(); g.arc(0, 0, 30, Math.PI, 0); g.closePath(); g.fillStyle = tcol(); g.fill(); g.stroke();
+    g.globalAlpha = .35; g.fillStyle = '#fff'; g.beginPath(); g.ellipse(-12, -16, 8, 4, -.5, 0, 7); g.fill(); g.restore();
+    g.save(); g.translate(0, open * 26); g.beginPath(); g.arc(0, 0, 30, 0, Math.PI); g.closePath(); g.fillStyle = '#f2ecdc'; g.fill(); g.stroke(); g.restore();
+    g.restore();
+  }
+  // ---- 結果 ----
+  if (res && (G.phase === 'result' || e >= GC_OPEN)) {
+    const a = G.phase === 'result' ? 1 : Math.min(1, (e - GC_OPEN) / .3);
+    g.save(); g.globalAlpha = a;
+    g.fillStyle = 'rgba(10,8,6,.55)'; g.fillRect(0, 0, W, H);
+    const ccx = W / 2, ccy = H * .5;
+    g.save(); g.translate(ccx, ccy); g.globalCompositeOperation = 'lighter'; g.globalAlpha = a * (tier >= 2 ? .5 : .28);
+    for (let i = 0; i < 16; i++) { const an = i / 16 * Math.PI * 2 + t * .4; g.fillStyle = tcol(i); g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, Math.max(W, H), an, an + .1); g.fill(); }
+    g.restore();
+    const cw = Math.min(W * .72, 330), ch = Math.min(H * .8, 300), x0 = ccx - cw / 2, y0 = ccy - ch / 2;
+    g.lineWidth = 5; g.strokeStyle = INK; rr(g, x0, y0, cw, ch, 14, '#e6dcc0');
+    rr(g, x0 + 14, y0 - 16, cw - 28, 36, 6, tier ? tcol() : '#b9ad88');
+    g.fillStyle = INK; g.font = `900 20px ${JP}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(tier ? `${'★'.repeat(tier)} ${RARE_NAME[tier]}` : 'おまけ', ccx, y0 + 3);
+    const ir = Math.min(ch * .26, 70), iy = y0 + 30 + ir;
+    if (res.ch) {
+      const im = F[crewByKey[res.ch].img];
+      g.save(); g.beginPath(); g.arc(ccx, iy, ir, 0, 7); g.fillStyle = '#b9ad88'; g.fill(); g.clip();
+      if (im && im.width) { const sc = ir * 2.3 / im.height; g.drawImage(im, ccx - im.width * sc / 2, iy - ir * 1.05, im.width * sc, im.height * sc); }
+      g.restore(); g.lineWidth = 5; g.beginPath(); g.arc(ccx, iy, ir, 0, 7); g.stroke();
+    } else if (res.img && res.img.complete) g.drawImage(res.img, ccx - ir, iy - ir, ir * 2, ir * 2);
+    g.fillStyle = INK; g.font = `900 ${Math.round(Math.min(26, cw / 10))}px ${JP}`;
+    g.fillText(res.ch ? res.name : `${res.name} ×${res.n}`, ccx, iy + ir + 24, cw - 24);
+    g.font = `800 15px ${JP}`; g.fillStyle = '#4f4a3c';
+    const sub = res.r === 0 ? (res.it ? 'もちもの に入れました' : '素材を手に入れました') : res.isNew ? '仲間になった！' : `かさなり：${res.lv ? 'Lv ＋' + res.lv : ''}${res.coins ? (res.lv ? '・' : '') + '朕銭 ＋' + fmt(res.coins) : ''}`;
+    g.fillText(sub, ccx, iy + ir + 52, cw - 24);
+    if (res.isNew) {
+      g.save(); g.translate(x0 + cw - 34, y0 + 46); g.rotate(-.25); g.lineWidth = 4; g.fillStyle = '#a9402f'; g.beginPath(); g.roundRect(-36, -16, 72, 32, 6); g.fill(); g.stroke();
+      g.fillStyle = '#f4ecd8'; g.font = `900 20px ${JP}`; g.fillText('NEW!', 0, 1); g.restore();
+    }
+    g.font = `800 12px ${JP}`; g.fillStyle = '#e6dcc0'; g.fillText('クリック（Enter でもう一回）', ccx, y0 + ch + 18);
+    g.restore();
+  }
+}
+
+// =====================================================================
 //  マルチ募集（PeerJS：ルームを作った人がサーバー役）
 // =====================================================================
 const PEER_PREFIX = 'fuzei-watch-busters-v1-', PUB_SLOTS = 20, CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -2022,6 +2533,7 @@ function interact(n) {
   else if (t.kind === 'quest') showTalk(t.name, t.text, () => openScreen('quest'));
   else if (t.kind === 'form') openScreen('nakama');
   else if (t.kind === 'multi') openScreen('multi');
+  else if (t.kind === 'gacha') { Snd.ok(); openScreen('gacha'); }
   else if (t.kind === 'desk') {
     if (!save.gift) {
       save.gift = true; save.coins += 3000;
@@ -2062,6 +2574,7 @@ addEventListener('keydown', (e) => {
         const tabKey = S.cur === 'mochi' ? 'mo' : S.cur === 'zukan' ? 'zk' : 'ws', n = S.cur === 'mochi' ? 2 : 3;
         if (k === 'KeyL' || k === 'KeyR' && S.cur !== 'multi') { const T = S[tabKey]; T.tab = (T.tab + (k === 'KeyR' ? 1 : n - 1)) % n; if (tabKey !== 'ws') T.sel = 0; Snd.move(); renderScreen(); return; }
       }
+      if (S.cur === 'gacha' && (k === 'Enter' || k === 'Space')) return ACT.gcSpin();
       const b = map[k] && byKey(map[k]);
       if (b) { if (b.dataset.act.startsWith('hold:')) ACT[b.dataset.act.split(':')[1]](); else b.click(); return; }
       if (k === 'Digit1' && S.cur === 'nakama') return;
