@@ -5393,10 +5393,30 @@ function drawMenaceAura(F, t, SCL) {
   ctx.restore();
 }
 // ---- バーサーカー専用：黒煙の炎・血の色の芯・ひび割れた地面・赤い稲妻 ----
+// バーサーカーのオーラの画質（0：ふつう / 1：軽い / 2：最小）
+//   半透明の大きな絵を何十枚も重ねるので、塗る量が多くて重い。バーサーカーが2人とも激怒すると処理が追いつかず、
+//   オンラインでは入力のやりとりが止まって ping が跳ね上がり、フリーズしていた。そこでオンラインでは「軽い」から始め、
+//   オフラインでも処理落ちが続いたら一段ずつ軽くする（AURA.note で毎フレームの間隔を見る）
+const AURA = { q: 0, last: 0, avg: 16.7, slow: 0,
+  reset(online) { this.q = online ? 1 : 0; this.last = 0; this.avg = 16.7; this.slow = 0; },
+  note() {   // バトルの描画ごとに呼ぶ：1秒以上カクついたら画質を一段下げる（上げはしない＝ちらつかない）
+    const now = performance.now(), dt = this.last ? Math.min(100, now - this.last) : 16.7; this.last = now;
+    this.avg += (dt - this.avg) * 0.08;
+    if (this.avg > 21) { if (++this.slow > 60 && this.q < 2) { this.q++; this.slow = 0; this.avg = 16.7; } } else this.slow = Math.max(0, this.slow - 2);
+  } };
+// 画質ごとの量：炎の柱の本数・柱の玉の数・黒い煙の玉を描くか・芯の大きさ・立ちのぼる黒煙の数・火の粉の数・激怒のときの大きさ・
+//   剛拳のため／登場演出でふくらむ倍率の上限（ためきると 1.7 倍になり、塗る量が約3倍になる）
+let MOVIE_AURA_Q = 2;   // 切り札ムービーの王のオーラの画質（寄りの絵でとても大きくなるため。背景も赤い炎なので最小でも目立たない）
+const AURA_Q = [
+  { cols: 6, puffs: 5, dark: true, core: 1, smoke: 4, embers: 8, rage: 1.35, boost: 9 },
+  { cols: 4, puffs: 3, dark: true, core: 0.8, smoke: 2, embers: 5, rage: 1.2, boost: 1.3 },
+  { cols: 3, puffs: 2, dark: false, core: 0.65, smoke: 0, embers: 3, rage: 1.12, boost: 1.1 },
+];
 function drawBerserkAura(F, t, SCL) {
-  const rage = F.rage, boost = F.auraBoost === undefined ? 1 : F.auraBoost;
+  const Q = AURA_Q[AURA.q] || AURA_Q[0];
+  const rage = F.rage, boost = Math.min(Q.boost, F.auraBoost === undefined ? 1 : F.auraBoost);
   if (boost <= 0.01) return;
-  const s = SCL * (rage ? 1.35 : 1) * (F.state === 'move' ? 1.1 : 1) * boost;
+  const s = SCL * (rage ? Q.rage : 1) * (F.state === 'move' ? 1.1 : 1) * boost;
   ctx.save();
   // 足元：やわらかい黒い影だまりと、ゆっくり脈打つ赤い光
   const pulse = 0.55 + 0.45 * Math.sin(t * 0.08);
@@ -5410,36 +5430,37 @@ function drawBerserkAura(F, t, SCL) {
     ctx.globalAlpha = 0.5 * pulse; ctx.strokeStyle = 'rgba(255,40,30,.8)'; ctx.lineWidth = 2.5 * SCL;
     ctx.beginPath(); ctx.moveTo(0, 2); ctx.quadraticCurveTo(Math.cos(a) * r * 0.5, 2 + Math.sin(a) * 6 * s, Math.cos(a) * r, 2 + Math.sin(a) * 12 * s); ctx.stroke();
   }
-  // 炎の柱：やわらかい煙の玉を積み重ねて、ゆらゆら立ちのぼる
-  const COLS = 6, H = 210 * s;
-  for (let layer = 0; layer < 2; layer++) {
+  // 炎の柱：やわらかい煙の玉を積み重ねて、ゆらゆら立ちのぼる（軽い画質では柱と玉を減らし、そのぶん少し大きくして隙間を埋める）
+  const COLS = Q.cols, NP = Q.puffs, H = 210 * s, grow = Math.sqrt(5 / NP) * (COLS < 6 ? 1.08 : 1);
+  for (let layer = Q.dark ? 0 : 1; layer < 2; layer++) {
     ctx.globalCompositeOperation = layer ? 'lighter' : 'source-over';
     const spr = layer === 0 ? puffSprite('rgba(18,0,6,.95)') : glowSprite('rgba(220,20,35,.85)');
-    const sz = [1.3, 0.95][layer], al = [0.5, 0.42][layer];
+    const sz = [1.3, 0.95][layer] * (NP < 5 ? Math.min(1.25, grow) : 1), al = [0.5, 0.42][layer] * (Q.dark || !layer ? 1 : 1.25);
     for (let i = 0; i < COLS; i++) {
-      const q = i / (COLS - 1) - 0.5, bx = q * 120 * s, hh = H * (0.75 + 0.35 * Math.cos(q * 2.6)) * (0.85 + 0.15 * Math.sin(t * 0.05 + i * 1.3));
-      for (let j = 0; j < 5; j++) {
-        const k = j / 4, ph = t * 0.06 + i * 1.1 - j * 0.45;
+      const q = i / (COLS - 1) - 0.5, ii = i * 6 / COLS, bx = q * 120 * s, hh = H * (0.75 + 0.35 * Math.cos(q * 2.6)) * (0.85 + 0.15 * Math.sin(t * 0.05 + ii * 1.3));
+      for (let j = 0; j < NP; j++) {
+        const k = j / (NP - 1), ph = t * 0.06 + ii * 1.1 - k * 1.8;
         const x = bx * (1 - k * 0.45) + Math.sin(ph) * 16 * s * k, y = -k * hh - 8 * s;
         const r = (34 - 22 * k) * s * sz * (0.9 + 0.1 * Math.sin(ph * 1.7));
-        ctx.globalAlpha = al * (1 - k * 0.7);
+        ctx.globalAlpha = Math.min(1, al * (1 - k * 0.7));
         ctx.drawImage(spr, x - r, y - r, r * 2, r * 2);
       }
     }
   }
   // 体の芯：暗い赤の光
+  const cs = Q.core;
   ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5 + 0.15 * Math.sin(t * 0.12);
-  ctx.drawImage(glowSprite('rgba(200,0,20,.6)'), -100 * s, -210 * s, 200 * s, 230 * s);
+  ctx.drawImage(glowSprite('rgba(200,0,20,.6)'), -100 * s * cs, -(10 + 200 * cs) * s, 200 * s * cs, (20 + 210 * cs) * s);
   // 立ちのぼる黒煙
   ctx.globalCompositeOperation = 'source-over';
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < Q.smoke; i++) {
     const life = ((t * (0.5 + (i % 3) * 0.15) + i * 47) % 100) / 100;
     const x = Math.sin(i * 1.7 + t * 0.02) * 60 * s, y = (-80 - life * 260) * s, r = (30 + life * 46) * s;
     ctx.globalAlpha = (1 - life) * 0.35; ctx.drawImage(puffSprite('rgba(15,5,8,.9)'), x - r, y - r, r * 2, r * 2);
   }
   // 火の粉（丸く光る）
   ctx.globalCompositeOperation = 'lighter';
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < Q.embers; i++) {
     const life = ((t * (0.8 + (i % 4) * 0.25) + i * 29) % 80) / 80;
     const x = Math.sin(i * 2.9 + t * 0.03) * 70 * s + Math.sin(life * 6 + i) * 8 * s, y = (-10 - life * 270) * s, r = (5 + (i % 3) * 2) * SCL;
     ctx.globalAlpha = (1 - life) * 0.9; ctx.drawImage(glowSprite(i % 3 ? 'rgba(255,60,30,.9)' : 'rgba(255,180,90,.9)'), x - r, y - r, r * 2, r * 2);
@@ -6879,7 +6900,7 @@ function drawFighter(F, t) {
     ctx.restore();
   }
   if (CH.psychic && !hidden) drawMenaceAura(F, t, SCL);
-  if (CH.berserk && !hidden) drawBerserkAura(F, t, SCL);   // 常時の威圧オーラ
+  if (CH.berserk && !hidden && !F._noAura) drawBerserkAura(F, t, SCL);   // 常時の威圧オーラ（ムービーの残像では描かない）
   if (CH.psychic) {
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     const ar = 100 * SCL;
@@ -8806,6 +8827,7 @@ SC_.battle = (o) => {
   BT = B;
   if (st.style === 'ichigo') { Snd.bgmStop(0.2); Snd.chipStart(); }
   else { Snd.chipStop(0.2); Snd.bgmPlay(ON ? (ON.seed >>> 0) % Snd.BGM_LIST.length : (Math.random() * Snd.BGM_LIST.length) | 0); }
+  AURA.reset(!!ON);   // バーサーカーのオーラの画質：オンラインは軽いほうから
   B.introF = fs.find(f => f.ch.berserk) || null; B.intro = B.introF ? 170 : 0; B.introT = 0;
   if (B.introF) B.introF.auraBoost = 0;
 
@@ -10979,6 +11001,7 @@ SC_.battle = (o) => {
     return o;
   }
   const MCAM = { x: 0, y: 0, z: 2, r: 0, last: -9, hist: [] };
+  const MOVIE_BG = { c: null, g: null, hot: null };   // 王のムービーの背景（小さく描いて引きのばす）
   function drawSuperMovie(S) {
     const F = S.F, T = S.T, RM = S.mt || 0, fin = 168, SL = 50, SR = 0.12;
     // 最後の一撃が当たったら SL フレームのあいだスローモーション（見た目の時間 mt をゆっくり進める）
@@ -11002,10 +11025,15 @@ SC_.battle = (o) => {
     ctx.save();
     ctx.globalAlpha = zin * zout;
     // ---- 背景（画面に固定。カメラの回転に少しだけついてくる） ----
-    const bg = ctx.createRadialGradient(VW / 2, VH * 0.55, 30, VW / 2, VH * 0.55, VW * 0.8);
+    // 背景のグラデーションは 1/8 の大きさの別キャンバスに描いて引きのばす（画面全体を毎フレーム円形グラデーションで塗ると重い。なめらかなので見た目は同じ）
     const hot = mt >= fin ? '#ffeedd' : mt >= 136 ? `rgb(${170 + (mt - 136) * 2},${10 + (mt - 136) * 2},20)` : big ? '#ff3a2a' : '#a0101c';
-    bg.addColorStop(0, hot); bg.addColorStop(0.35, '#4a0008'); bg.addColorStop(1, '#050002');
-    ctx.fillStyle = bg; ctx.fillRect(0, 0, VW, VH);
+    if (!MOVIE_BG.c) { MOVIE_BG.c = document.createElement('canvas'); MOVIE_BG.c.width = VW / 8; MOVIE_BG.c.height = VH / 8; MOVIE_BG.g = MOVIE_BG.c.getContext('2d'); }
+    if (MOVIE_BG.hot !== hot) {
+      const g = MOVIE_BG.g, bg = g.createRadialGradient(VW / 16, VH * 0.55 / 8, 30 / 8, VW / 16, VH * 0.55 / 8, VW * 0.8 / 8);
+      bg.addColorStop(0, hot); bg.addColorStop(0.35, '#4a0008'); bg.addColorStop(1, '#050002');
+      g.fillStyle = bg; g.fillRect(0, 0, VW / 8, VH / 8); MOVIE_BG.hot = hot;
+    }
+    ctx.drawImage(MOVIE_BG.c, 0, 0, VW, VH);
     ctx.save(); ctx.translate(VW / 2, VH * 0.5); ctx.rotate(t * (mt >= fin ? 0.035 : mt >= 136 ? 0.02 : 0.008) + MCAM.r * 3); ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < 20; i++) { ctx.rotate(TAU / 20); ctx.fillStyle = i % 2 ? 'rgba(255,60,40,.11)' : 'rgba(255,200,160,.05)'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(1400, -90); ctx.lineTo(1400, 90); ctx.fill(); }
     ctx.restore();
@@ -11069,7 +11097,8 @@ SC_.battle = (o) => {
     if (trail) {
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
       const hs = MCAM.hist;
-      for (let i = 0; i < hs.length - 1; i += 2) { ctx.globalAlpha = 0.14 + i * 0.03; drawFigureAt(F, hs[i].x - (mt >= 158 ? (hs.length - i) * 18 : 0), hs[i].y, 1, hs[i].p, 1, t); }
+      F._noAura = true;   // 残像にはオーラをつけない（画面いっぱいのオーラを何枚も重ねると重い）
+      try { for (let i = 0; i < hs.length - 1; i += 2) { ctx.globalAlpha = 0.14 + i * 0.03; drawFigureAt(F, hs[i].x - (mt >= 158 ? (hs.length - i) * 18 : 0), hs[i].y, 1, hs[i].p, 1, t); } } finally { delete F._noAura; }
       ctx.restore();
     }
     // 拳の軌跡（三日月のような光）
@@ -11085,8 +11114,9 @@ SC_.battle = (o) => {
         ctx.restore();
       }
     }
-    // 王（本体）
-    ctx.save(); ctx.translate(o.bx, o.by); ctx.scale(o.bsx, o.bsy); drawFigureAt(F, 0, 0, 1, o.bp, 1, t); ctx.restore();
+    // 王（本体）：カメラが寄っていてオーラが画面いっぱいになり、ここだけで描画がとても重くなるので、オーラは軽い画質で描く
+    const auraQ = AURA.q; AURA.q = Math.max(auraQ, MOVIE_AURA_Q);
+    try { ctx.save(); ctx.translate(o.bx, o.by); ctx.scale(o.bsx, o.bsy); drawFigureAt(F, 0, 0, 1, o.bp, 1, t); ctx.restore(); } finally { AURA.q = auraQ; }
     // ためている拳の光
     if (mt >= 140 && mt < fin + 2) {
       const k = clamp((mt - 140) / 20, 0, 1), r = 30 + k * 120, hx = o.bx - 70, hy = o.by - 120;
@@ -13344,6 +13374,7 @@ function pubNoise() {   // フィルムの粒子
       stepSim();
     },
     draw() {
+      AURA.note();
       drawWorld();
       if (B.beams.length) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(170,0,25,.14)'; ctx.fillRect(0, 0, VW, VH); ctx.restore(); }
       if (B.intro > 0) drawIntro();
