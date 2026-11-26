@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "_comment": "風情ウォッチバスターズ 朕銭ガシャの設定。確率・ラインナップ・カプセルの色はここだけ変えれば反映されます",
+
+  "invest": {
+    "min": 100,
+    "max": 100000,
+    "_steps": "スライダーと ◀▶ のきざみ。[ここまで, きざみ] の順に並べる",
+    "steps": [[1000, 100], [5000, 500], [20000, 1000], [100000, 5000]]
+  },
+
+  "jackpotCurve": {
+    "_formula": "rate(%) = minRate + (maxRate - minRate) * ((invest - min) / (max - min)) ^ exponent。小数第1位で四捨五入した値で抽選する",
+    "minRate": 0.1,
+    "maxRate": 100.0,
+    "exponent": 0.85
+  },
+
+  "_rareShare": "大当たりに漏れた残り（100% - 大当たり確率）のうち、中当たりになる割合",
+  "rareShare": 0.25,
+
+  "_dailyLimit": "1日に回せる回数。デモ用の朕銭むげん中は数えない",
+  "dailyLimit": 10,
+
+  "_newCharBonus": "まだ仲間でないキャラの重みを何倍にするか",
+  "newCharBonus": 2,
+
+  "capsules": {
+    "gray":  { "name": "灰色", "rank": 0, "hex": "#9aa0a6" },
+    "blue":  { "name": "青色", "rank": 1, "hex": "#3f8fe0" },
+    "red":   { "name": "赤色", "rank": 2, "hex": "#d8402f" },
+    "gold":  { "name": "金色", "rank": 3, "hex": "#f2c230" },
+    "black": { "name": "黒色", "rank": 4, "hex": "#1b1519", "glow": "#b23cff" }
+  },
+
+  "_fakeUpgradeChance": "カプセルがゆれても色が変わらないフェイントの出やすさ（黒以外）",
+  "fakeUpgradeChance": 0.5,
+
+  "tiers": {
+    "jackpot": {
+      "label": "大当たり",
+      "cutin": "大当たり！！",
+      "color": "#ffd84a",
+      "omen": 1.0,
+      "capsules": [{ "color": "black", "weight": 1 }],
+      "duplicate": { "lv": 10, "coinsIfMax": 1000 },
+      "pool": [
+        { "type": "char", "id": "henry",  "weight": 10 },
+        { "type": "char", "id": "kotan",  "weight": 10 },
+        { "type": "char", "id": "archer", "weight": 10 },
+        { "type": "char", "id": "chinta", "weight": 10 },
+        { "type": "item", "id": "assist", "count": 3, "weight": 4 }
+      ]
+    },
+    "rare": {
+      "label": "中当たり",
+      "cutin": "中当たり！",
+      "color": "#7fd3ff",
+      "omen": 0.2,
+      "capsules": [{ "color": "gold", "weight": 1 }, { "color": "red", "weight": 2 }],
+      "duplicate": { "lv": 6, "coinsIfMax": 300 },
+      "pool": [
+        { "type": "char", "id": "imai",      "weight": 10 },
+        { "type": "char", "id": "ichigo",    "weight": 10 },
+        { "type": "char", "id": "unko",      "weight": 10 },
+        { "type": "char", "id": "kenshin",   "weight": 10 },
+        { "type": "char", "id": "homura",    "weight": 3 },
+        { "type": "char", "id": "berserker", "weight": 3 },
+        { "type": "char", "id": "nagata",    "weight": 3 },
+        { "type": "char", "id": "shimarin",  "weight": 3 },
+        { "type": "item", "id": "clock", "count": 2, "weight": 6 },
+        { "type": "item", "id": "candy", "count": 3, "weight": 6 },
+        { "type": "matRandom", "rarity": 3, "count": 1, "weight": 8 }
+      ]
+    },
+    "normal": {
+      "label": "小当たり",
+      "cutin": "小当たり",
+      "color": "#e6dcc0",
+      "omen": 0.03,
+      "capsules": [{ "color": "blue", "weight": 2 }, { "color": "gray", "weight": 3 }],
+      "duplicate": { "lv": 3, "coinsIfMax": 100 },
+      "pool": [
+        { "type": "item", "id": "onigiri",   "count": 3, "weight": 20 },
+        { "type": "item", "id": "curry",     "count": 1, "weight": 10 },
+        { "type": "item", "id": "ume",       "count": 2, "weight": 10 },
+        { "type": "item", "id": "drink",     "count": 2, "weight": 10 },
+        { "type": "item", "id": "gum",       "count": 2, "weight": 10 },
+        { "type": "item", "id": "bakuchiku", "count": 2, "weight": 10 },
+        { "type": "matRandom", "rarity": 1, "count": 4, "weight": 30 },
+        { "type": "matRandom", "rarity": 2, "count": 2, "weight": 15 }
+      ]
+    }
+  }
+}

@@ -151,12 +151,14 @@
   #gaRes { position:fixed; left:50%; bottom:34px; transform:translateX(-50%) scale(.85); opacity:0; transition:.25s; z-index:30; min-width:340px; max-width:calc(100% - 40px); text-align:center; background:linear-gradient(#e2d8b9,#cfc39c); color:var(--ink); border:5px solid var(--ink); border-radius:14px; box-shadow:0 6px 0 var(--ink); padding:26px 26px 12px; pointer-events:none; }
   #gaRes.on { opacity:1; transform:translateX(-50%) scale(1); cursor:pointer; animation:gaSlam .38s cubic-bezier(.2,1.4,.4,1) both; }
   @keyframes gaSlam { 0% { transform:translateX(-50%) scale(2.4); opacity:0; } 60% { transform:translateX(-50%) scale(.94); opacity:1; } 100% { transform:translateX(-50%) scale(1); opacity:1; } }
-  #gaRank { position:fixed; left:50%; top:46%; z-index:31; pointer-events:none; opacity:0; white-space:nowrap; font:900 76px "Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif; color:var(--c,#fff); -webkit-text-stroke:4px var(--ink); paint-order:stroke fill; text-shadow:0 6px 0 var(--ink),0 0 30px var(--c,#fff); letter-spacing:.04em; }
-  #gaRank.on { animation:gaRank 1.6s ease-out forwards; }
-  #gaRank.r0, #gaRank.r1 { font-size:54px; }
-  #gaRank.r3 { --c:#ffd84a; font-size:84px; animation:gaRank 1.8s ease-out forwards, gaHue .7s linear infinite; }
+  #gaRank { position:fixed; left:0; right:0; top:50%; height:0; z-index:31; pointer-events:none; }
+  #gaRank .band { position:absolute; left:-10%; right:-10%; top:-62px; height:124px; transform:rotate(-6deg) translateX(110%); background:linear-gradient(90deg,transparent,#1b1519 12%,#1b1519 88%,transparent); border-top:6px solid var(--c,#fff); border-bottom:6px solid var(--c,#fff); display:grid; place-items:center; opacity:0; }
+  #gaRank .band span { font:900 78px "Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif; color:var(--c,#fff); -webkit-text-stroke:3px var(--ink); paint-order:stroke fill; letter-spacing:.06em; text-shadow:0 5px 0 var(--ink),0 0 26px var(--c,#fff); white-space:nowrap; }
+  #gaRank.on .band { animation:gaCut 2.3s cubic-bezier(.2,.9,.3,1) forwards; }
+  #gaRank.t-normal .band { height:90px; top:-45px; } #gaRank.t-normal .band span { font-size:54px; }
+  #gaRank.t-jackpot .band span { font-size:96px; animation:gaHue .7s linear infinite; }
+  @keyframes gaCut { 0% { transform:rotate(-6deg) translateX(110%); opacity:1; } 14% { transform:rotate(-6deg) translateX(0); opacity:1; } 80% { transform:rotate(-6deg) translateX(-2%); opacity:1; } 100% { transform:rotate(-6deg) translateX(-110%); opacity:1; } }
   @keyframes gaHue { to { filter:hue-rotate(360deg); } }
-  @keyframes gaRank { 0% { transform:translate(-50%,-50%) scale(3) rotate(-8deg); opacity:0; } 14% { transform:translate(-50%,-50%) scale(.95) rotate(-3deg); opacity:1; } 22% { transform:translate(-50%,-50%) scale(1.05) rotate(-3deg); } 78% { opacity:1; } 100% { transform:translate(-50%,-70%) scale(1) rotate(-3deg); opacity:0; } }
   #gaFlash { position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:29; }
   #gaFlash.on { animation:gaFlash .55s ease-out; }
   @keyframes gaFlash { 0% { opacity:.95; } 100% { opacity:0; } }
@@ -181,11 +183,16 @@
   input.gcRange::-webkit-slider-thumb { -webkit-appearance:none; width:28px; height:28px; border-radius:50%; background:radial-gradient(circle at 40% 35%,#ffd27a,#c9532a 70%); border:3px solid var(--ink); }
   input.gcRange::-moz-range-thumb { width:22px; height:22px; border-radius:50%; background:#c9532a; border:3px solid var(--ink); }
   .gcRates { display:flex; flex-direction:column; gap:5px; margin-top:8px; overflow:auto; min-height:0; }
-  .gcRate { display:grid; grid-template-columns:136px 1fr 66px; align-items:center; gap:8px; border:3px solid var(--ink); border-radius:7px; padding:2px 8px; background:#efe7cd; }
+  .gcRate { display:grid; grid-template-columns:118px 1fr 70px; align-items:center; gap:8px; border:3px solid var(--ink); border-radius:7px; padding:2px 8px; background:#efe7cd; }
   .gcRate .t { font-weight:900; font-size:13px; line-height:1.2; white-space:nowrap; } .gcRate .t i { font-style:normal; color:#b5862a; letter-spacing:-.1em; }
   .gcRate .fc { display:flex; gap:3px; flex-wrap:wrap; align-items:center; font-size:11px; font-weight:800; }
   .gcRate .pc { font:900 18px "Courier New",monospace; text-align:right; }
   .gcRate.r3 { background:linear-gradient(90deg,#f3dc8c,#efe7cd); } .gcRate.r2 { background:linear-gradient(90deg,#c5dde9,#efe7cd); }
+  .gcBanner b { min-width:3.2em; text-align:right; display:inline-block; }
+  .gcBanner.pop b { animation:gcPop .25s ease-out; }
+  @keyframes gcPop { 0% { transform:scale(1.35); color:#fff2b0; } 100% { transform:scale(1); } }
+  .capdot { display:inline-block; width:12px; height:12px; border-radius:50%; border:2px solid var(--ink); vertical-align:-2px; margin-left:2px; }
+  .gcRate.r3 .t i { color:#1b1519; } .gcRate.r2 .t i { color:#d8402f; } .gcRate.r1 .t i { color:#3f8fe0; }
   .btn.huge { font-size:21px; padding:8px 18px; justify-content:center; }
 </style>
 <script type="importmap">{ "imports": { "playcanvas": "./lib/playcanvas.min.mjs" } }</script>
@@ -1421,6 +1428,7 @@ tcv.addEventListener('click', startGame);
 async function boot() {
   await Promise.all(Object.keys(window.FACES).map(k => new Promise(res => { const im = new Image(); im.onload = res; im.onerror = res; im.src = window.FACES[k]; F[k] = im; })));
   build1F(); build2F(); buildRoof(); stairs(); stairs2(); root = app.root;
+  await loadGachaData();
   placeNpcs(); setPlayer(crewByKey[save.team[0]] ? save.team[0] : 'homura');
   uiInit();
   requestAnimationFrame(titleLoop);
@@ -2052,72 +2060,100 @@ Object.assign(ACT, {
 
 // =====================================================================
 //  朕銭ガシャ（屋上）
-//  つかう朕銭を 100〜1000 で決める。100朕銭ごとに「大当たり確率」が1倍ずつ上がり、
-//  レア・ウルトラレアの隊員が出やすくなる（そのぶん、おまけが出にくくなる）
+//  投入する朕銭の量で「大当たり確率」が変わる。設定は data/fwb-gacha.json（GDATA）
+//    大当たり：jackpotRate(投入量)%　→ 目玉キャラ・激レアアイテム（黒カプセル確定）
+//    中当たり：(100 − 大当たり)% × rareShare　→ 金・赤カプセル
+//    小当たり：のこり　→ 青・灰カプセル（アイテム・素材）
+//  1回まわすと、投入した朕銭と「きょうのガシャ回数」を1つ使う
+//  状態：idle（投入・確率変動）→ crank → eject（カプセル排出・色の示唆）→ open（開封・カットイン）→ result
 // =====================================================================
-const GC = { min: 100, max: 1000, step: 100 };
-const RARE_NAME = ['おまけ', 'ノーマル', 'レア', 'ウルトラレア'];
-const RARE_COL = ['#e6dcc0', '#ffb347', '#7fd3ff', '#ffd84a'];
-const DUP_LV = [0, 3, 6, 10], DUP_COIN = [0, 100, 300, 1000];   // すでに仲間の隊員が出たとき：Lv アップ（Lv99 なら朕銭）
-// [おまけ, ノーマル, レア, ウルトラレア] の確率
-function gcRates(amt) { const m = amt / 100, p3 = .02 * m, p2 = .10 + .03 * (m - 1), p1 = .25; return [1 - p1 - p2 - p3, p1, p2, p3]; }
-const pct = (p) => (Math.round(p * 1000) / 10).toFixed(1) + '%';
+let GDATA = null;
+async function loadGachaData() {
+  try { const r = await fetch('data/fwb-gacha.json', { cache: 'no-cache' }); GDATA = await r.json(); }
+  catch (e) { GDATA = null; console.warn('ガシャの設定が読めませんでした', e); }
+}
+const TIERS = ['normal', 'rare', 'jackpot'];          // 小当たり・中当たり・大当たり（並びはランクの順）
+// 投入できる量の一覧（設定の steps から作る）
+function investLadder() {
+  const I = GDATA.invest, out = [I.min]; let v = I.min;
+  for (const [upto, st] of I.steps) while (v + st <= upto && v + st <= I.max) { v += st; out.push(v); }
+  return out;
+}
+// 投入量 → 大当たり確率（%・小数第1位）
+function jackpotRate(amt) {
+  const I = GDATA.invest, C = GDATA.jackpotCurve;
+  const x = Math.max(0, Math.min(1, (amt - I.min) / (I.max - I.min)));
+  return Math.round((C.minRate + (C.maxRate - C.minRate) * Math.pow(x, C.exponent)) * 10) / 10;
+}
+// [小当たり, 中当たり, 大当たり] の確率（%）
+function tierRates(amt) {
+  const j = jackpotRate(amt), r = Math.round((100 - j) * GDATA.rareShare * 10) / 10;
+  return [Math.max(0, Math.round((100 - j - r) * 10) / 10), r, j];
+}
+const pct1 = (p) => p.toFixed(1) + '%';
 const pickW = (arr, w) => { let x = Math.random() * w.reduce((a, b) => a + b, 0); for (let i = 0; i < arr.length; i++) { x -= w[i]; if (x < 0) return arr[i]; } return arr[arr.length - 1]; };
+// きょうのガシャ回数
+function gachaToday() { if (!save.gday || save.gday.d !== today()) save.gday = { d: today(), n: 0 }; return save.gday; }
+const gachaLeft = () => save.settings.demo ? Infinity : Math.max(0, GDATA.dailyLimit - gachaToday().n);
+// 抽選
 function gcRoll(amt) {
-  const R = gcRates(amt); let x = Math.random(), r = 0;
-  while (r < 3 && x >= R[r]) { x -= R[r]; r++; }
-  if (r === 0) {
-    // おまけ：お助けアイテムか、素材
-    if (Math.random() < .6) {
-      const it = pickW(ITEMS.filter(i => i.price <= 300), ITEMS.filter(i => i.price <= 300).map(i => 400 - i.price)), n = it.price <= 100 ? 2 : 1;
-      save.items[it.key] = (save.items[it.key] || 0) + n;
-      return { r, it: it.key, n, name: it.name, src: iconURL('it', it.key, 64, '#cdbf92') };
+  const R = tierRates(amt); let x = Math.random() * 100, ti = 2;
+  if (x < R[2]) ti = 2; else if (x < R[2] + R[1]) ti = 1; else ti = 0;
+  const tier = TIERS[ti], T = GDATA.tiers[tier];
+  const cap = pickW(T.capsules, T.capsules.map(c => c.weight)).color;
+  const pool = T.pool.filter(p => p.type !== 'char' || crewByKey[p.id]);
+  const e = pickW(pool, pool.map(p => p.type === 'char' && !owned(p.id) ? p.weight * GDATA.newCharBonus : p.weight));
+  const res = { tier, ti, cap, rate: R[2] };
+  if (e.type === 'char') {
+    const c = crewByKey[e.id]; Object.assign(res, { ch: c.key, name: c.name });
+    if (!owned(c.key)) { save.own[c.key] = 1; res.isNew = true; }
+    else {
+      const cs = chOf(c.key), up = Math.min(T.duplicate.lv, 99 - cs.lv); cs.lv += up; res.lv = up;
+      if (up < T.duplicate.lv) { save.coins += T.duplicate.coinsIfMax; res.coins = T.duplicate.coinsIfMax; }
     }
-    const e = ENEMIES[Math.floor(Math.random() * ENEMIES.length)], mr = Math.random() < .25 ? 2 : 1, id = e.key + mr, n = mr === 2 ? 2 : 4;
-    save.mats[id] = have(id) + n;
-    return { r, mat: id, n, name: MATS[id].name, src: iconURL('mat', MATS[id].draw, 64, RAR_BG[mr - 1], mr) };
-  }
-  // 隊員：まだ仲間でない隊員は2倍出やすい
-  const pool = CREW.filter(c => CREW_RARE[c.key] === r), c = pickW(pool, pool.map(c => owned(c.key) ? 1 : 2));
-  const res = { r, ch: c.key, name: c.name };
-  if (!owned(c.key)) { save.own[c.key] = 1; res.isNew = true; }
-  else {
-    const cs = chOf(c.key), up = Math.min(DUP_LV[r], 99 - cs.lv); cs.lv += up; res.lv = up;
-    if (up < DUP_LV[r]) { save.coins += DUP_COIN[r]; res.coins = DUP_COIN[r]; }
+  } else if (e.type === 'item') {
+    const it = itemByKey[e.id]; save.items[it.key] = (save.items[it.key] || 0) + e.count;
+    Object.assign(res, { it: it.key, n: e.count, name: it.name, src: iconURL('it', it.key, 64, '#cdbf92') });
+  } else {
+    const id = e.type === 'mat' ? e.id : (() => { const en = ENEMIES[Math.floor(Math.random() * ENEMIES.length)]; return e.rarity <= 3 ? en.key + e.rarity : en.key + 1; })();
+    const m = MATS[id]; save.mats[id] = have(id) + e.count;
+    Object.assign(res, { mat: id, n: e.count, name: m.name, src: iconURL('mat', m.draw, 64, RAR_BG[m.r - 1], m.r) });
   }
   return res;
 }
-S.gc = { amt: 100, phase: 'idle', res: null, last: null };
-const GC_SPIN = 1.5, GC_DROP = 2.25;
+S.gc = { amt: 100, shown: .1, res: null, last: null };
 function gcResultText(res) {
   if (!res) return '';
-  if (res.r === 0) return `おまけ：${res.name} ×${res.n}`;
-  if (res.isNew) return `${res.name}が仲間になった！ 2F の結成ボードでメンバーに入れられます`;
-  return `${res.name}（かさなり）：${res.lv ? `Lv ＋${res.lv}` : ''}${res.coins ? `${res.lv ? '・' : ''}朕銭 ＋${fmt(res.coins)}` : ''}`;
+  const lab = GDATA.tiers[res.tier].label;
+  if (!res.ch) return `${lab}：${res.name} ×${res.n}`;
+  if (res.isNew) return `${lab}：${res.name}が仲間になった！ 2F の結成ボードでメンバーに入れられます`;
+  return `${lab}：${res.name}（かさなり）${res.lv ? ` Lv ＋${res.lv}` : ''}${res.coins ? ` 朕銭 ＋${fmt(res.coins)}` : ''}`;
 }
 SCREENS.gacha = () => {
-  const G = S.gc, R = gcRates(G.amt);
-  const faces = (r) => CREW.filter(c => CREW_RARE[c.key] === r).map(c => faceImg(c.key, 24, !owned(c.key))).join('');
-  const rows = [[3, `<i>★★★</i> ウルトラレア`, faces(3)], [2, `<i>★★</i> レア`, faces(2)], [1, `<i>★</i> ノーマル`, faces(1)], [0, 'おまけ', 'アイテム・素材']];
+  if (!GDATA) return { title: '朕銭ガシャ', html: '<div class="card"><div class="empty">ガシャの設定（data/fwb-gacha.json）が読めませんでした。GitHub Pages かローカルサーバーで開いてください</div></div>', desc: '', foot: '' };
+  const G = S.gc, R = tierRates(G.amt), L = investLadder(), gi = Math.max(0, L.indexOf(G.amt)), day = gachaToday();
+  const faces = (tier) => GDATA.tiers[tier].pool.filter(p => p.type === 'char' && crewByKey[p.id]).map(p => faceImg(p.id, 22, !owned(p.id))).join('');
+  const rows = [[2, `<i>●</i> 大当たり`, faces('jackpot') + '<span>激レアアイテム</span>'], [1, `<i>●</i> 中当たり`, faces('rare')], [0, `<i>●</i> 小当たり`, 'アイテム・素材']];
+  const capDot = (tier) => GDATA.tiers[tier].capsules.map(c => `<span class="capdot" style="background:${GDATA.capsules[c.color].hex}" title="${GDATA.capsules[c.color].name}"></span>`).join('');
   return {
-    title: '朕銭ガシャ', sub: 'GACHA / つかう朕銭が多いほどレアが出やすい', cols: '1.25fr 1fr',
-    html: `<div class="card gcStage"><div class="gcBanner"><small>大当たり確率</small><b id="gcMul">${G.amt / 100}</b><span>倍</span></div><canvas id="gcCv"></canvas></div>
+    title: '朕銭ガシャ', sub: 'GACHA / 投入した朕銭で大当たり確率が変わる', cols: '1.2fr 1fr',
+    html: `<div class="card gcStage"><div class="gcBanner"><small>大当たり確率</small><b id="gcMul">${pct1(G.shown).replace('%', '')}</b><span>%</span></div><canvas id="gcCv"></canvas></div>
       <div class="card" style="padding:10px 12px;display:flex;flex-direction:column;min-height:0">
-        <span class="lbl" style="align-self:flex-start">つかう朕銭</span>
+        <div style="display:flex;align-items:center;gap:6px"><span class="lbl">投入する朕銭</span><span style="margin-left:auto"></span><button class="pill" data-act="gcMin">最小</button><button class="pill" data-act="gcMax">MAX</button></div>
         <div class="gcAmt"><button class="gcArrow" data-act="hold:gcDown">◀</button><div class="val"><span class="coin"></span><span id="gcAmt">${fmt(G.amt)}</span></div><button class="gcArrow" data-act="hold:gcUp">▶</button></div>
-        <input type="range" class="gcRange" id="gcRange" min="${GC.min}" max="${GC.max}" step="${GC.step}" value="${G.amt}">
-        <div class="mono" style="display:flex;justify-content:space-between"><span>${GC.min}（1倍）</span><span>${GC.max}（${GC.max / 100}倍）</span></div>
-        <div class="gcRates">${rows.map(([r, t, f]) => `<div class="gcRate r${r}"><span class="t">${t}</span><span class="fc">${f}</span><span class="pc" id="gcP${r}">${pct(R[r])}</span></div>`).join('')}</div>
+        <input type="range" class="gcRange" id="gcRange" min="0" max="${L.length - 1}" step="1" value="${gi}">
+        <div class="mono" style="display:flex;justify-content:space-between"><span>${fmt(GDATA.invest.min)}</span><span>${fmt(GDATA.invest.max)}</span></div>
+        <div class="gcRates">${rows.map(([r, t, f]) => `<div class="gcRate r${r + 1}"><span class="t">${t} ${capDot(TIERS[r])}</span><span class="fc">${f}</span><span class="pc" id="gcP${r}">${pct1(R[r])}</span></div>`).join('')}</div>
         <div style="margin-top:auto;padding-top:8px;display:flex;flex-direction:column;gap:6px">
           <button class="btn go huge" data-act="gcSpin"><span class="key">Enter</span>ガシャをまわす</button>
-          <div class="mono" style="text-align:center">仲間 ${ownedCrew().length}/${CREW.length}　／　まわした回数 ${save.gacha || 0}　／　持っている朕銭 <span class="coinsTxt"></span></div>
+          <div class="mono" style="text-align:center">きょうのガシャ ${save.settings.demo ? '∞（デモ）' : `のこり ${gachaLeft()}/${GDATA.dailyLimit}`}　／　仲間 ${ownedCrew().length}/${CREW.length}　／　朕銭 <span class="coinsTxt"></span></div>
         </div>
       </div>`,
-    desc: G.last ? '前の結果：' + gcResultText(G.last) : 'つかう朕銭が多いほど、レアな隊員が出やすくなります（100朕銭ごとに大当たり確率が1倍ずつ上がる）。すでに仲間の隊員が出たら、その隊員のレベルが上がります',
-    foot: B('hold:gcDown', 'へらす', '◀') + B('hold:gcUp', 'ふやす', '▶'),
+    desc: G.last ? '前の結果：' + gcResultText(G.last) : `投入する朕銭が多いほど大当たり確率が上がります（${fmt(GDATA.invest.min)}で${pct1(jackpotRate(GDATA.invest.min))}・500で${pct1(jackpotRate(500))}・${fmt(GDATA.invest.max)}で${pct1(jackpotRate(GDATA.invest.max))}）。黒いカプセルが出たら大当たり確定！`,
+    foot: B('hold:gcDown', 'へらす', '◀') + B('hold:gcUp', 'ふやす', '▶') + B('gcMax', 'MAX', 'Y'),
     after() {
       const rg = $('gcRange');
-      rg.oninput = () => gcSetAmt(+rg.value, true);
+      rg.oninput = () => gcSetAmt(investLadder()[+rg.value], true);
       rg.onchange = () => rg.blur();
       gcSync();
       if (!gcRaf) gcRaf = requestAnimationFrame(gcLoop);
@@ -2125,29 +2161,35 @@ SCREENS.gacha = () => {
   };
 };
 function gcSync() {
-  const G = S.gc, R = gcRates(G.amt);
-  if (!$('gcAmt')) return;
-  $('gcAmt').textContent = fmt(G.amt); $('gcMul').textContent = G.amt / 100;
-  const rg = $('gcRange'); rg.value = G.amt; rg.style.setProperty('--p', ((G.amt - GC.min) / (GC.max - GC.min) * 100) + '%');
-  for (let r = 0; r < 4; r++) $('gcP' + r).textContent = pct(R[r]);
+  const G = S.gc; if (!$('gcAmt') || !GDATA) return;
+  const R = tierRates(G.amt), L = investLadder(), gi = L.indexOf(G.amt);
+  $('gcAmt').textContent = fmt(G.amt);
+  const rg = $('gcRange'); rg.value = gi; rg.style.setProperty('--p', (gi / (L.length - 1) * 100) + '%');
+  for (let r = 0; r < 3; r++) $('gcP' + r).textContent = pct1(R[r]);
   $('gcAmt').parentElement.style.color = save.coins >= G.amt ? '' : '#e0503c';
 }
 function gcSetAmt(v, fromRange) {
-  const G = S.gc;
-  v = Math.max(GC.min, Math.min(GC.max, Math.round(v / GC.step) * GC.step));
+  const G = S.gc, L = investLadder();
+  v = L.reduce((a, b) => Math.abs(b - v) < Math.abs(a - v) ? b : a, L[0]);
   if (v === G.amt) { if (!fromRange) stopHold(); return; }
   G.amt = v; Snd.move();
+  const b = document.querySelector('.gcBanner'); if (b) { b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
   gcSync();
 }
+const gcStep = (d) => { const L = investLadder(), i = L.indexOf(S.gc.amt); gcSetAmt(L[Math.max(0, Math.min(L.length - 1, i + d))]); };
 Object.assign(ACT, {
-  gcUp() { gcSetAmt(S.gc.amt + GC.step); },
-  gcDown() { gcSetAmt(S.gc.amt - GC.step); },
+  gcUp() { gcStep(1); },
+  gcDown() { gcStep(-1); },
+  gcMin() { gcSetAmt(GDATA.invest.min); },
+  gcMax() { const L = investLadder(); gcSetAmt([...L].reverse().find(v => v <= save.coins) ?? L[0]); },
   gcSpin() {
     const G = S.gc;
-    if (GA.on) return;
+    if (GA.on || !GDATA) return;
     if (!gachaFx || state.floor !== 2) { Snd.err(); toast('屋上の朕銭ガシャの前で回してください'); return; }
+    if (gachaLeft() <= 0) { Snd.err(); toast('きょうのガシャは、もう回せません。また明日！'); return; }
     if (save.coins < G.amt) { Snd.err(); toast('朕銭が足りません'); return; }
     save.coins -= G.amt; save.gacha = (save.gacha || 0) + 1;
+    if (!save.settings.demo) gachaToday().n++;
     G.res = gcRoll(G.amt);
     writeSave(); updateCoins();
     gaStart(G.res);
@@ -2156,6 +2198,10 @@ Object.assign(ACT, {
 let gcRaf = 0;
 function gcLoop(now) {
   if (S.cur !== 'gacha' || !$('pad').classList.contains('on')) { gcRaf = 0; return; }
+  // フェーズ1：「大当たり確率」の数字が、なめらかに増えたり減ったりする
+  const G = S.gc, target = GDATA ? jackpotRate(G.amt) : 0;
+  G.shown += (target - G.shown) * .18; if (Math.abs(target - G.shown) < .05) G.shown = target;
+  const m = $('gcMul'); if (m) m.textContent = G.shown.toFixed(1);
   const cv = $('gcCv'); if (cv) gcDraw(cv, now);
   gcRaf = requestAnimationFrame(gcLoop);
 }
@@ -2166,7 +2212,7 @@ function gcDraw(cv, now) {
   if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
   const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
   const t = now / 1000, e = -1;
-  const res = G.res, tier = res ? res.r : 1, tcol = (k = 0) => tier === 3 ? `hsl(${(t * 220 + k * 60) % 360},95%,62%)` : RARE_COL[tier];
+  const tcol = () => '#ff9a2e';
   // 背景：夕方の屋上
   const sky = g.createLinearGradient(0, 0, 0, H * .7); sky.addColorStop(0, '#6f9fbe'); sky.addColorStop(.55, '#e8c98a'); sky.addColorStop(1, '#ef9f5c');
   g.fillStyle = sky; g.fillRect(0, 0, W, H);
@@ -2187,10 +2233,8 @@ function gcDraw(cv, now) {
   for (let x = 20; x < W; x += 80) { g.beginPath(); g.moveTo(x, H * .5); g.lineTo(x, H * .62); g.stroke(); }
   // ---- 機械 ----
   const s = Math.min(W / 440, H * .9 / 410), cx = W / 2, base = H * .95;
-  const spin = e >= 0 && e < GC_SPIN ? e : -1;
-  const shake = spin >= 0 ? Math.sin(t * 70) * 2.5 * Math.min(1, spin / .3) : e >= GC_SPIN && e < GC_DROP ? Math.sin(t * 90) * 1.5 : 0;
+  const spin = -1, shake = 0;   // 回す演出は3D（gaUpdate）。ここは待っているときの絵だけ
   let heat = .85 + Math.sin(t * 6) * .1 + Math.sin(t * 13.7) * .06;
-  if (e >= 0 && e < 90) heat += Math.min(1, e / GC_SPIN) * .9;
   const hot = e >= 1.0 && e < 90 ? tcol() : '#ff9a2e';
   g.save(); g.translate(cx + shake, base); g.scale(s, s);
   g.lineJoin = 'round'; g.lineCap = 'round'; g.strokeStyle = INK;
@@ -2251,7 +2295,7 @@ function gcDraw(cv, now) {
   if (spin >= 0 && spin < .5) { const cy = -260 + spin / .5 * 60; g.save(); g.lineWidth = 3; g.translate(-68, cy); g.scale(.45 + Math.abs(Math.cos(t * 20)) * .55, 1); circ(g, 0, 0, 11, '#dcbc55'); g.fillStyle = INK; g.fillRect(-3, -3, 6, 6); g.restore(); }
   g.fillStyle = '#100c0a'; g.beginPath(); g.ellipse(0, -36, 38, 22, 0, Math.PI, 0); g.fill(); g.lineWidth = 4; g.stroke();
   // ハンドル（右）
-  const ang = spin >= 0 ? spin / GC_SPIN * Math.PI * 4 : 0;
+  const ang = 0;
   g.save(); g.translate(98, -158); g.lineWidth = 4; circ(g, 0, 0, 16, '#c9a545'); g.rotate(ang);
   g.lineWidth = 9; g.strokeStyle = INK; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 46); g.stroke(); g.lineWidth = 5; g.strokeStyle = '#c9a545'; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 46); g.stroke();
   g.strokeStyle = INK; g.lineWidth = 4; circ(g, 0, 50, 12, '#a9402f'); g.restore();
@@ -2263,7 +2307,9 @@ function gcDraw(cv, now) {
 //  ハンドルが回る → カプセルが転がり出る → ゆれるたびに色が上がることがある（白→橙→青→金）
 //  → カプセルが開いて煙。キャラは煙が濃く出て、ゆっくり晴れるとキャラが見える。アイテムは煙がすぐ消える
 // =====================================================================
-const CAP_COL = ['#e9e4d6', '#ee8a2c', '#3f9be0', '#f2c230'];
+// カプセルの色（ランク順：灰 → 青 → 赤 → 金 → 黒）。色は data/fwb-gacha.json の capsules
+const capRanked = () => Object.entries(GDATA.capsules).sort((a, b) => a[1].rank - b[1].rank);
+const CAP_HEX = (k) => capRanked()[k][1].hex;
 const GA = { on: false, t: 0 };
 const GT = { crank: 1.7, out: 2.6, shake: 1.1 };
 let hemiMeshC = null;
@@ -2281,12 +2327,16 @@ function hemiMesh() {          // 半球（上半分）＋切り口のふた。�
   const m = new Mesh(app.graphicsDevice); m.setPositions(pos); m.setNormals(nrm); m.setUvs(0, uv); m.setIndices(idx); m.update();
   return (hemiMeshC = m);
 }
-// カプセルの色の順番：[出てきたときの色, ゆれるたびの色…]。レアほど何回も色が上がる。ときどきフェイント
-function capSeq(r) {
-  let c = r === 0 ? 0 : r === 1 ? (Math.random() < .45 ? 0 : 1) : (Math.random() < .35 ? 0 : 1);
+// カプセルの色の順番：[出てきたときの色, ゆれるたびの色…]（ランクの番号）。
+// 最後の色は抽選で決まった色。それより下の色で出てきて、ゆれるたびに上がることがある。黒は大当たり確定
+function capSeq(res) {
+  const top = GDATA.capsules[res.cap].rank;
+  let c;
+  if (top === 4) c = Math.random() < .3 ? 4 : Math.random() < .5 ? 3 : 2;         // 黒：いきなり黒（確定）か、金・赤からの昇格
+  else c = Math.max(0, top - (Math.random() < .45 ? 0 : Math.random() < .6 ? 1 : 2));
   const seq = [c];
-  while (c < r) seq.push(++c);
-  if (r < 3 && Math.random() < .5) seq.push(c);
+  while (c < top) seq.push(++c);
+  if (top < 4 && Math.random() < GDATA.fakeUpgradeChance) seq.push(c);          // フェイント
   if (seq.length === 1) seq.push(c);
   return seq;
 }
@@ -2297,10 +2347,15 @@ function hslCol(h, sat, l) {   // h：0〜360
   return new Color(f(0), f(8), f(4));
 }
 function setCapColor(k, t) {
-  const m = GA.capMat, col = k === 3 ? hslCol((t * 200) % 360, .9, .62) : hexCol(CAP_COL[k]);
-  if (k === 3) { const g = hexCol(CAP_COL[3]); m.diffuse.set(g.r, g.g, g.b); } else m.diffuse.set(col.r, col.g, col.b);
-  m.emissive.set(col.r, col.g, col.b); m.emissiveIntensity = (k === 0 ? .05 : .35) + GA.flash * 2.2; m.update();
-  return col;
+  const m = GA.capMat, cd = capRanked()[k][1], base = hexCol(cd.hex);
+  m.diffuse.set(base.r, base.g, base.b);
+  if (cd.glow) {   // 黒：むらさきの光がどくどく脈打つ
+    const g = hexCol(cd.glow), p = .55 + Math.sin(t * 9) * .45;
+    m.emissive.set(g.r, g.g, g.b); m.emissiveIntensity = .04 + p * .12 + GA.flash * 1.6; m.update();
+    return g;
+  }
+  m.emissive.set(base.r, base.g, base.b); m.emissiveIntensity = (k === 0 ? .05 : .3) + GA.flash * 2.2; m.update();
+  return base;
 }
 // ---- 部品（はじめの1回だけ作って、使いまわす） ----
 function gaParts() {
@@ -2345,10 +2400,10 @@ function gaSparks(col, n = 14, power = 1, at = null) {
 }
 function gaStart(res) {
   gaParts();
-  const F0 = gachaFx.pos, seq = capSeq(res.r), isChar = !!res.ch;
+  const F0 = gachaFx.pos, seq = capSeq(res), isChar = !!res.ch;
   const shakesEnd = GT.out + .5 + (seq.length - 1) * GT.shake, open = shakesEnd + 1.15;
-  // 大当たりの前ぶれ：ウルトラレアは必ず。レアでも、ときどきフェイントで出る
-  const omen = res.r === 3 || (res.r === 2 && Math.random() < .25);
+  // 大当たりの前ぶれ：大当たりは必ず。中当たり・小当たりでも、ときどきフェイントで出る（omen の値）
+  const omen = Math.random() < GDATA.tiers[res.tier].omen;
   Object.assign(GA, {
     on: true, t: 0, res, seq, isChar, omen, shakesEnd, open, end: open + (isChar ? 3.5 : 1.0), flash: 0, quake: 0,
     opened: false, ended: false, landed: false, hopped: 0, omenOn: false, tick: 0, sparkT: 0, shakeDone: 0, chr: null, item: null, skip: false, shot: -1,
@@ -2359,6 +2414,7 @@ function gaStart(res) {
   player.pos.set(F0.x - 2.4, F0.y, F0.z + 2.7); player.face = Math.PI / 2; player.vy = 0;
   GA.cap.enabled = false; GA.top.setLocalPosition(0, 0, 0); GA.top.setLocalEulerAngles(0, 0, 0); GA.bot.setLocalScale(1, 1, 1);
   GA.ol.enabled = true; GA.band.enabled = true; GA.top.enabled = true; GA.cap.setLocalScale(1, 1, 1);
+  camera.camera.fov = 54;
   $('pad').classList.remove('on'); S.cur = null; state.ui = 'gacha3d'; document.body.classList.add('cine');
   $('gaHint').classList.add('on'); $('gaRes').classList.remove('on');
 }
@@ -2371,8 +2427,8 @@ function gaCamera(dt) {
   else if (t < GA.shakesEnd) { shot = 2; pos = [1.0, 1.75, 6.2]; look = [0, .7, 2.6]; }             // カプセル
   else if (!GA.opened) { shot = 3; pos = [.3, 1.5, 7.0]; look = [0, 1.0, 3.6]; }                    // とびだすカプセルに寄る
   else if (!GA.isChar) { shot = 4; pos = [.6, 1.6, 6.7]; look = [0, .95, 3.7]; }
-  else if (t - GA.open < 2.5) { shot = 5; pos = [.9, 2.6, 9.8]; look = [0, 1.3, 3.6]; }              // 煙
-  else { shot = 6; pos = [0, 1.9, 8.8]; look = [0, 1.05, 3.6]; }                                   // キャラの正面
+  else if (t - GA.open < 2.5) { shot = 5; pos = [.8, 3.4, 6.8]; look = [0, 1.2, 3.6]; }              // 煙
+  else { shot = 6; pos = [0, 2.9, 6.8]; look = [0, 1.0, 3.6]; }                                   // キャラの正面
   const tp = new Vec3(F0.x + pos[0], F0.y + pos[1], F0.z + pos[2]), tl = new Vec3(F0.x + look[0], F0.y + look[1], F0.z + look[2]);
   if (GA.shot !== shot && snap) { GA.camPos.copy(tp); GA.camLook.copy(tl); }
   GA.shot = shot;
@@ -2437,7 +2493,7 @@ function gaUpdate(dt) {
         if (u >= .7 && GA.shakeDone === i) {
           GA.shakeDone = i + 1; GA.flash = 1;
           const up = GA.seq[i + 1] > GA.seq[i];
-          if (up) { GA.quake = .25 + GA.seq[i + 1] * .1; gaSparks(hexCol(CAP_COL[GA.seq[i + 1]]), 16 + GA.seq[i + 1] * 4); if (!quiet) [660, 880, 1175, 1568].slice(0, 2 + GA.seq[i + 1]).forEach((f, j) => setTimeout(() => Snd.beep(f, .09, 'triangle', .9), j * 70)); }
+          if (up) { GA.quake = .25 + GA.seq[i + 1] * .1 + (GA.seq[i + 1] === 4 ? .5 : 0); if (GA.seq[i + 1] === 4 && !quiet) Snd.beep(60, .8, 'sawtooth', 1, -10); gaSparks(hexCol(capRanked()[GA.seq[i + 1]][1].glow || CAP_HEX(GA.seq[i + 1])), 16 + GA.seq[i + 1] * 4); if (!quiet) [660, 880, 1175, 1568].slice(0, 2 + GA.seq[i + 1]).forEach((f, j) => setTimeout(() => Snd.beep(f, .09, 'triangle', .9), j * 70)); }
           else if (!quiet) Snd.beep(220, .12, 'square', .5, -40);
         }
         if (u >= 0 && !quiet && !GA['rattle' + i]) { GA['rattle' + i] = 1; for (let j = 0; j < 5; j++) setTimeout(() => Snd.beep(500 + Math.random() * 200, .03, 'square', .3), j * 110); }
@@ -2457,7 +2513,7 @@ function gaUpdate(dt) {
     GA.opened = true; GA.leapSnd = 0; GA.flash = 1.2; GA.quake = .5; GA.cap.setLocalEulerAngles(0, 0, 0); GA.cap.setLocalScale(1, 1, 1); GA.ol.enabled = false; GA.band.enabled = false;
     gaSparks(capCol, 22, 1.2);
     if (!quiet) { Snd.beep(120, .3, 'sawtooth', .9, 300); setTimeout(() => Snd.beep(900, .4, 'sine', .6, -700), 60); }
-    gaRankText(GA.res.r); $('gaFlash').classList.remove('on'); void $('gaFlash').offsetWidth; $('gaFlash').classList.add('on');
+    gaCutin(GA.res); $('gaFlash').classList.remove('on'); void $('gaFlash').offsetWidth; $('gaFlash').classList.add('on');
     const c = GA.cap.getPosition();
     GA.puffs.forEach(p => { p.e.enabled = true; p.e.setPosition(c.x, c.y, c.z); p.e.setLocalScale(.01, .01, .01); });
     if (GA.isChar) {
@@ -2507,23 +2563,23 @@ function gaUpdate(dt) {
   if (t >= GA.end && !GA.ended) { GA.ended = true; GA.skip = false; gaShowResult(); }
   gaCamera(dt);
 }
-// カプセルが開いた瞬間の、レア度の大きな文字
-function gaRankText(r) {
-  const el = $('gaRank');
-  el.className = ''; el.textContent = ['おまけ', 'ノーマル', 'レア！', 'ウルトラレア！！'][r];
-  el.style.setProperty('--c', RARE_COL[r]); void el.offsetWidth; el.className = 'on r' + r;
-  if (r >= 2) [784, 988, 1319].forEach((f, i) => setTimeout(() => Snd.beep(f, .1, 'triangle', .9), i * 80));
+// フェーズ3：カプセルが開いた瞬間のカットイン（ななめの帯に「大当たり！！」など）
+function gaCutin(res) {
+  const T = GDATA.tiers[res.tier], el = $('gaRank');
+  el.className = ''; el.innerHTML = `<div class="band"><span>${esc(T.cutin)}</span></div>`;
+  el.style.setProperty('--c', T.color); void el.offsetWidth; el.className = 'on t-' + res.tier;
+  if (res.ti >= 1) [784, 988, 1319, 1568].slice(0, res.ti + 2).forEach((f, i) => setTimeout(() => Snd.beep(f, .1, 'triangle', .9), i * 80));
 }
 function gaShowResult() {
-  const res = GA.res, r = res.r, el = $('gaRes');
-  const big = r === 0 ? `${esc(res.name)} ×${res.n}` : res.isNew ? `${esc(res.name)}が<br>仲間になった！` : `${esc(res.name)}`;
-  const sub = r === 0 ? (res.it ? 'もちものに入れました' : '素材を手に入れました') : res.isNew ? '2F の結成ボードでメンバーに入れられます' : `かさなりボーナス：${res.lv ? 'Lv ＋' + res.lv : ''}${res.coins ? (res.lv ? '・' : '') + '朕銭 ＋' + fmt(res.coins) : ''}`;
-  el.innerHTML = `<div class="rib ${r === 3 ? 'rainbow' : ''}" style="background:${r ? RARE_COL[r] : '#b9ad88'}">${r ? '★'.repeat(r) + ' ' + RARE_NAME[r] : 'おまけ'}</div>
+  const res = GA.res, ti = res.ti, T = GDATA.tiers[res.tier], el = $('gaRes');
+  const big = !res.ch ? `${esc(res.name)} ×${res.n}` : res.isNew ? `${esc(res.name)}が<br>仲間になった！` : `${esc(res.name)}`;
+  const sub = !res.ch ? (res.it ? 'もちものに入れました' : '素材を手に入れました') : res.isNew ? '2F の結成ボードでメンバーに入れられます' : `かさなりボーナス：${res.lv ? 'Lv ＋' + res.lv : ''}${res.coins ? (res.lv ? '・' : '') + '朕銭 ＋' + fmt(res.coins) : ''}`;
+  el.innerHTML = `<div class="rib ${ti === 2 ? 'rainbow' : ''}" style="background:${T.color}">${T.label}　<span style="font-size:13px">（大当たり確率 ${pct1(res.rate)}）</span></div>
     ${res.isNew ? '<div class="new">NEW!</div>' : ''}<div class="nm">${big}</div><div class="sb">${sub}</div><small>Enter／クリックで ガシャにもどる</small>`;
   el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); $('gaHint').classList.remove('on');
-  if (r === 3) { Snd.up(); setTimeout(() => Snd.up(), 260); setTimeout(() => [1568, 2093].forEach((f, i) => setTimeout(() => Snd.beep(f, .12, 'triangle', .9), i * 90)), 520); }
-  else if (r === 2) { Snd.up(); setTimeout(() => Snd.ok(), 250); }
-  else if (r === 1) Snd.up(); else Snd.buy();
+  if (ti === 2) { Snd.up(); setTimeout(() => Snd.up(), 260); setTimeout(() => [1568, 2093].forEach((f, i) => setTimeout(() => Snd.beep(f, .12, 'triangle', .9), i * 90)), 520); }
+  else if (ti === 1) { Snd.up(); setTimeout(() => Snd.ok(), 250); }
+  else Snd.buy();
   dirty();
 }
 function gaSkip() {
@@ -2538,7 +2594,7 @@ function gaEnd() {
   if (GA.item) { GA.item.holder.destroy(); GA.item = null; }
   Fx.mach.setLocalPosition(F0.x, F0.y, F0.z); Fx.crank.setLocalEulerAngles(0, 0, 0);
   Fx.glow.emissive.set(1, .54, .16); Fx.glow.update(); Fx.lamp.light.color = new Color(1, .55, .2); Fx.lamp.light.intensity = 1.2;
-  sun.light.intensity = SUN_I; app.scene.ambientLight = AMB.clone(); camera.camera.clearColor = BG_SKY; GA.flames.forEach(f => f.e.enabled = false);
+  camera.camera.fov = 40; sun.light.intensity = SUN_I; app.scene.ambientLight = AMB.clone(); camera.camera.clearColor = BG_SKY; GA.flames.forEach(f => f.e.enabled = false);
   $('gaRes').classList.remove('on'); $('gaHint').classList.remove('on'); $('gaRank').className = ''; document.body.classList.remove('cine');
   // カメラは今の位置からなめらかに戻す
   const p = player.pos; cam.x = GA.camLook.x; cam.y = GA.camLook.y;
