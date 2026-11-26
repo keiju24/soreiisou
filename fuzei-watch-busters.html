@@ -145,6 +145,56 @@
   .codebox { font:900 22px monospace; background:#10150e; color:var(--crt); padding:0 10px; border:3px solid var(--ink); letter-spacing:.2em; }
   .chip { display:inline-block; background:#efe7cd; color:var(--ink); padding:1px 6px; border-radius:4px; margin-top:4px; }
   .eqn { font-weight:900; font-size:16px; margin-top:4px; }
+  /* まだ仲間になっていない隊員（シルエット） */
+  .face.lock img { filter:brightness(0) opacity(.45); }
+  /* 朕銭ガシャ */
+  body.game.cine .hud { display:none; }
+  #gaRes { position:fixed; left:50%; bottom:34px; transform:translateX(-50%) scale(.85); opacity:0; transition:.25s; z-index:30; min-width:340px; max-width:calc(100% - 40px); text-align:center; background:linear-gradient(#e2d8b9,#cfc39c); color:var(--ink); border:5px solid var(--ink); border-radius:14px; box-shadow:0 6px 0 var(--ink); padding:26px 26px 12px; pointer-events:none; }
+  #gaRes.on { opacity:1; transform:translateX(-50%) scale(1); cursor:pointer; animation:gaSlam .38s cubic-bezier(.2,1.4,.4,1) both; }
+  @keyframes gaSlam { 0% { transform:translateX(-50%) scale(2.4); opacity:0; } 60% { transform:translateX(-50%) scale(.94); opacity:1; } 100% { transform:translateX(-50%) scale(1); opacity:1; } }
+  #gaRank { position:fixed; left:0; right:0; top:50%; height:0; z-index:31; pointer-events:none; }
+  #gaRank .band { position:absolute; left:-10%; right:-10%; top:-62px; height:124px; transform:rotate(-6deg) translateX(110%); background:linear-gradient(90deg,transparent,#1b1519 12%,#1b1519 88%,transparent); border-top:6px solid var(--c,#fff); border-bottom:6px solid var(--c,#fff); display:grid; place-items:center; opacity:0; }
+  #gaRank .band span { font:900 78px "Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif; color:var(--c,#fff); -webkit-text-stroke:3px var(--ink); paint-order:stroke fill; letter-spacing:.06em; text-shadow:0 5px 0 var(--ink),0 0 26px var(--c,#fff); white-space:nowrap; }
+  #gaRank.on .band { animation:gaCut 2.3s cubic-bezier(.2,.9,.3,1) forwards; }
+  #gaRank.t-normal .band { height:90px; top:-45px; } #gaRank.t-normal .band span { font-size:54px; }
+  #gaRank.t-jackpot .band span { font-size:96px; animation:gaHue .7s linear infinite; }
+  @keyframes gaCut { 0% { transform:rotate(-6deg) translateX(110%); opacity:1; } 14% { transform:rotate(-6deg) translateX(0); opacity:1; } 80% { transform:rotate(-6deg) translateX(-2%); opacity:1; } 100% { transform:rotate(-6deg) translateX(-110%); opacity:1; } }
+  @keyframes gaHue { to { filter:hue-rotate(360deg); } }
+  #gaFlash { position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:29; }
+  #gaFlash.on { animation:gaFlash .55s ease-out; }
+  @keyframes gaFlash { 0% { opacity:.95; } 100% { opacity:0; } }
+  #gaRes .rib { position:absolute; left:18px; right:18px; top:-20px; border:4px solid var(--ink); border-radius:8px; font-weight:900; font-size:20px; padding:2px; color:var(--ink); }
+  #gaRes .rib.rainbow { background:linear-gradient(90deg,#ff8b7b,#ffd84a,#8fe08a,#7fd3ff,#c79bff) !important; }
+  #gaRes .nm { font-weight:900; font-size:30px; line-height:1.25; } #gaRes .sb { font-weight:800; font-size:15px; margin-top:4px; }
+  #gaRes .new { position:absolute; right:-20px; top:12px; transform:rotate(12deg); background:var(--red); color:#f4ecd8; border:4px solid var(--ink); border-radius:8px; font-weight:900; padding:0 10px; font-size:20px; }
+  #gaRes small { display:block; margin-top:8px; font:800 12px monospace; color:#4f4a3c; }
+  #gaHint { position:fixed; right:18px; bottom:16px; display:none; font-weight:900; color:#f4ecd8; background:#0009; padding:6px 12px; border-radius:8px; z-index:30; }
+  #gaHint.on { display:block; }
+  .gcStage { padding:0; background:#1b1712; }
+  .gcStage canvas { position:absolute; inset:0; width:100%; height:100%; cursor:pointer; }
+  .gcBanner { position:absolute; left:10px; top:10px; z-index:2; display:flex; align-items:baseline; gap:6px; padding:4px 30px 6px 12px; background:linear-gradient(#2b2621,#151210); color:#f4ecd8; border:4px solid var(--ink); clip-path:polygon(0 0,100% 0,calc(100% - 18px) 100%,0 100%); pointer-events:none; }
+  .gcBanner small { font-weight:900; font-size:15px; letter-spacing:.06em; }
+  .gcBanner b { font:900 44px "Courier New",monospace; color:var(--hazard); line-height:1; }
+  .gcBanner span { font-weight:900; font-size:18px; }
+  .gcAmt { display:flex; align-items:center; gap:8px; margin-top:8px; }
+  .gcAmt .val { flex:1; display:flex; align-items:center; gap:10px; justify-content:center; background:#10150e; color:var(--crt); border:3px solid var(--ink); border-radius:8px; font:900 32px "Courier New",monospace; padding:2px 10px; }
+  .gcArrow { width:44px; height:44px; border:4px solid var(--ink); border-radius:8px; background:linear-gradient(#d9bd5c,#b39436); font:900 20px sans-serif; cursor:pointer; box-shadow:0 3px 0 var(--ink); color:var(--ink); }
+  .gcArrow:active { transform:translateY(2px); box-shadow:0 1px 0 var(--ink); }
+  input.gcRange { -webkit-appearance:none; appearance:none; width:100%; height:18px; margin:10px 0 2px; border:3px solid var(--ink); border-radius:9px; background:linear-gradient(90deg,#d9662e var(--p,0%),#3a3530 var(--p,0%)); cursor:pointer; }
+  input.gcRange::-webkit-slider-thumb { -webkit-appearance:none; width:28px; height:28px; border-radius:50%; background:radial-gradient(circle at 40% 35%,#ffd27a,#c9532a 70%); border:3px solid var(--ink); }
+  input.gcRange::-moz-range-thumb { width:22px; height:22px; border-radius:50%; background:#c9532a; border:3px solid var(--ink); }
+  .gcRates { display:flex; flex-direction:column; gap:5px; margin-top:8px; overflow:auto; min-height:0; }
+  .gcRate { display:grid; grid-template-columns:118px 1fr 70px; align-items:center; gap:8px; border:3px solid var(--ink); border-radius:7px; padding:2px 8px; background:#efe7cd; }
+  .gcRate .t { font-weight:900; font-size:13px; line-height:1.2; white-space:nowrap; } .gcRate .t i { font-style:normal; color:#b5862a; letter-spacing:-.1em; }
+  .gcRate .fc { display:flex; gap:3px; flex-wrap:wrap; align-items:center; font-size:11px; font-weight:800; }
+  .gcRate .pc { font:900 18px "Courier New",monospace; text-align:right; }
+  .gcRate.r3 { background:linear-gradient(90deg,#f3dc8c,#efe7cd); } .gcRate.r2 { background:linear-gradient(90deg,#c5dde9,#efe7cd); }
+  .gcBanner b { min-width:3.2em; text-align:right; display:inline-block; }
+  .gcBanner.pop b { animation:gcPop .25s ease-out; }
+  @keyframes gcPop { 0% { transform:scale(1.35); color:#fff2b0; } 100% { transform:scale(1); } }
+  .capdot { display:inline-block; width:12px; height:12px; border-radius:50%; border:2px solid var(--ink); vertical-align:-2px; margin-left:2px; }
+  .gcRate.r3 .t i { color:#1b1519; } .gcRate.r2 .t i { color:#d8402f; } .gcRate.r1 .t i { color:#3f8fe0; }
+  .btn.huge { font-size:21px; padding:8px 18px; justify-content:center; }
 </style>
 <script type="importmap">{ "imports": { "playcanvas": "./lib/playcanvas.min.mjs" } }</script>
 </head>
@@ -157,6 +207,10 @@
 <div id="prompt"></div>
 <div id="talk"></div>
 <div id="toast"></div>
+<div id="gaRes"></div>
+<div id="gaRank"></div>
+<div id="gaFlash"></div>
+<div id="gaHint"><span class="key">Enter</span>クリックで とばす</div>
 <div id="pad"><div class="dev"><div class="dbody">
   <div id="padHome" style="display:flex;flex-direction:column;gap:12px;height:100%">
     <div class="phead"><div class="logo">Hu-jo <b>Pad</b><small>FUJO WATCH BUSTERS 隊員用端末</small></div><div class="counter"><span class="coin"></span><span class="coinsTxt"></span></div><div class="x" id="padClose">×</div></div>
@@ -211,6 +265,10 @@ const CREW = [
   { key: 'kenshin', name: 'Kenshin', img: 'KENSHIN', role: 'R', prop: 'wrench', moves: ['レンチ打ち', '砲台設置', 'バリア展開', '試作機起動'] },
 ];
 const crewByKey = Object.fromEntries(CREW.map(c => [c.key, c]));
+// 最初からいる隊員。ほかの隊員は屋上の朕銭ガシャで仲間になる
+const STARTERS = ['homura', 'berserker', 'nagata', 'shimarin'];
+// ガシャのレア度（1 ノーマル・2 レア・3 ウルトラレア）
+const CREW_RARE = { homura: 1, berserker: 1, nagata: 1, shimarin: 1, imai: 2, ichigo: 2, unko: 2, kenshin: 2, henry: 3, kotan: 3, archer: 3, chinta: 3 };
 const TACTICS = ['おまかせ', 'ガンガンいこう', 'みんなを守って', '回復優先'];
 
 // ---- 敵（ザコのブスイ と ブスイに取りつかれた隊員） ----
@@ -436,8 +494,8 @@ const icSk = (i, role, size = 30) => `<img class="ic" style="width:${size}px;hei
 
 // =====================================================================
 //  風情ウォッチバスターズ
-//  タイトル（クリックでスタート）→ 本部（2階建ての消防署）。本部から外へは出られない。
-//  1F：受付・工房（職人ヘンリー）・出動用の救急車　／　2F：指令室（ヘンリー隊長）
+//  タイトル（クリックでスタート）→ 本部（2階建ての消防署＋屋上）。本部から外へは出られない。
+//  1F：受付・工房（職人ヘンリー）・出動用の救急車　／　2F：指令室（ヘンリー隊長）　／　屋上：朕銭ガシャ
 //  Esc / M で Hu-jo Pad（隊員用端末）を開く
 // =====================================================================
 const F = {};                                   // 顔の画像（window.FACES から読みこむ）
@@ -599,6 +657,7 @@ const T = {
   wall: makeTex('wall', 512, 512, (g, w, h) => { g.fillStyle = '#d9cfb3'; g.fillRect(0, 0, w, h); g.fillStyle = '#6f7a5e'; g.fillRect(0, h * .72, w, h * .28); g.fillStyle = '#3b3f35'; g.fillRect(0, h * .7, w, h * .03); grime(g, w, h, 30); }),
   wall2: makeTex('wall2', 512, 512, (g, w, h) => { g.fillStyle = '#c9c4ad'; g.fillRect(0, 0, w, h); g.fillStyle = '#4f6f86'; g.fillRect(0, h * .74, w, h * .26); g.fillStyle = '#2e3a44'; g.fillRect(0, h * .72, w, h * .03); grime(g, w, h, 30); }),
   hazard: makeTex('hazard', 256, 64, (g, w, h) => { g.fillStyle = '#cfae45'; g.fillRect(0, 0, w, h); g.fillStyle = INK; for (let x = -h; x < w; x += 48) { g.beginPath(); g.moveTo(x, h); g.lineTo(x + 24, h); g.lineTo(x + 24 + h, 0); g.lineTo(x + h, 0); g.fill(); } }),
+  roof: makeTex('roof', 256, 256, (g, w, h) => { g.fillStyle = '#a3a596'; g.fillRect(0, 0, w, h); grime(g, w, h, 14); g.strokeStyle = 'rgba(40,40,30,.35)'; g.lineWidth = 3; g.strokeRect(0, 0, w, h); g.strokeStyle = 'rgba(255,255,240,.12)'; g.lineWidth = 2; g.strokeRect(4, 4, w - 8, h - 8); }),
   shutter: makeTex('shutter', 256, 256, (g, w, h) => { g.fillStyle = '#8c9187'; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 16) { g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(0, y + 12, w, 4); g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(0, y, w, 3); } grime(g, w, h, 10); }),
 };
 const TMC = {};
@@ -689,9 +748,13 @@ function paper(x, y, z, w, h, face = '+z', col = '#ece4cc') {
 const RW = 22, RD = 12, FH = 4.6, SL = 0.3, WH = FH - SL;
 const ST = { x0: 1.4, x1: 7.8, z0: -RD, z1: -10.5, n: 16 };     // 階段：x0（1F）→ x1（2F）
 ST.run = (ST.x1 - ST.x0) / ST.n; ST.rise = FH / ST.n;
-const floors = [new Entity('1F'), new Entity('2F')];
-const stairsG = new Entity('stairs');
-floors.forEach(f => app.root.addChild(f)); app.root.addChild(stairsG);
+// 2F → 屋上：奥の壁の手前を、右（xb・2F）から左（xa・屋上）へのぼる。段は板だけなので下をくぐれる
+const S2 = { xa: 2.2, xb: 8.6, z0: -10.3, z1: -8.5, n: 16 };
+S2.run = (S2.xb - S2.xa) / S2.n; S2.rise = FH / S2.n;
+const RY = FH * 2;                                                // 屋上の床の高さ
+const floors = [new Entity('1F'), new Entity('2F'), new Entity('RF')];
+const stairsG = new Entity('stairs'), stairs2G = new Entity('stairs2');
+floors.forEach(f => app.root.addChild(f)); app.root.addChild(stairsG); app.root.addChild(stairs2G);
 const M = {
   ink: cm('#1d1b19', { gloss: .3 }), dark: cm('#2c2d2a'), steel: cm('#7d8279', { spec: .3, gloss: .5 }), steel2: cm('#565a51'),
   chrome: cm('#c9ccc4', { spec: .5, gloss: .7 }), khaki: cm('#b3a477'), khaki2: cm('#8b7d55'), red: cm('#a9402f'), red2: cm('#7a2a1e'),
@@ -874,6 +937,195 @@ function build2F() {
   box(M.white, 4.4, 7.2, y + 1.2, y + 2.6, -RD, -RD + .06, false);
   decal((g, W, H) => { g.fillStyle = '#efeadb'; g.fillRect(0, 0, W, H); g.strokeStyle = '#2e3a44'; g.lineWidth = 5; g.font = `800 34px ${JP}`; g.fillStyle = '#2e3a44'; g.fillText('本日のブスイ反応', 20, 50); g.fillStyle = '#a9402f'; g.fillText('公園：大', 30, 110); g.fillStyle = '#2e3a44'; g.fillText('商店街：中', 30, 160); g.fillText('繁華街：？', 30, 210); }, 400, 240, 5.8, y + 1.9, -RD + .07, 2.6, 1.3, '+z');
 }
+// ===== 2F → 屋上の階段（2F と屋上にいるときだけ見える）=====
+function stairs2() {
+  root = stairs2G;
+  const y = FH;
+  for (let k = 0; k < S2.n; k++) {
+    const x1 = S2.xb - S2.run * k, x0 = x1 - S2.run, top = y + S2.rise * (k + 1);
+    box(cm('#8d8f86'), x0, x1, top - .14, top, S2.z0, S2.z1);
+    box(M.yellow, x0, x0 + .06, top - .02, top + .004, S2.z0, S2.z1, false, false);
+    // 横から落ちないように（段ごとの見えない壁。下をくぐるときはじゃましない）
+    addCol(x0, x1, top, top + 1.2, S2.z0 - .1, S2.z0); addCol(x0, x1, top, top + 1.2, S2.z1, S2.z1 + .1);
+  }
+  for (const z of [S2.z0 + .06, S2.z1 - .06]) bar(M.steel2, [S2.xb, y, z], [S2.xa, y + FH, z], .16);   // 側げた
+  for (const z of [S2.z0 - .02, S2.z1 + .02]) {
+    bar(M.yellow, [S2.xb, y + 1.0, z], [S2.xa, y + FH + 1.0, z], .07);
+    for (let k = 0; k <= S2.n; k += 4) { const x = S2.xb - S2.run * k; bar(M.steel, [x, y + S2.rise * k, z], [x, y + S2.rise * k + 1.0, z], .05); }
+  }
+  bar(M.steel, [9.2, y, -8.25], [9.2, y + 2.25, -8.25], .07);
+  sign('屋上へ ↑', 9.2, y + 2.45, -8.2, 1.3, .42, '+z', '#cfae45');
+}
+
+// ===== 屋上：さび色の手すり・ホース乾燥塔・足場・朕銭ガシャ =====
+const RUST = () => cm('#a5452a', { gloss: .35, spec: .1 });
+function railing(a, b, y, post = 1.6) {
+  const m = RUST(), len = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.round(len / post));
+  bar(m, [a[0], y + 1.1, a[1]], [b[0], y + 1.1, b[1]], .08);
+  bar(m, [a[0], y + .62, a[1]], [b[0], y + .62, b[1]], .05);
+  for (let i = 0; i <= n; i++) { const x = a[0] + (b[0] - a[0]) * i / n, z = a[1] + (b[1] - a[1]) * i / n; bar(m, [x, y, z], [x, y + 1.1, z], .06); }
+}
+function hoseTower(x0, z0, w, h, y) {
+  const m = RUST(), x1 = x0 + w, z1 = z0 + w, seg = h / 6;
+  for (const [x, z] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) bar(m, [x, y, z], [x, y + h + 1.1, z], .15);
+  for (let i = 1; i <= 6; i++) {
+    const yy = y + seg * i, y0 = yy - seg;
+    for (const [a, b] of [[[x0, z0], [x1, z0]], [[x0, z1], [x1, z1]], [[x0, z0], [x0, z1]], [[x1, z0], [x1, z1]]]) bar(m, [a[0], yy, a[1]], [b[0], yy, b[1]], .09);
+    // すじかい（前と左右の面）
+    bar(m, [x0, y0, z1], [x1, yy, z1], .05); bar(m, [x1, y0, z1], [x0, yy, z1], .05);
+    bar(m, [x0, y0, z0], [x0, yy, z1], .05); bar(m, [x1, y0, z1], [x1, yy, z0], .05);
+  }
+  // てっぺんの見張り台と手すり
+  box(cm('#7a3420'), x0 - .35, x1 + .35, y + h, y + h + .14, z0 - .35, z1 + .35, false);
+  for (const [a, b] of [[[x0 - .35, z0 - .35], [x1 + .35, z0 - .35]], [[x0 - .35, z1 + .35], [x1 + .35, z1 + .35]], [[x0 - .35, z0 - .35], [x0 - .35, z1 + .35]], [[x1 + .35, z0 - .35], [x1 + .35, z1 + .35]]]) bar(m, [a[0], y + h + 1.0, a[1]], [b[0], y + h + 1.0, b[1]], .07);
+  // 干してあるホース（白・灰色）
+  for (let i = 0; i < 4; i++) { const x = x0 + .45 + i * .43; bar(cm(['#e9e6dc', '#c9c6bb'][i % 2]), [x, y + h - .1, (z0 + z1) / 2], [x, y + h - 5.2 + (i % 2) * .8, (z0 + z1) / 2 + .1], .11); }
+  bar(M.steel2, [x0 + .2, y + h - .1, (z0 + z1) / 2], [x1 - .2, y + h - .1, (z0 + z1) / 2], .09);
+  // はしご（前の面）
+  for (const x of [(x0 + x1) / 2 - .28, (x0 + x1) / 2 + .28]) bar(M.steel, [x, y, z1 + .12], [x, y + h, z1 + .12], .05);
+  for (let yy = y + .35; yy < y + h; yy += .35) bar(M.steel, [(x0 + x1) / 2 - .28, yy, z1 + .12], [(x0 + x1) / 2 + .28, yy, z1 + .12], .04);
+  addCol(x0 - .1, x1 + .1, y, y + h, z0 - .1, z1 + .25);
+}
+// 外から見た本部（屋上にいるときだけ。写真の白い出張所がもと）
+function facade() {
+  const k = 1024 / (RW + .6), X = (m) => (m + .3) * k, Y = (m) => (RY - SL - m) * k;
+  decal((g, W, H) => {
+    g.fillStyle = '#e9e7df'; g.fillRect(0, 0, W, H); grime(g, W, H, 18);
+    g.strokeStyle = INK; g.lineWidth = 4;
+    // 2F の窓
+    for (const [a, b] of [[1.0, 4.4], [5.2, 8.6], [10.0, 15.6], [16.6, 20.8]]) {
+      g.fillStyle = '#7d97a8'; g.fillRect(X(a), Y(7.7), (b - a) * k, 1.9 * k); g.strokeRect(X(a), Y(7.7), (b - a) * k, 1.9 * k);
+      g.fillStyle = '#f2efe6'; for (let x = a; x < b - .1; x += 1.1) { g.fillRect(X(x) + 4, Y(7.6), .45 * k, 1.5 * k); g.strokeStyle = '#5d6b74'; g.lineWidth = 2; g.strokeRect(X(x), Y(7.7), 1.1 * k, 1.9 * k); }
+      g.strokeStyle = INK; g.lineWidth = 4;
+    }
+    // 階のさかいの帯
+    g.fillStyle = '#d4d1c7'; g.fillRect(0, Y(4.75), W, .3 * k); g.beginPath(); g.moveTo(0, Y(4.45)); g.lineTo(W, Y(4.45)); g.stroke();
+    // 看板の文字
+    g.fillStyle = '#3b4750'; g.font = `900 ${Math.round(.62 * k)}px ${JP}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('風情ウォッチバスターズ 本部', X(5.2), Y(4.05));
+    // 車庫（左：道具置き場、右：消防車と救急車）
+    const bay = (a, b) => { g.fillStyle = '#2b2925'; g.fillRect(X(a), Y(3.6), (b - a) * k, 3.6 * k); g.strokeRect(X(a), Y(3.6), (b - a) * k, 3.6 * k); };
+    bay(.6, 8.2); bay(12.6, 21.4);
+    g.fillStyle = '#cfae45'; g.fillRect(X(1.4), Y(2.2), .7 * k, 1.2 * k); g.fillStyle = '#4f6f86'; g.fillRect(X(2.4), Y(2.0), .6 * k, 1.0 * k); g.fillStyle = '#5f8a45'; g.fillRect(X(6.6), Y(3.4), .5 * k, 3.4 * k);
+    // 消防車（赤）
+    g.fillStyle = '#b7362a'; g.beginPath(); g.roundRect(X(13.4), Y(2.6), 3.3 * k, 2.4 * k, 8); g.fill(); g.stroke();
+    g.fillStyle = '#9fb4c2'; g.fillRect(X(13.7), Y(2.4), 2.7 * k, .9 * k); g.strokeRect(X(13.7), Y(2.4), 2.7 * k, .9 * k);
+    g.fillStyle = '#e8c24a'; g.fillRect(X(13.6), Y(.9), .5 * k, .3 * k); g.fillRect(X(16.0), Y(.9), .5 * k, .3 * k);
+    // 救急車（白に赤い線）
+    g.fillStyle = '#efece3'; g.beginPath(); g.roundRect(X(17.2), Y(2.5), 3.4 * k, 2.3 * k, 8); g.fill(); g.stroke();
+    g.fillStyle = '#9fb4c2'; g.fillRect(X(17.5), Y(2.3), 2.8 * k, .8 * k); g.fillStyle = '#c23a2c'; g.fillRect(X(17.2), Y(1.25), 3.4 * k, .22 * k); g.fillRect(X(18.3), Y(2.65), 1.2 * k, .2 * k);
+    // 入口と窓（まん中）
+    g.fillStyle = '#9aa7ad'; g.fillRect(X(9.0), Y(2.6), 1.4 * k, 2.6 * k); g.strokeRect(X(9.0), Y(2.6), 1.4 * k, 2.6 * k);
+    g.fillStyle = '#7d97a8'; g.fillRect(X(10.8), Y(2.6), 1.3 * k, 1.2 * k); g.strokeRect(X(10.8), Y(2.6), 1.3 * k, 1.2 * k);
+    g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, H - 2); g.lineTo(W, H - 2); g.stroke();
+  }, 1024, Math.round((RY - SL) * k), RW / 2, (RY - SL) / 2, .23, RW + .6, RY - SL, '+z');
+  const wm = cm('#dedbd2');
+  box(wm, -.3, 0, 0, RY - SL, -RD - .3, .2, false, false); box(wm, RW, RW + .3, 0, RY - SL, -RD - .3, .2, false, false);
+  // 地面（アスファルト）と、となりの建物
+  box(cm('#6c6b66'), -40, RW + 40, -.3, -.04, -RD - 30, 30, false, false);
+  box(cm('#8a877f'), -40, RW + 40, -.04, -.02, 2.6, 2.9, false, false);
+  const bld = (x0, x1, h, z0, z1, col, win) => {
+    box(cm(col), x0, x1, 0, h, z0, z1, false, false);
+    for (let yy = 1.2; yy < h - 1; yy += 2.8) for (let x = x0 + .8; x < x1 - 1.2; x += 2.2) box(cm(win), x, x + 1.3, yy, yy + 1.3, z1, z1 + .04, false, false);
+  };
+  bld(-12, -2.2, 6.5, -RD - 1, -1, '#d6d0c2', '#5b6b77');
+  bld(RW + 1.6, RW + 12, 14, -RD - 2, -1.2, '#b3946f', '#efe9da');
+  bld(-8, 9, 18, -RD - 16, -RD - 9, '#a3abb0', '#6d7a84');
+  bld(11, 30, 13, -RD - 13, -RD - 7, '#c7bca7', '#5b6b77');
+}
+let gachaFx = null;
+// 朕銭ガシャ：古い鉄の釜（ボイラー）に、朕銭を入れて回すオリジナルの機械
+// 機械は1つのグループ（mach）にまとめて、演出でゆらせるようにする。座標はグループの中の位置
+function gachaMachine(cx, cz, y) {
+  const keep = root, mach = new Entity('gacha'); mach.setLocalPosition(cx, y, cz); floors[2].addChild(mach); root = mach;
+  const iron = cm('#3b322e', { gloss: .35, spec: .15 }), brass = cm('#c9a545', { gloss: .6, spec: .4 });
+  const glow = mat('#ff8a2a', { emissive: '#ff8a2a', ei: 1.3 }), ember = mat('#ff6a2a', { emissive: '#ff6a2a', ei: 1.2 });
+  box(tmat(T.hazard, 3, 1), -1.3, 1.3, 0, .35, -1.15, 1.15, false);
+  box(M.ink, -1.32, 1.32, .35, .38, -1.17, 1.17, false, false);
+  inked(mach, 'cylinder', iron, [0, 1.5, 0], [1.9, 2.3, 1.9]);
+  inked(mach, 'sphere', iron, [0, 2.62, 0], [1.75, 1.2, 1.75]);
+  for (const yy of [.62, 2.45]) piece(mach, torusMesh(.97, .08), brass, [0, yy, 0]);
+  for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; ball(brass, Math.sin(a) * .98, .78, Math.cos(a) * .98, .08, .08, .08); }
+  // 炉の窓（光る）
+  piece(mach, 'cylinder', glow, [0, 1.6, .9], [1.05, .1, 1.05], [90, 0, 0]);
+  piece(mach, torusMesh(.56, .08), brass, [0, 1.6, .96], null, [90, 0, 0]);
+  for (const dx of [-.22, 0, .22]) box(M.ink, dx - .025, dx + .025, 1.12, 2.08, .96, 1.0, false, false);
+  // 名札・取り出し口・投入口
+  decal((g, W, H) => { g.fillStyle = '#e6dcc0'; g.fillRect(0, 0, W, H); g.strokeStyle = INK; g.lineWidth = 10; g.strokeRect(5, 5, W - 10, H - 10); g.fillStyle = INK; g.font = `900 52px ${JP}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('朕銭ガシャ', W / 2, H / 2 + 3); }, 320, 90, 0, .98, .97, .95, .27);
+  box(cm('#120e0c'), -.34, .34, .38, .66, .7, .99, false, false);
+  box(brass, -.4, .4, .66, .71, .7, 1.0, false, false);
+  box(cm('#2b2421'), -.86, -.56, 1.5, 1.95, .4, .72, false, false);
+  box(M.ink, -.73, -.69, 1.58, 1.87, .72, .74, false, false);
+  // ハンドル（右。演出で回る）
+  const crank = new Entity('crank'); crank.setLocalPosition(1.05, 1.6, 0); mach.addChild(crank);
+  cyl(brass, 0, 0, 0, .16, .2, 'x', 'cylinder', crank);
+  bar(brass, [.07, 0, 0], [.09, -.45, .3], .08, crank);
+  ball(M.red, .09, -.48, .32, .22, .22, .22, crank);
+  // 煙突と、てっぺんで回る朕銭
+  cyl(iron, .5, 3.25, -.25, .15, .9); cyl(brass, .5, 3.68, -.25, .19, .1);
+  ball(ember, .5, 3.74, -.25, .24, .1, .24);
+  const coin = new Entity(); coin.setLocalPosition(0, 3.55, 0); mach.addChild(coin);
+  piece(coin, 'cylinder', cm('#dcbc55', { gloss: .7, spec: .5 }), [0, 0, 0], [.7, .09, .7], [90, 0, 0]);
+  piece(coin, 'box', M.ink, [0, 0, 0], [.17, .17, .11]);
+  piece(coin, 'cylinder', outline, [0, 0, 0], [.76, .07, .76], [90, 0, 0]);
+  // 炉の明かり（床を照らす。演出で色が変わる）
+  const lamp = new Entity('gachaLamp'); lamp.addComponent('light', { type: 'omni', color: new Color(1, .55, .2), range: 4.5, intensity: 1.2, castShadows: false }); lamp.setLocalPosition(0, 1.6, 1.6); mach.addChild(lamp);
+  root = floors[2];
+  // ちょうちん（風情。機械の外）
+  const lan = mat('#e0503c', { emissive: '#e0503c', ei: .7 });
+  for (const x of [cx - 3.2, cx + 3.2]) bar(M.wood2, [x, y, cz - 1.3], [x, y + 3.6, cz - 1.3], .1);
+  bar(M.ink, [cx - 3.2, y + 3.5, cz - 1.3], [cx + 3.2, y + 3.5, cz - 1.3], .025);
+  for (let i = 0; i < 5; i++) { const x = cx - 2.4 + i * 1.2, yy = y + 3.05 - Math.sin(i / 4 * Math.PI) * .2; ball(lan, x, yy, cz - 1.3, .36, .46, .36); box(M.ink, x - .1, x + .1, yy + .2, yy + .3, cz - 1.4, cz - 1.2, false, false); box(M.ink, x - .1, x + .1, yy - .3, yy - .22, cz - 1.4, cz - 1.2, false, false); }
+  addCol(cx - 1.3, cx + 1.3, y, y + 3.6, cz - 1.15, cz + 1.15);
+  root = keep;
+  gachaFx = { glow, ember, coin, mach, crank, lamp, pos: new Vec3(cx, y, cz) };
+}
+function buildRoof() {
+  root = floors[2];
+  const y = RY, fm = tmat(T.roof, RW / 2.5, RD / 2.5);
+  // 床（2F からの階段の穴をあける）
+  box(fm, -.3, RW + .3, y - SL, y, S2.z1, .2);
+  box(fm, -.3, RW + .3, y - SL, y, -RD - .3, S2.z0);
+  box(fm, -.3, S2.xa, y - SL, y, S2.z0, S2.z1);
+  box(fm, S2.xb, RW + .3, y - SL, y, S2.z0, S2.z1);
+  // ふちの立ち上がりと、さび色の手すり（写真の手すりがもと）
+  const par = cm('#d4d0c5');
+  box(par, -.3, RW + .3, y, y + .4, -RD - .3, -RD, false); box(par, -.3, 0, y, y + .4, -RD, .2, false); box(par, RW, RW + .3, y, y + .4, -RD, .2, false);
+  box(par, -.3, RW + .3, y, y + .4, -.1, .2, false);
+  box(M.ink, -.32, RW + .32, y + .4, y + .43, -.12, .22, false, false);
+  railing([-.15, -RD - .15], [RW + .15, -RD - .15], y + .4); railing([-.15, -RD - .15], [-.15, .05], y + .4); railing([RW + .15, -RD - .15], [RW + .15, .05], y + .4);
+  railing([-.15, .05], [RW + .15, .05], y + .4, 2.2);
+  addCol(-.6, RW + .6, y - 1, y + 1.5, -.1, .8); addCol(-.6, RW + .6, y - 1, y + 1.5, -RD - .8, -RD);
+  addCol(-.8, 0, y - 1, y + 1.5, -RD, .2); addCol(RW, RW + .8, y - 1, y + 1.5, -RD, .2);
+  // 階段の穴のまわりの柵（左があき口）
+  railing([S2.xa + .5, S2.z1 + .05], [S2.xb + .05, S2.z1 + .05], y, 1.3); railing([S2.xa + .5, S2.z0 - .05], [S2.xb + .05, S2.z0 - .05], y, 1.3); railing([S2.xb + .05, S2.z0 - .05], [S2.xb + .05, S2.z1 + .05], y, 1.3);
+  addCol(S2.xa + .4, S2.xb, y, y + 1.2, S2.z1, S2.z1 + .12); addCol(S2.xa + .4, S2.xb, y, y + 1.2, S2.z0 - .12, S2.z0); addCol(S2.xb, S2.xb + .12, y, y + 1.2, S2.z0, S2.z1);
+  sign('↓ 2F', S2.xa + .9, y + 1.6, S2.z1 + .1, .9, .36, '+z', '#cfae45');
+  // ホース乾燥塔（右の奥）
+  hoseTower(17.8, -11.4, 2.3, 8.4, y);
+  // 足場の枠（左の手前。白いパイプ）
+  const pipe = cm('#d9d7cf', { gloss: .4 });
+  for (const x of [.8, 3.0, 5.2]) for (const z of [-6.4, -4.2]) { bar(pipe, [x, y, z], [x, y + 2.6, z], .07); addCol(x - .06, x + .06, y, y + 2.6, z - .06, z + .06); }
+  for (const yy of [1.3, 2.6]) { for (const z of [-6.4, -4.2]) bar(pipe, [.8, y + yy, z], [5.2, y + yy, z], .06); for (const x of [.8, 3.0, 5.2]) bar(pipe, [x, y + yy, -6.4], [x, y + yy, -4.2], .06); }
+  box(M.wood, .8, 5.2, y + 2.6, y + 2.66, -6.3, -5.3, false);
+  crate(1.2, -5.9, .8, .8, .6, y); crate(1.3, -5.8, .6, .6, .45, y + .6, cm('#b7c0c4'));
+  // 室外機・物干し・ベンチ（右の手前）
+  for (const x of [19.4, 20.6]) { box(cm('#dad8d0'), x, x + 1.0, y, y + .75, -1.6, -.9); cyl(M.dark, x + .45, y + .4, -.88, .26, .03, 'z'); }
+  bench(14.6, 17.0, -1.6, y, '#a9402f');
+  plant(13.8, -1.4, y); plant(17.6, -1.3, y);
+  for (const x of [7.8, 10.2]) bar(M.steel, [x, y, -2.2], [x, y + 1.8, -2.2], .06);
+  bar(M.steel, [7.8, y + 1.75, -2.2], [10.2, y + 1.75, -2.2], .04);
+  for (const [x, c] of [[8.3, '#cfae45'], [8.9, '#e9e6dc'], [9.5, '#4f6f86']]) box(cm(c), x - .22, x + .22, y + 1.05, y + 1.72, -2.24, -2.16, false);
+  // 朕銭ガシャと看板
+  gachaMachine(12.5, -7.4, y);
+  for (const x of [10.9, 14.1]) bar(M.wood2, [x, y, -9.1], [x, y + 4.2, -9.1], .12);
+  decal((g, W, H) => {
+    g.fillStyle = '#2a211c'; g.fillRect(0, 0, W, H); g.strokeStyle = '#c9a545'; g.lineWidth = 12; g.strokeRect(10, 10, W - 20, H - 20);
+    g.fillStyle = '#f0c048'; g.font = `900 78px ${JP}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('朕銭ガシャ', W / 2 + 40, H / 2 + 4);
+    g.fillStyle = '#dcbc55'; g.strokeStyle = INK; g.lineWidth = 8; g.beginPath(); g.arc(96, H / 2, 46, 0, 7); g.fill(); g.stroke(); g.fillStyle = INK; g.fillRect(80, H / 2 - 16, 32, 32);
+  }, 640, 150, 12.5, y + 4.0, -9.05, 3.4, .8, '+z');
+  facade();
+}
 function drawMonitor(t) {
   if (!monitor) return;
   const g = monitor.ctx, W = 768, H = 240;
@@ -1049,6 +1301,7 @@ function placeNpcs() {
   npcs.push({ pos: new Vec3(19.3, 0, -.6), floor: 0, thing: true, talk: { name: '救急車', kind: 'ambulance' } });
   npcs.push({ pos: new Vec3(3.6, FH, -6.4), floor: 1, thing: true, talk: { name: '結成ボード', kind: 'form' } });
   npcs.push({ pos: new Vec3(17.4, FH, -2.6), floor: 1, thing: true, talk: { name: '募集端末', kind: 'multi' } });
+  npcs.push({ pos: new Vec3(12.5, RY, -6.2), floor: 2, thing: true, talk: { name: '朕銭ガシャ', kind: 'gacha' } });
 }
 let ring = null;
 function setPlayer(key) {
@@ -1078,7 +1331,9 @@ function animate(a, moving, run, dt, t) {
   if (a.ring) a.ring.setLocalPosition(a.pos.x, a.pos.y + .03, a.pos.z);
 }
 let time = 0;
-function floorOf(y) { return y > FH * .5 ? 1 : 0; }
+function floorOf(y) { return y > FH * 1.5 ? 2 : y > FH * .5 ? 1 : 0; }
+const FLOOR_TAG = ['1F<small>受付・工房・出動口</small>', '2F<small>指令室</small>', '屋上<small>朕銭ガシャ</small>'];
+const BG_IN = new Color(.09, .085, .08), BG_SKY = new Color(.62, .78, .9);
 app.on('update', (dt) => {
   if (titleOn || !player) return;
   dt = Math.min(dt, .05); time += dt;
@@ -1124,8 +1379,10 @@ app.on('update', (dt) => {
   const fl = floorOf(p.y + .2);
   if (fl !== state.floor || !floorEl.dataset.init) {
     state.floor = fl; floorEl.dataset.init = 1;
-    floors[0].enabled = fl === 0; floors[1].enabled = fl === 1;
-    floorEl.innerHTML = fl === 0 ? '1F<small>受付・工房・出動口</small>' : '2F<small>指令室</small>';
+    floors.forEach((f, i) => f.enabled = i === fl);
+    stairsG.enabled = fl <= 1; stairs2G.enabled = fl >= 1;
+    camera.camera.clearColor = fl === 2 ? BG_SKY : BG_IN;
+    floorEl.innerHTML = FLOOR_TAG[fl];
   }
   for (const a of actors) a.root.enabled = a.floor === fl;
   // 話しかけられる相手
@@ -1133,16 +1390,24 @@ app.on('update', (dt) => {
   for (const n of npcs) { if (n.floor !== fl) continue; const d = Math.hypot(n.pos.x - p.x, n.pos.z - p.z) - (n.fixed || n.thing ? .9 : 0); if (d < best) { best = d; nearNpc = n; } }
   promptEl.classList.toggle('on', !!nearNpc && !state.ui);
   if (nearNpc) promptEl.innerHTML = `<span class="key">Enter</span>${nearNpc.talk.name}${nearNpc.thing ? 'を調べる' : 'に話しかける'}`;
-  // カメラ（ラフの絵のような斜め見下ろし。今いる階を見る）
+  // カメラ（ラフの絵のような斜め見下ろし。今いる階を見る）。ガシャの演出中は演出のカメラ
+  if (GA.on) gaUpdate(dt); else {
   const tx = Math.max(7, Math.min(RW - 7, p.x)), ty = fl * FH + 1.0, tz = -5.4;
   const k = 1 - Math.exp(-dt * 4);
   cam.x += (tx - cam.x) * k; cam.y += (ty - cam.y) * (1 - Math.exp(-dt * 3)); cam.z = tz;
   const pr = VIEW.pitch * Math.PI / 180, dist = VIEW.dist * VIEW.zoom * Math.max(1, 1.5 / (canvas.clientWidth / Math.max(1, canvas.clientHeight)));
   camera.setPosition(cam.x, cam.y + Math.sin(pr) * dist, cam.z + Math.cos(pr) * dist);
   camera.lookAt(cam.x, cam.y, cam.z);
+  }
   // 救急車の赤色灯
   ambLights.forEach((m, i) => { m.emissiveIntensity = .3 + (Math.sin(time * 9 + i * Math.PI) > 0 ? 2.2 : 0); m.update(); });
   if (fl === 1 && Math.floor(time * 20) % 2 === 0) drawMonitor(time * 1000);
+  // 朕銭ガシャ：炉の火がゆらぎ、てっぺんの朕銭が回る
+  if (fl === 2 && gachaFx) {
+    gachaFx.coin.setLocalEulerAngles(0, time * 80, 0);
+    gachaFx.glow.emissiveIntensity = 1.2 + Math.sin(time * 6) * .3 + Math.sin(time * 13.7) * .15; gachaFx.glow.update();
+    gachaFx.ember.emissiveIntensity = 1 + Math.sin(time * 4.3) * .4; gachaFx.ember.update();
+  }
   player.floor = fl;
   uiTick(dt);
 });
@@ -1163,12 +1428,13 @@ function startGame() {
 tcv.addEventListener('click', startGame);
 async function boot() {
   await Promise.all(Object.keys(window.FACES).map(k => new Promise(res => { const im = new Image(); im.onload = res; im.onerror = res; im.src = window.FACES[k]; F[k] = im; })));
-  build1F(); build2F(); stairs(); root = app.root;
+  build1F(); build2F(); buildRoof(); stairs(); stairs2(); root = app.root;
+  await loadGachaData();
   placeNpcs(); setPlayer(crewByKey[save.team[0]] ? save.team[0] : 'homura');
   uiInit();
   requestAnimationFrame(titleLoop);
   document.body.dataset.ready = '1';
-  if (new URLSearchParams(location.search).has('debug')) window.__dbg = { app, get player() { return player; }, state, startGame, setPlayer, FH, npcs, openPad, openScreen, interact, save, NET };
+  if (new URLSearchParams(location.search).has('debug')) window.__dbg = { app, get player() { return player; }, state, startGame, setPlayer, FH, npcs, openPad, openScreen, interact, save, NET, GA };
 }
 
 // =====================================================================
@@ -1179,20 +1445,37 @@ function newSave() {
   return {
     v: 2, name: '新人隊員', coins: 2000, team: ['homura', 'berserker', 'nagata', 'shimarin'], tactic: 0,
     chars: {}, equips: [], nextId: 1, mats: {}, items: {}, set: [null, null], quest: null,
-    seen: {}, crafted: {}, settings: { bgm: 3, se: 4, quality: 1, zoom: 1, text: 1, guide: 1 },
+    seen: {}, crafted: {}, settings: { bgm: 3, se: 4, quality: 1, zoom: 1, text: 1, guide: 1, demo: 1 },
     daily: '', gift: false, play: 0,
+    own: Object.fromEntries(STARTERS.map(k => [k, 1])), gacha: 0,
   };
 }
 const save = (() => {
   let s = null;
   try { s = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { }
+  const oldSave = !!s && !s.own;          // ガシャができる前のセーブ
   s = Object.assign(newSave(), s || {});
   s.settings = Object.assign(newSave().settings, s.settings || {});
   for (const c of CREW) s.chars[c.key] = Object.assign({ lv: 1, eq: null }, s.chars[c.key] || {});
-  s.team = (s.team || []).map(k => crewByKey[k] ? k : null); while (s.team.length < 4) s.team.push(null);
+  // 前のセーブでは全員使えたので、育てた・装備した・編成に入れた隊員はそのまま仲間にしておく
+  if (oldSave) for (const c of CREW) { const cs = s.chars[c.key]; if (cs.lv > 1 || cs.eq != null || (s.team || []).includes(c.key)) s.own[c.key] = 1; }
+  for (const k of STARTERS) s.own[k] = 1;
+  s.team = (s.team || []).map(k => crewByKey[k] && s.own[k] ? k : null); while (s.team.length < 4) s.team.push(null);
   if (!s.team[0]) s.team[0] = 'homura';
   return s;
 })();
+// デモプレイ用：せっていの「朕銭（デモ用）」が「むげん」のあいだは、朕銭がへらない（表示は ∞）。
+// 本当の朕銭は realCoins にとっておき、セーブにもそちらを書く
+const DEMO_COINS = 99999999;
+let realCoins = save.coins;
+Object.defineProperty(save, 'coins', {
+  get() { return save.settings.demo ? DEMO_COINS : realCoins; },
+  set(v) { if (!save.settings.demo) realCoins = v; },
+  enumerable: true, configurable: true,
+});
+Object.defineProperty(save, 'toJSON', { value() { const o = { ...this }; o.coins = realCoins; return o; }, enumerable: false });
+const owned = (k) => !!save.own[k];
+const ownedCrew = () => CREW.filter(c => owned(c.key));
 let saveTimer = 0;
 function writeSave() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { } }
 function dirty() { clearTimeout(saveTimer); saveTimer = setTimeout(writeSave, 300); }
@@ -1327,12 +1610,12 @@ function buildPad() {
 function padSelect(i) { if (padSel !== i) Snd.move(); padSel = i; [...$('padTiles').children].forEach((t, j) => t.classList.toggle('sel', j === i)); $('padDesc').textContent = PAD_TILES[i][2]; }
 function padAlerts() {
   // いくせい：朕銭が足りる隊員がいれば「!」
-  const canUp = CREW.some(c => chOf(c.key).lv < 99 && save.coins >= lvCost(chOf(c.key).lv));
+  const canUp = ownedCrew().some(c => chOf(c.key).lv < 99 && save.coins >= lvCost(chOf(c.key).lv));
   const tiles = $('padTiles').children;
   tiles[1].querySelector('.alert').style.display = canUp ? '' : 'none';
   tiles[5].querySelector('.alert').style.display = NET.on ? '' : 'none';
 }
-function updateCoins() { document.querySelectorAll('.coinsTxt').forEach(e => e.textContent = fmt(save.coins)); }
+function updateCoins() { document.querySelectorAll('.coinsTxt').forEach(e => e.textContent = save.settings.demo ? '∞' : fmt(save.coins)); }
 function openPad() { state.ui = 'pad'; Snd.menu(); $('pad').classList.add('on'); $('padHome').style.display = 'flex'; $('padScreen').style.display = 'none'; S.cur = null; updateCoins(); padAlerts(); padSelect(padSel); }
 function closePad() { $('pad').classList.remove('on'); state.ui = null; S.cur = null; stopHold(); writeSave(); }
 
@@ -1357,7 +1640,7 @@ function renderScreen() {
   m.querySelectorAll('[data-act]').forEach(bindAct); $('scrFoot').querySelectorAll('[data-act]').forEach(bindAct);
   s.after && s.after();
   const items = navItems();
-  setFocus(items.find(e => (e.dataset.act || e.id) === S.focusKey) || items[0], true);
+  setFocus(items.find(e => (e.dataset.act || e.id) === S.focusKey) || (S.cur === 'gacha' && items.find(e => e.dataset.act === 'gcSpin')) || items[0], true);
 }
 function bindAct(el) {
   const [act, ...args] = el.dataset.act.split(':');
@@ -1425,10 +1708,10 @@ function whoPanel(key, o = {}) {
       <div class="moves">${c.moves.map((m, i) => `<div class="mv">${icSk(i, c.role, 28)}<span class="t">${MOVE_TYPES[i]}</span>${m}<span class="lv">Lv${ml}</span></div>`).join('')}</div>
     </div></div>`;
 }
-const faceImg = (key, size, lock) => `<span class="face" style="width:${size}px;height:${size}px"><img src="${F[crewByKey[key].img].src}"></span>`;
+const faceImg = (key, size, lock) => `<span class="face${lock ? ' lock' : ''}" style="width:${size}px;height:${size}px"><img src="${F[crewByKey[key].img].src}"></span>`;
 const roleTag = (r) => `<span class="role" style="background:${ROLE[r][1]}">${r}</span>`;
 const B = (act, label, key = '', cls = '') => `<button class="btn ${cls}" data-act="${act}">${key ? `<span class="key">${key}</span>` : ''}${label}</button>`;
-const charStep = (cur, d) => { const i = CREW.findIndex(c => c.key === cur); return CREW[(i + d + CREW.length) % CREW.length].key; };
+const charStep = (cur, d) => { const L = ownedCrew(), i = L.findIndex(c => c.key === cur); return L[(i + d + L.length) % L.length].key; };
 
 // =====================================================================
 //  なかま（メンバー編成）
@@ -1461,8 +1744,9 @@ SCREENS.nakama = () => {
           <div class="mono">${s.key ? crewByKey[s.key].role + '・Lv' + (s.lv ?? chOf(s.key).lv) : '—'}${NET.on && s.kind !== 'cpu' ? (s.ready ? ' ✔OK' : ' 準備中') : ''}</div></div>`).join('')}</div>
       </div>
       <div class="card" style="padding:10px 12px;display:flex;flex-direction:column;min-height:0">
-        <div style="display:flex;gap:6px;align-items:center"><span class="lbl">隊員名簿</span><span style="margin-left:auto"></span>${[['all', '全員'], ['A', 'A'], ['T', 'T'], ['R', 'R'], ['H', 'H']].map(([f, l]) => `<button class="pill ${N.filter === f ? 'on' : ''}" data-act="filter:${f}">${l}</button>`).join('')}</div>
-        <div class="rows">${list.map(c => { const ti = save.team.indexOf(c.key); return `<div class="row ${N.pick === c.key ? 'on' : ''}" data-act="pick:${c.key}">
+        <div style="display:flex;gap:6px;align-items:center"><span class="lbl">隊員名簿</span><span class="mono" style="margin-left:6px">仲間 ${ownedCrew().length}/${CREW.length}</span><span style="margin-left:auto"></span>${[['all', '全員'], ['A', 'A'], ['T', 'T'], ['R', 'R'], ['H', 'H']].map(([f, l]) => `<button class="pill ${N.filter === f ? 'on' : ''}" data-act="filter:${f}">${l}</button>`).join('')}</div>
+        <div class="rows">${list.map(c => { const ti = save.team.indexOf(c.key); if (!owned(c.key)) return `<div class="row unk" data-act="locked">
+          <span class="mono" style="width:60px"></span>${faceImg(c.key, 30, true)}<b>？？？</b><span style="margin-left:auto" class="small">屋上のガシャで仲間に</span>${roleTag(c.role)}<span class="mono" style="width:54px;text-align:right">${'★'.repeat(CREW_RARE[c.key])}</span></div>`; return `<div class="row ${N.pick === c.key ? 'on' : ''}" data-act="pick:${c.key}">
           <span class="mono" style="width:60px">${ti === 0 ? '★リーダー' : ti > 0 ? 'CPU' : ''}</span>${faceImg(c.key, 30)}<b>${c.name}</b><span style="margin-left:auto"></span>${roleTag(c.role)}<span class="mono" style="width:54px;text-align:right">Lv${chOf(c.key).lv}</span></div>`; }).join('')}</div>
       </div>
     </div>`,
@@ -1475,8 +1759,10 @@ const ACT = {
   slot(i) { S.nk.slot = +i; const k = teamView()[+i].key; if (k) S.nk.pick = k; Snd.move(); renderScreen(); },
   filter(f) { S.nk.filter = f; Snd.move(); renderScreen(); },
   pick(k) { S.nk.pick = k; Snd.move(); renderScreen(); },
+  locked() { Snd.err(); toast('まだ仲間になっていない隊員です。屋上の朕銭ガシャで仲間にしよう'); },
   swap() {
     const N = S.nk, k = N.pick, i = N.slot;
+    if (!owned(k)) { Snd.err(); return; }
     if (NET.on && i > 0) {
       if (!NET.host || teamView()[i].kind !== 'cpu') { Snd.err(); toast('オンラインでは、ほかの隊員の枠は変えられません'); return; }
       if (NET.room.members.some(m => m.ch === k)) { Snd.err(); toast('その隊員は、ほかの人が使っています'); return; }
@@ -1694,6 +1980,7 @@ const SET_ROWS = [
   ['zoom', 'カメラの距離', ['近い', 'ふつう', '遠い'], '本部を見下ろすカメラの距離を変えます'],
   ['text', '文字の速さ', ['おそい', 'ふつう', 'はやい'], '会話の文字が出る速さを変えます'],
   ['guide', '操作ガイド', ['表示しない', '表示する'], '画面の下の操作説明を出すかどうかを変えます'],
+  ['demo', '朕銭（デモ用）', ['ふつう', 'むげん'], 'デモプレイ用。「むげん」のあいだは朕銭がへりません（ふつうにもどすと、もとの朕銭にもどります）'],
 ];
 SCREENS.settei = () => ({
   title: 'せってい', sub: 'CONFIG / 音量・画質・操作・データ', cols: '1fr 320px',
@@ -1818,6 +2105,551 @@ Object.assign(ACT, {
   qAccept() { save.quest = QUESTS[S.qs.sel].key; Snd.ok(); toast(`「${QUESTS[S.qs.sel].name}」を受理した`); dirty(); netRoomQuest(); renderScreen(); },
   qCancel() { save.quest = null; Snd.back(); dirty(); renderScreen(); },
 });
+
+// =====================================================================
+//  朕銭ガシャ（屋上）
+//  投入する朕銭の量で「大当たり確率」が変わる。設定は data/fwb-gacha.json（GDATA）
+//    大当たり：jackpotRate(投入量)%　→ 目玉キャラ・激レアアイテム（黒カプセル確定）
+//    中当たり：(100 − 大当たり)% × rareShare　→ 金・赤カプセル
+//    小当たり：のこり　→ 青・灰カプセル（アイテム・素材）
+//  1回まわすと、投入した朕銭と「きょうのガシャ回数」を1つ使う
+//  状態：idle（投入・確率変動）→ crank → eject（カプセル排出・色の示唆）→ open（開封・カットイン）→ result
+// =====================================================================
+let GDATA = null;
+async function loadGachaData() {
+  try { const r = await fetch('data/fwb-gacha.json', { cache: 'no-cache' }); GDATA = await r.json(); }
+  catch (e) { GDATA = null; console.warn('ガシャの設定が読めませんでした', e); }
+}
+const TIERS = ['normal', 'rare', 'jackpot'];          // 小当たり・中当たり・大当たり（並びはランクの順）
+// 投入できる量の一覧（設定の steps から作る）
+function investLadder() {
+  const I = GDATA.invest, out = [I.min]; let v = I.min;
+  for (const [upto, st] of I.steps) while (v + st <= upto && v + st <= I.max) { v += st; out.push(v); }
+  return out;
+}
+// 投入量 → 大当たり確率（%・小数第1位）
+function jackpotRate(amt) {
+  const I = GDATA.invest, C = GDATA.jackpotCurve;
+  const x = Math.max(0, Math.min(1, (amt - I.min) / (I.max - I.min)));
+  return Math.round((C.minRate + (C.maxRate - C.minRate) * Math.pow(x, C.exponent)) * 10) / 10;
+}
+// [小当たり, 中当たり, 大当たり] の確率（%）
+function tierRates(amt) {
+  const j = jackpotRate(amt), r = Math.round((100 - j) * GDATA.rareShare * 10) / 10;
+  return [Math.max(0, Math.round((100 - j - r) * 10) / 10), r, j];
+}
+const pct1 = (p) => p.toFixed(1) + '%';
+const pickW = (arr, w) => { let x = Math.random() * w.reduce((a, b) => a + b, 0); for (let i = 0; i < arr.length; i++) { x -= w[i]; if (x < 0) return arr[i]; } return arr[arr.length - 1]; };
+// きょうのガシャ回数
+function gachaToday() { if (!save.gday || save.gday.d !== today()) save.gday = { d: today(), n: 0 }; return save.gday; }
+const gachaLeft = () => save.settings.demo ? Infinity : Math.max(0, GDATA.dailyLimit - gachaToday().n);
+// 抽選
+function gcRoll(amt) {
+  const R = tierRates(amt); let x = Math.random() * 100, ti = 2;
+  if (x < R[2]) ti = 2; else if (x < R[2] + R[1]) ti = 1; else ti = 0;
+  const tier = TIERS[ti], T = GDATA.tiers[tier];
+  const cap = pickW(T.capsules, T.capsules.map(c => c.weight)).color;
+  const pool = T.pool.filter(p => p.type !== 'char' || crewByKey[p.id]);
+  const e = pickW(pool, pool.map(p => p.type === 'char' && !owned(p.id) ? p.weight * GDATA.newCharBonus : p.weight));
+  const res = { tier, ti, cap, rate: R[2] };
+  if (e.type === 'char') {
+    const c = crewByKey[e.id]; Object.assign(res, { ch: c.key, name: c.name });
+    if (!owned(c.key)) { save.own[c.key] = 1; res.isNew = true; }
+    else {
+      const cs = chOf(c.key), up = Math.min(T.duplicate.lv, 99 - cs.lv); cs.lv += up; res.lv = up;
+      if (up < T.duplicate.lv) { save.coins += T.duplicate.coinsIfMax; res.coins = T.duplicate.coinsIfMax; }
+    }
+  } else if (e.type === 'item') {
+    const it = itemByKey[e.id]; save.items[it.key] = (save.items[it.key] || 0) + e.count;
+    Object.assign(res, { it: it.key, n: e.count, name: it.name, src: iconURL('it', it.key, 64, '#cdbf92') });
+  } else {
+    const id = e.type === 'mat' ? e.id : (() => { const en = ENEMIES[Math.floor(Math.random() * ENEMIES.length)]; return e.rarity <= 3 ? en.key + e.rarity : en.key + 1; })();
+    const m = MATS[id]; save.mats[id] = have(id) + e.count;
+    Object.assign(res, { mat: id, n: e.count, name: m.name, src: iconURL('mat', m.draw, 64, RAR_BG[m.r - 1], m.r) });
+  }
+  return res;
+}
+S.gc = { amt: 100, shown: .1, res: null, last: null };
+function gcResultText(res) {
+  if (!res) return '';
+  const lab = GDATA.tiers[res.tier].label;
+  if (!res.ch) return `${lab}：${res.name} ×${res.n}`;
+  if (res.isNew) return `${lab}：${res.name}が仲間になった！ 2F の結成ボードでメンバーに入れられます`;
+  return `${lab}：${res.name}（かさなり）${res.lv ? ` Lv ＋${res.lv}` : ''}${res.coins ? ` 朕銭 ＋${fmt(res.coins)}` : ''}`;
+}
+SCREENS.gacha = () => {
+  if (!GDATA) return { title: '朕銭ガシャ', html: '<div class="card"><div class="empty">ガシャの設定（data/fwb-gacha.json）が読めませんでした。GitHub Pages かローカルサーバーで開いてください</div></div>', desc: '', foot: '' };
+  const G = S.gc, R = tierRates(G.amt), L = investLadder(), gi = Math.max(0, L.indexOf(G.amt)), day = gachaToday();
+  const faces = (tier) => GDATA.tiers[tier].pool.filter(p => p.type === 'char' && crewByKey[p.id]).map(p => faceImg(p.id, 22, !owned(p.id))).join('');
+  const rows = [[2, `<i>●</i> 大当たり`, faces('jackpot') + '<span>激レアアイテム</span>'], [1, `<i>●</i> 中当たり`, faces('rare')], [0, `<i>●</i> 小当たり`, 'アイテム・素材']];
+  const capDot = (tier) => GDATA.tiers[tier].capsules.map(c => `<span class="capdot" style="background:${GDATA.capsules[c.color].hex}" title="${GDATA.capsules[c.color].name}"></span>`).join('');
+  return {
+    title: '朕銭ガシャ', sub: 'GACHA / 投入した朕銭で大当たり確率が変わる', cols: '1.2fr 1fr',
+    html: `<div class="card gcStage"><div class="gcBanner"><small>大当たり確率</small><b id="gcMul">${pct1(G.shown).replace('%', '')}</b><span>%</span></div><canvas id="gcCv"></canvas></div>
+      <div class="card" style="padding:10px 12px;display:flex;flex-direction:column;min-height:0">
+        <div style="display:flex;align-items:center;gap:6px"><span class="lbl">投入する朕銭</span><span style="margin-left:auto"></span><button class="pill" data-act="gcMin">最小</button><button class="pill" data-act="gcMax">MAX</button></div>
+        <div class="gcAmt"><button class="gcArrow" data-act="hold:gcDown">◀</button><div class="val"><span class="coin"></span><span id="gcAmt">${fmt(G.amt)}</span></div><button class="gcArrow" data-act="hold:gcUp">▶</button></div>
+        <input type="range" class="gcRange" id="gcRange" min="0" max="${L.length - 1}" step="1" value="${gi}">
+        <div class="mono" style="display:flex;justify-content:space-between"><span>${fmt(GDATA.invest.min)}</span><span>${fmt(GDATA.invest.max)}</span></div>
+        <div class="gcRates">${rows.map(([r, t, f]) => `<div class="gcRate r${r + 1}"><span class="t">${t} ${capDot(TIERS[r])}</span><span class="fc">${f}</span><span class="pc" id="gcP${r}">${pct1(R[r])}</span></div>`).join('')}</div>
+        <div style="margin-top:auto;padding-top:8px;display:flex;flex-direction:column;gap:6px">
+          <button class="btn go huge" data-act="gcSpin"><span class="key">Enter</span>ガシャをまわす</button>
+          <div class="mono" style="text-align:center">きょうのガシャ ${save.settings.demo ? '∞（デモ）' : `のこり ${gachaLeft()}/${GDATA.dailyLimit}`}　／　仲間 ${ownedCrew().length}/${CREW.length}　／　朕銭 <span class="coinsTxt"></span></div>
+        </div>
+      </div>`,
+    desc: G.last ? '前の結果：' + gcResultText(G.last) : `投入する朕銭が多いほど大当たり確率が上がります（${fmt(GDATA.invest.min)}で${pct1(jackpotRate(GDATA.invest.min))}・500で${pct1(jackpotRate(500))}・${fmt(GDATA.invest.max)}で${pct1(jackpotRate(GDATA.invest.max))}）。黒いカプセルが出たら大当たり確定！`,
+    foot: B('hold:gcDown', 'へらす', '◀') + B('hold:gcUp', 'ふやす', '▶') + B('gcMax', 'MAX', 'Y'),
+    after() {
+      const rg = $('gcRange');
+      rg.oninput = () => gcSetAmt(investLadder()[+rg.value], true);
+      rg.onchange = () => rg.blur();
+      gcSync();
+      if (!gcRaf) gcRaf = requestAnimationFrame(gcLoop);
+    },
+  };
+};
+function gcSync() {
+  const G = S.gc; if (!$('gcAmt') || !GDATA) return;
+  const R = tierRates(G.amt), L = investLadder(), gi = L.indexOf(G.amt);
+  $('gcAmt').textContent = fmt(G.amt);
+  const rg = $('gcRange'); rg.value = gi; rg.style.setProperty('--p', (gi / (L.length - 1) * 100) + '%');
+  for (let r = 0; r < 3; r++) $('gcP' + r).textContent = pct1(R[r]);
+  $('gcAmt').parentElement.style.color = save.coins >= G.amt ? '' : '#e0503c';
+}
+function gcSetAmt(v, fromRange) {
+  const G = S.gc, L = investLadder();
+  v = L.reduce((a, b) => Math.abs(b - v) < Math.abs(a - v) ? b : a, L[0]);
+  if (v === G.amt) { if (!fromRange) stopHold(); return; }
+  G.amt = v; Snd.move();
+  const b = document.querySelector('.gcBanner'); if (b) { b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
+  gcSync();
+}
+const gcStep = (d) => { const L = investLadder(), i = L.indexOf(S.gc.amt); gcSetAmt(L[Math.max(0, Math.min(L.length - 1, i + d))]); };
+Object.assign(ACT, {
+  gcUp() { gcStep(1); },
+  gcDown() { gcStep(-1); },
+  gcMin() { gcSetAmt(GDATA.invest.min); },
+  gcMax() { const L = investLadder(); gcSetAmt([...L].reverse().find(v => v <= save.coins) ?? L[0]); },
+  gcSpin() {
+    const G = S.gc;
+    if (GA.on || !GDATA) return;
+    if (!gachaFx || state.floor !== 2) { Snd.err(); toast('屋上の朕銭ガシャの前で回してください'); return; }
+    if (gachaLeft() <= 0) { Snd.err(); toast('きょうのガシャは、もう回せません。また明日！'); return; }
+    if (save.coins < G.amt) { Snd.err(); toast('朕銭が足りません'); return; }
+    save.coins -= G.amt; save.gacha = (save.gacha || 0) + 1;
+    if (!save.settings.demo) gachaToday().n++;
+    G.res = gcRoll(G.amt);
+    writeSave(); updateCoins();
+    gaStart(G.res);
+  },
+});
+let gcRaf = 0;
+function gcLoop(now) {
+  if (S.cur !== 'gacha' || !$('pad').classList.contains('on')) { gcRaf = 0; return; }
+  // フェーズ1：「大当たり確率」の数字が、なめらかに増えたり減ったりする
+  const G = S.gc, target = GDATA ? jackpotRate(G.amt) : 0;
+  G.shown += (target - G.shown) * .18; if (Math.abs(target - G.shown) < .05) G.shown = target;
+  const m = $('gcMul'); if (m) m.textContent = G.shown.toFixed(1);
+  const cv = $('gcCv'); if (cv) gcDraw(cv, now);
+  gcRaf = requestAnimationFrame(gcLoop);
+}
+// ---- ガシャの絵（キャンバスに太い線で描く） ----
+function gcDraw(cv, now) {
+  const G = S.gc, dpr = Math.min(2, devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
+  if (!W || !H) return;
+  if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const t = now / 1000, e = -1;
+  const tcol = () => '#ff9a2e';
+  // 背景：夕方の屋上
+  const sky = g.createLinearGradient(0, 0, 0, H * .7); sky.addColorStop(0, '#6f9fbe'); sky.addColorStop(.55, '#e8c98a'); sky.addColorStop(1, '#ef9f5c');
+  g.fillStyle = sky; g.fillRect(0, 0, W, H);
+  g.fillStyle = 'rgba(255,250,235,.55)';
+  for (let i = 0; i < 4; i++) { const x = ((i * 170 + t * 8) % (W + 200)) - 100, y = 60 + (i % 2) * 40 + i * 6; g.beginPath(); g.ellipse(x, y, 60, 14, 0, 0, 7); g.ellipse(x + 34, y - 8, 36, 12, 0, 0, 7); g.fill(); }
+  g.fillStyle = '#8c6f68';
+  for (let i = 0; i < 9; i++) { const bw = 50 + (i * 37) % 60, bh = 50 + (i * 53) % 90; g.fillRect(i * W / 8 - 20, H * .62 - bh, bw, bh); }
+  g.fillStyle = '#7a5e58'; for (let i = 0; i < 9; i++) for (let j = 0; j < 3; j++) g.fillRect(i * W / 8 - 8 + (j % 2) * 18, H * .62 - 30 - j * 22, 8, 9);
+  // ホース乾燥塔のシルエット（左）
+  g.strokeStyle = '#8a3a24'; g.lineWidth = 4; const tx = W * .1, tw = 34;
+  for (const x of [tx, tx + tw]) { g.beginPath(); g.moveTo(x, H * .62); g.lineTo(x, H * .08); g.stroke(); }
+  g.lineWidth = 2; for (let y = H * .62; y > H * .1; y -= 30) { g.beginPath(); g.moveTo(tx, y); g.lineTo(tx + tw, y - 30); g.moveTo(tx + tw, y); g.lineTo(tx, y - 30); g.moveTo(tx, y); g.lineTo(tx + tw, y); g.stroke(); }
+  // 屋上の床と、さび色の手すり
+  g.fillStyle = '#9d9e92'; g.fillRect(0, H * .66, W, H); g.strokeStyle = 'rgba(40,40,30,.25)'; g.lineWidth = 2;
+  for (let x = -W; x < W * 2; x += 70) { g.beginPath(); g.moveTo(W / 2 + (x - W / 2) * .5, H * .66); g.lineTo(x, H); g.stroke(); }
+  g.fillStyle = '#d4d0c5'; g.fillRect(0, H * .62, W, H * .04); g.strokeStyle = INK; g.lineWidth = 3; g.strokeRect(-4, H * .62, W + 8, H * .04);
+  g.strokeStyle = '#a5452a'; g.lineWidth = 5; for (const y of [H * .5, H * .56]) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+  for (let x = 20; x < W; x += 80) { g.beginPath(); g.moveTo(x, H * .5); g.lineTo(x, H * .62); g.stroke(); }
+  // ---- 機械 ----
+  const s = Math.min(W / 440, H * .9 / 410), cx = W / 2, base = H * .95;
+  const spin = -1, shake = 0;   // 回す演出は3D（gaUpdate）。ここは待っているときの絵だけ
+  let heat = .85 + Math.sin(t * 6) * .1 + Math.sin(t * 13.7) * .06;
+  const hot = e >= 1.0 && e < 90 ? tcol() : '#ff9a2e';
+  g.save(); g.translate(cx + shake, base); g.scale(s, s);
+  g.lineJoin = 'round'; g.lineCap = 'round'; g.strokeStyle = INK;
+  g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(0, 0, 130, 14, 0, 0, 7); g.fill();
+  // ちょうちん
+  g.strokeStyle = INK; g.lineWidth = 2; g.beginPath(); g.moveTo(-190, -300); g.quadraticCurveTo(0, -270, 190, -300); g.stroke();
+  for (const x of [-150, -75, 75, 150]) {
+    const yy = -300 + 30 * (1 - (x / 190) ** 2) + 20, sw = Math.sin(t * 1.6 + x) * 3;
+    g.save(); g.translate(x + sw, yy); g.shadowColor = '#ff6a3a'; g.shadowBlur = 18; g.fillStyle = '#d9472f'; g.lineWidth = 3;
+    g.beginPath(); g.ellipse(0, 0, 15, 20, 0, 0, 7); g.fill(); g.shadowBlur = 0; g.stroke();
+    g.strokeStyle = 'rgba(40,10,0,.4)'; g.lineWidth = 1.5; for (const k of [-8, 0, 8]) { g.beginPath(); g.ellipse(0, k, 14 - Math.abs(k) * .4, 2, 0, 0, Math.PI); g.stroke(); }
+    g.fillStyle = INK; g.fillRect(-6, -24, 12, 5); g.fillRect(-6, 19, 12, 5); g.restore();
+  }
+  g.strokeStyle = INK;
+  // 台座（黄黒しま）
+  g.lineWidth = 5; g.save(); g.beginPath(); g.roundRect(-112, -36, 224, 36, 6); g.fillStyle = '#cfae45'; g.fill(); g.clip();
+  g.fillStyle = INK; for (let x = -150; x < 130; x += 26) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 13, 0); g.lineTo(x + 49, -36); g.lineTo(x + 36, -36); g.fill(); }
+  g.restore(); g.beginPath(); g.roundRect(-112, -36, 224, 36, 6); g.stroke();
+  // 本体（鉄の釜）
+  const bg = g.createLinearGradient(-90, 0, 90, 0); bg.addColorStop(0, '#231d1a'); bg.addColorStop(.35, '#5e5049'); bg.addColorStop(.7, '#3a302c'); bg.addColorStop(1, '#1b1614');
+  rr(g, -90, -244, 180, 210, 20, bg);
+  // ドーム
+  g.beginPath(); g.moveTo(-84, -240); g.bezierCurveTo(-84, -330, 84, -330, 84, -240); g.closePath(); g.fillStyle = bg; g.fill(); g.lineWidth = 5; g.stroke();
+  g.save(); g.globalAlpha = .18; g.fillStyle = '#fff'; g.beginPath(); g.ellipse(-30, -280, 22, 12, -.4, 0, 7); g.fill(); g.restore();
+  // 真ちゅうの帯とびょう
+  for (const y of [-74, -246]) rr(g, -95, y, 190, 16, 5, '#c9a545');
+  g.lineWidth = 2.5; for (let x = -76; x <= 76; x += 25) { circ(g, x, -66, 3.6, '#ead08a'); circ(g, x, -238, 3.6, '#ead08a'); }
+  // 煙突と煙
+  g.lineWidth = 4; rr(g, 34, -350, 24, 70, 3, '#3a302c'); rr(g, 29, -358, 34, 12, 3, '#c9a545');
+  g.save(); g.shadowColor = '#ff7a3a'; g.shadowBlur = 14 * heat; g.fillStyle = '#ff7a3a'; g.beginPath(); g.ellipse(46, -360, 12, 4, 0, 0, 7); g.fill(); g.restore();
+  const puffs = spin >= 0 ? 9 : 5, spd = spin >= 0 ? 1.4 : .35;
+  for (let i = 0; i < puffs; i++) {
+    const ph = (t * spd + i / puffs) % 1, x = 46 + Math.sin(t * 2 + i * 1.7) * 6 + ph * 40, y = -368 - ph * 110, r = 7 + ph * 18;
+    g.fillStyle = `rgba(235,230,220,${.5 * (1 - ph)})`; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+  }
+  // てっぺんの朕銭（回る）
+  const cs = Math.cos(t * (spin >= 0 ? 14 : 2.4));
+  g.save(); g.translate(-18, -332); g.scale(Math.max(.08, Math.abs(cs)), 1); g.lineWidth = 4;
+  circ(g, 0, 0, 26, cs > 0 ? '#dcbc55' : '#b39436'); g.fillStyle = INK; g.fillRect(-8, -8, 16, 16); g.restore();
+  // 炉の窓（光る）
+  g.save(); g.globalCompositeOperation = 'lighter';
+  const halo = g.createRadialGradient(0, -158, 10, 0, -158, 120 + heat * 40); halo.addColorStop(0, hot); halo.addColorStop(1, 'rgba(0,0,0,0)');
+  g.globalAlpha = Math.min(.8, .3 * heat); g.fillStyle = halo; g.beginPath(); g.arc(0, -158, 170, 0, 7); g.fill(); g.restore();
+  const fire = g.createRadialGradient(0, -150, 4, 0, -158, 56); fire.addColorStop(0, '#fff6c8'); fire.addColorStop(.45, hot); fire.addColorStop(1, '#6a1a0c');
+  g.lineWidth = 5; circ(g, 0, -158, 54, fire);
+  // 火のうず（回すと速くなる）
+  g.save(); g.beginPath(); g.arc(0, -158, 50, 0, 7); g.clip(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = 'rgba(255,240,180,.55)'; g.lineWidth = 6;
+  for (let i = 0; i < 3; i++) { const a = t * (spin >= 0 ? 9 : 1.8) + i * 2.1; g.beginPath(); g.arc(0, -158, 18 + i * 11, a, a + 1.6); g.stroke(); }
+  g.restore();
+  g.lineWidth = 6; for (const dx of [-22, 0, 22]) { g.beginPath(); g.moveTo(dx, -206); g.lineTo(dx, -110); g.stroke(); }
+  g.lineWidth = 13; g.strokeStyle = '#c9a545'; g.beginPath(); g.arc(0, -158, 58, 0, 7); g.stroke();
+  g.lineWidth = 4; g.strokeStyle = INK; g.beginPath(); g.arc(0, -158, 65, 0, 7); g.stroke(); g.beginPath(); g.arc(0, -158, 52, 0, 7); g.stroke();
+  g.lineWidth = 2.5; for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; circ(g, Math.cos(a) * 58, -158 + Math.sin(a) * 58, 3.2, '#7a5f22'); }
+  // 名札
+  g.lineWidth = 4; rr(g, -62, -100, 124, 24, 4, '#e6dcc0'); g.fillStyle = INK; g.font = `900 17px ${JP}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('朕銭ガシャ', 0, -87);
+  // 投入口（左）と取り出し口（下）
+  rr(g, -84, -214, 30, 46, 5, '#2b2421'); g.fillStyle = '#000'; g.fillRect(-71, -206, 5, 30);
+  if (spin >= 0 && spin < .5) { const cy = -260 + spin / .5 * 60; g.save(); g.lineWidth = 3; g.translate(-68, cy); g.scale(.45 + Math.abs(Math.cos(t * 20)) * .55, 1); circ(g, 0, 0, 11, '#dcbc55'); g.fillStyle = INK; g.fillRect(-3, -3, 6, 6); g.restore(); }
+  g.fillStyle = '#100c0a'; g.beginPath(); g.ellipse(0, -36, 38, 22, 0, Math.PI, 0); g.fill(); g.lineWidth = 4; g.stroke();
+  // ハンドル（右）
+  const ang = 0;
+  g.save(); g.translate(98, -158); g.lineWidth = 4; circ(g, 0, 0, 16, '#c9a545'); g.rotate(ang);
+  g.lineWidth = 9; g.strokeStyle = INK; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 46); g.stroke(); g.lineWidth = 5; g.strokeStyle = '#c9a545'; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 46); g.stroke();
+  g.strokeStyle = INK; g.lineWidth = 4; circ(g, 0, 50, 12, '#a9402f'); g.restore();
+  g.restore();
+}
+
+// =====================================================================
+//  ガシャの3D演出（屋上の機械の前で）
+//  ハンドルが回る → カプセルが転がり出る → ゆれるたびに色が上がることがある（白→橙→青→金）
+//  → カプセルが開いて煙。キャラは煙が濃く出て、ゆっくり晴れるとキャラが見える。アイテムは煙がすぐ消える
+// =====================================================================
+// カプセルの色（ランク順：灰 → 青 → 赤 → 金 → 黒）。色は data/fwb-gacha.json の capsules
+const capRanked = () => Object.entries(GDATA.capsules).sort((a, b) => a[1].rank - b[1].rank);
+const CAP_HEX = (k) => capRanked()[k][1].hex;
+const GA = { on: false, t: 0 };
+const GT = { crank: 1.7, out: 2.6, shake: 1.1 };
+let hemiMeshC = null;
+function hemiMesh() {          // 半球（上半分）＋切り口のふた。半径 0.5
+  if (hemiMeshC) return hemiMeshC;
+  const pos = [], nrm = [], uv = [], idx = [], LAT = 8, LON = 22;
+  for (let i = 0; i <= LAT; i++) {
+    const th = i / LAT * Math.PI / 2;
+    for (let j = 0; j <= LON; j++) { const ph = j / LON * Math.PI * 2, x = Math.cos(th) * Math.cos(ph), y = Math.sin(th), z = Math.cos(th) * Math.sin(ph); pos.push(x * .5, y * .5, z * .5); nrm.push(x, y, z); uv.push(j / LON, i / LAT); }
+  }
+  for (let i = 0; i < LAT; i++) for (let j = 0; j < LON; j++) { const a = i * (LON + 1) + j, b = a + LON + 1; idx.push(a, b, a + 1, b, b + 1, a + 1); }
+  const c = pos.length / 3; pos.push(0, 0, 0); nrm.push(0, -1, 0); uv.push(.5, .5);
+  for (let j = 0; j <= LON; j++) { const ph = j / LON * Math.PI * 2; pos.push(Math.cos(ph) * .5, 0, Math.sin(ph) * .5); nrm.push(0, -1, 0); uv.push(.5, .5); }
+  for (let j = 0; j < LON; j++) idx.push(c, c + 1 + j, c + 2 + j);
+  const m = new Mesh(app.graphicsDevice); m.setPositions(pos); m.setNormals(nrm); m.setUvs(0, uv); m.setIndices(idx); m.update();
+  return (hemiMeshC = m);
+}
+// カプセルの色の順番：[出てきたときの色, ゆれるたびの色…]（ランクの番号）。
+// 最後の色は抽選で決まった色。それより下の色で出てきて、ゆれるたびに上がることがある。黒は大当たり確定
+function capSeq(res) {
+  const top = GDATA.capsules[res.cap].rank;
+  let c;
+  if (top === 4) c = Math.random() < .3 ? 4 : Math.random() < .5 ? 3 : 2;         // 黒：いきなり黒（確定）か、金・赤からの昇格
+  else c = Math.max(0, top - (Math.random() < .45 ? 0 : Math.random() < .6 ? 1 : 2));
+  const seq = [c];
+  while (c < top) seq.push(++c);
+  if (top < 4 && Math.random() < GDATA.fakeUpgradeChance) seq.push(c);          // フェイント
+  if (seq.length === 1) seq.push(c);
+  return seq;
+}
+const ease = (x) => 1 - (1 - Math.min(1, Math.max(0, x))) ** 3;
+const hexCol = (h) => new Color().fromString(h);
+function hslCol(h, sat, l) {   // h：0〜360
+  const k = (n) => (n + h / 30) % 12, a = sat * Math.min(l, 1 - l), f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+  return new Color(f(0), f(8), f(4));
+}
+function setCapColor(k, t) {
+  const m = GA.capMat, cd = capRanked()[k][1], base = hexCol(cd.hex);
+  m.diffuse.set(base.r, base.g, base.b);
+  if (cd.glow) {   // 黒：むらさきの光がどくどく脈打つ
+    const g = hexCol(cd.glow), p = .55 + Math.sin(t * 9) * .45;
+    m.emissive.set(g.r, g.g, g.b); m.emissiveIntensity = .04 + p * .12 + GA.flash * 1.6; m.update();
+    return g;
+  }
+  m.emissive.set(base.r, base.g, base.b); m.emissiveIntensity = (k === 0 ? .05 : .3) + GA.flash * 2.2; m.update();
+  return base;
+}
+// ---- 部品（はじめの1回だけ作って、使いまわす） ----
+function gaParts() {
+  if (GA.cap) return;
+  const P = floors[2];
+  GA.capMat = mat('#e9e4d6', { emissive: '#e9e4d6', ei: .1, gloss: .7, spec: .4 });
+  const cap = new Entity('capsule'); P.addChild(cap);
+  const top = new Entity(); cap.addChild(top); piece(top, hemiMesh(), GA.capMat, [0, 0, 0], [.9, .9, .9]);
+  piece(top, 'sphere', cm('#ffffff', { emissive: '#ffffff', ei: .4 }), [-.16, .27, .16], [.14, .07, .1]);
+  const bot = new Entity(); cap.addChild(bot); piece(bot, hemiMesh(), cm('#f4efe2', { gloss: .6, spec: .3 }), [0, 0, 0], [.9, .9, .9], [180, 0, 0]);
+  const band = piece(cap, torusMesh(.45, .035), M.ink, [0, 0, 0]);
+  const ol = piece(cap, 'sphere', outline, [0, 0, 0], [.96, .96, .96]); ol.render.castShadows = false;
+  Object.assign(GA, { cap, top, bot, ol, band });
+  // 煙（白と灰色の玉）
+  GA.smokeMats = ['#f3f1ea', '#d9d6cc', '#bdb9ae'].map(h => { const m = new StandardMaterial(); m.diffuse = hexCol(h); m.emissive = hexCol(h); m.emissiveIntensity = .35; m.opacity = 0; m.blendType = BLEND_NORMAL; m.depthWrite = false; m.update(); return m; });
+  GA.puffs = Array.from({ length: 34 }, (_, i) => {
+    const e = new Entity(); e.addComponent('render', { type: 'sphere', material: GA.smokeMats[i % 3], castShadows: false }); P.addChild(e);
+    const a = Math.random() * Math.PI * 2, up = Math.random();
+    return { e, dir: new Vec3(Math.cos(a) * (1 - up * .5), up * 1.4 + .1, Math.sin(a) * (1 - up * .5) * .7), r0: .2 + Math.random() * .2, r1: .55 + Math.random() * .6, d: Math.random() * .25, spin: (Math.random() - .5) * 2 };
+  });
+  // 火花
+  GA.sparkMat = mat('#ffffff', { emissive: '#ffffff', ei: 2 });
+  GA.sparks = Array.from({ length: 22 }, () => { const e = new Entity(); e.addComponent('render', { type: 'box', material: GA.sparkMat, castShadows: false }); P.addChild(e); e.enabled = false; return { e, v: new Vec3(), life: 0 }; });
+  // 前ぶれの炎：機械のまわりと煙突から、火の玉が立ちのぼる
+  const fms = ['#ff5a1f', '#ff8a2a', '#ffc44a'].map(h => { const m = new StandardMaterial(); m.diffuse = hexCol(h); m.emissive = hexCol(h); m.emissiveIntensity = 2.2; m.opacity = .85; m.blendType = BLEND_NORMAL; m.depthWrite = false; m.update(); return m; });
+  GA.flames = [];
+  for (let i = 0; i < 30; i++) {
+    const col = i % 6, a = col / 6 * Math.PI * 2 + .5, chim = i >= 24;
+    GA.flames.push({ x: chim ? .5 : Math.sin(a) * 1.4, y: chim ? 3.7 : .1, z: chim ? -.25 : Math.cos(a) * 1.25, w: chim ? .42 : .6, h: chim ? 1.6 : 2.2, ph: (i * .37) % 1, m: fms[i % 3] });
+  }
+  GA.flames.forEach(f => { f.e = new Entity(); f.e.addComponent('render', { type: 'sphere', material: f.m, castShadows: false }); P.addChild(f.e); f.e.enabled = false; });
+  cap.enabled = false; GA.puffs.forEach(p => p.e.enabled = false);
+}
+function gaSparks(col, n = 14, power = 1, at = null) {
+  GA.sparkMat.emissive.set(col.r, col.g, col.b); GA.sparkMat.diffuse.set(col.r, col.g, col.b); GA.sparkMat.update();
+  const c = at || GA.cap.getPosition();
+  for (let i = 0; i < n; i++) {
+    const s = GA.sparks.find(s => s.life <= 0) || GA.sparks[i % GA.sparks.length], a = Math.random() * Math.PI * 2;
+    s.e.enabled = true; s.e.setPosition(c.x, c.y, c.z); s.life = .6 + Math.random() * .5;
+    s.v.set(Math.cos(a) * (1.5 + Math.random() * 2) * power, (2.5 + Math.random() * 3) * power, Math.sin(a) * (1.5 + Math.random() * 2) * power);
+  }
+}
+function gaStart(res) {
+  gaParts();
+  const F0 = gachaFx.pos, seq = capSeq(res), isChar = !!res.ch;
+  const shakesEnd = GT.out + .5 + (seq.length - 1) * GT.shake, open = shakesEnd + 1.15;
+  // 大当たりの前ぶれ：大当たりは必ず。中当たり・小当たりでも、ときどきフェイントで出る（omen の値）
+  const omen = Math.random() < GDATA.tiers[res.tier].omen;
+  Object.assign(GA, {
+    on: true, t: 0, res, seq, isChar, omen, shakesEnd, open, end: open + (isChar ? 3.5 : 1.0), flash: 0, quake: 0,
+    opened: false, ended: false, landed: false, hopped: 0, omenOn: false, tick: 0, sparkT: 0, shakeDone: 0, chr: null, item: null, skip: false, shot: -1,
+    camPos: camera.getPosition().clone(), camLook: new Vec3(cam.x, cam.y, cam.z),
+  });
+  for (let i = 0; i < 6; i++) delete GA['rattle' + i];
+  // 自分の隊員は機械の左に立って見守る
+  player.pos.set(F0.x - 2.4, F0.y, F0.z + 2.7); player.face = Math.PI / 2; player.vy = 0;
+  GA.cap.enabled = false; GA.top.setLocalPosition(0, 0, 0); GA.top.setLocalEulerAngles(0, 0, 0); GA.bot.setLocalScale(1, 1, 1);
+  GA.ol.enabled = true; GA.band.enabled = true; GA.top.enabled = true; GA.cap.setLocalScale(1, 1, 1);
+  camera.camera.fov = 54;
+  $('pad').classList.remove('on'); S.cur = null; state.ui = 'gacha3d'; document.body.classList.add('cine');
+  $('gaHint').classList.add('on'); $('gaRes').classList.remove('on');
+}
+// ---- カメラ：場面ごとに切りかえる（見上げる → 横から → カプセルに寄る → 開く → キャラの正面）----
+function gaCamera(dt) {
+  const F0 = gachaFx.pos, t = GA.t;
+  let shot, pos, look, snap = false;
+  if (t < .95) { shot = 0; pos = [-1.7, .75, 4.6]; look = [.1, 2.9, 0]; snap = true; }              // 主人公の目線で機械を見上げる
+  else if (t < GT.crank) { shot = 1; pos = [2.6, 1.7, 5.4]; look = [0, 1.7, .5]; snap = true; }     // 横からハンドル
+  else if (t < GA.shakesEnd) { shot = 2; pos = [1.0, 1.75, 6.2]; look = [0, .7, 2.6]; }             // カプセル
+  else if (!GA.opened) { shot = 3; pos = [.3, 1.5, 7.0]; look = [0, 1.0, 3.6]; }                    // とびだすカプセルに寄る
+  else if (!GA.isChar) { shot = 4; pos = [.6, 1.6, 6.7]; look = [0, .95, 3.7]; }
+  else if (t - GA.open < 2.5) { shot = 5; pos = [.8, 3.4, 6.8]; look = [0, 1.2, 3.6]; }              // 煙
+  else { shot = 6; pos = [0, 2.9, 6.8]; look = [0, 1.0, 3.6]; }                                   // キャラの正面
+  const tp = new Vec3(F0.x + pos[0], F0.y + pos[1], F0.z + pos[2]), tl = new Vec3(F0.x + look[0], F0.y + look[1], F0.z + look[2]);
+  if (GA.shot !== shot && snap) { GA.camPos.copy(tp); GA.camLook.copy(tl); }
+  GA.shot = shot;
+  const k = 1 - Math.exp(-dt * (GA.skip ? 30 : shot === 3 ? 6 : 3.2));
+  GA.camPos.lerp(GA.camPos, tp, k); GA.camLook.lerp(GA.camLook, tl, k);
+  GA.quake = Math.max(0, GA.quake - dt * 1.6);
+  const q = GA.quake * .12;
+  camera.setPosition(GA.camPos.x + (Math.random() - .5) * q, GA.camPos.y + (Math.random() - .5) * q, GA.camPos.z + (Math.random() - .5) * q);
+  camera.lookAt(GA.camLook);
+}
+// ---- 大当たりの前ぶれ：空が暗くなり、機械のまわりから炎が噴き出す ----
+const SUN_I = 1.25, AMB = new Color(.5, .48, .46), BG_OMEN = new Color(.13, .05, .07);
+function gaOmen(dt) {
+  const t = GA.t, u = t - GA.open;
+  const d = !GA.omen ? 0 : t < .25 ? 0 : u < 1.6 ? ease((t - .25) / .7) : Math.max(0, 1 - (u - 1.6) / 1.0);
+  sun.light.intensity = SUN_I * (1 - .72 * d);
+  app.scene.ambientLight = new Color(AMB.r * (1 - .6 * d) + .12 * d, AMB.g * (1 - .7 * d), AMB.b * (1 - .65 * d) + .05 * d);
+  camera.camera.clearColor = new Color(BG_SKY.r + (BG_OMEN.r - BG_SKY.r) * d, BG_SKY.g + (BG_OMEN.g - BG_SKY.g) * d, BG_SKY.b + (BG_OMEN.b - BG_SKY.b) * d);
+  const F0 = gachaFx.pos;
+  GA.flames.forEach((f, i) => {
+    f.e.enabled = d > .03;
+    if (!f.e.enabled) return;
+    const k = (time * 1.5 + f.ph) % 1, pw = d * (t < GT.crank + .4 ? 1 : .6), sc = f.w * (1 - k * .75) * (.6 + pw * .5);
+    f.e.setLocalPosition(F0.x + f.x * (1 - k * .25) + Math.sin(time * 9 + i) * .05, F0.y + f.y + k * f.h * pw, F0.z + f.z * (1 - k * .25)); f.e.setLocalScale(sc, sc * 1.4, sc);
+  });
+  if (GA.omen && t > .25 && !GA.omenOn) { GA.omenOn = true; GA.quake = .8; if (!GA.skip) { Snd.beep(55, 1.2, 'sawtooth', 1, -20); setTimeout(() => Snd.beep(70, 1.0, 'sawtooth', .9, 30), 300); } }
+  if (d > .3 && t < GA.open && t - GA.sparkT > .22) { GA.sparkT = t; gaSparks(new Color(1, .5 + Math.random() * .3, .15), 6, .8, new Vec3(F0.x + (Math.random() - .5) * 2.2, F0.y + .4, F0.z + (Math.random() - .5) * 2.2)); }
+}
+function gaUpdate(dt) {
+  const F0 = gachaFx.pos, Fx = gachaFx;
+  GA.t += dt; const t = GA.t, quiet = GA.skip;
+  GA.flash = Math.max(0, GA.flash - dt * 2.5);
+  gaOmen(dt);
+  // ---- 機械：ハンドルが回り、ゆれて、炉の火が強くなる ----
+  if (t < GT.crank) {
+    const p = t / GT.crank, amp = Math.min(1, t / .4) * (GA.omen ? .09 : .05);
+    Fx.mach.setLocalPosition(F0.x + Math.sin(t * 61) * amp, F0.y + Math.abs(Math.sin(t * 37)) * amp * .6, F0.z + Math.sin(t * 47) * amp * .5);
+    Fx.crank.setLocalEulerAngles(-ease(p) * 720, 0, 0);
+    if (t - GA.tick > .17) { GA.tick = t; if (!quiet) Snd.beep(280 + p * 260, .05, 'square', .5); }
+  } else Fx.mach.setLocalPosition(F0.x, F0.y, F0.z);
+  const heat = (t < GT.crank ? 1.3 + t / GT.crank * 2.2 : 2.2) + (GA.omen && t < GA.open ? 1.5 : 0);
+  // ---- カプセル ----
+  const nShake = GA.seq.length - 1;
+  let cur = GA.seq[0];
+  for (let i = 0; i < nShake; i++) { if (t >= GT.out + .5 + i * GT.shake + .7) cur = GA.seq[i + 1]; }
+  if (t >= GT.crank && !GA.cap.enabled) { GA.cap.enabled = true; GA.flash = .6; if (!quiet) Snd.beep(160, .25, 'sawtooth', .7, -60); }
+  const capCol = setCapColor(cur, t);
+  Fx.glow.emissive.set(...(t < GT.crank ? [1, .54, .16] : [capCol.r, capCol.g, capCol.b])); Fx.glow.emissiveIntensity = heat + GA.flash * 2; Fx.glow.update();
+  Fx.lamp.light.color = t < GT.crank ? new Color(1, .55, .2) : capCol; Fx.lamp.light.intensity = 1.2 + heat * .4 + GA.flash * 4;
+  if (GA.cap.enabled && !GA.opened) {
+    let y = .45, z = 2.6, rx = 0, rz = 0, sc = 1;
+    if (t < GT.out) {
+      const p = (t - GT.crank) / (GT.out - GT.crank);
+      z = .85 + (2.6 - .85) * ease(p); y = .45 + Math.abs(Math.sin(p * Math.PI * 2.5)) * (1 - p) * .7; rx = z / .45 * 57.3;
+    } else if (t < GA.shakesEnd) {
+      rx = 2.6 / .45 * 57.3;
+      // ゆれ：ぷるぷる → ぴょん → 色が変わる（変わらないこともある）
+      for (let i = 0; i < nShake; i++) {
+        const u = t - (GT.out + .5 + i * GT.shake);
+        if (u >= 0 && u < .7) { const k = u / .7; rz = Math.sin(u * 42) * 16 * k; y += Math.max(0, Math.sin(u * 30)) * .06 * k; if (u > .62) y += (u - .62) / .08 * .25; }
+        else if (u >= .7 && u < 1.0) y += Math.max(0, .25 - (u - .7) * 1.2);
+        if (u >= .7 && GA.shakeDone === i) {
+          GA.shakeDone = i + 1; GA.flash = 1;
+          const up = GA.seq[i + 1] > GA.seq[i];
+          if (up) { GA.quake = .25 + GA.seq[i + 1] * .1 + (GA.seq[i + 1] === 4 ? .5 : 0); if (GA.seq[i + 1] === 4 && !quiet) Snd.beep(60, .8, 'sawtooth', 1, -10); gaSparks(hexCol(capRanked()[GA.seq[i + 1]][1].glow || CAP_HEX(GA.seq[i + 1])), 16 + GA.seq[i + 1] * 4); if (!quiet) [660, 880, 1175, 1568].slice(0, 2 + GA.seq[i + 1]).forEach((f, j) => setTimeout(() => Snd.beep(f, .09, 'triangle', .9), j * 70)); }
+          else if (!quiet) Snd.beep(220, .12, 'square', .5, -40);
+        }
+        if (u >= 0 && !quiet && !GA['rattle' + i]) { GA['rattle' + i] = 1; for (let j = 0; j < 5; j++) setTimeout(() => Snd.beep(500 + Math.random() * 200, .03, 'square', .3), j * 110); }
+      }
+    } else {
+      // 大きくはねて、手前にとびだす → ドスンと着地
+      const p = Math.min(1, (t - GA.shakesEnd) / .8);
+      z = 2.6 + 1.0 * ease(p); y = .45 + Math.sin(p * Math.PI) * 1.7; rx = 2.6 / .45 * 57.3 + p * 720; sc = 1 + Math.sin(p * Math.PI) * .25;
+      if (p >= 1) { const w = Math.min(1, (t - GA.shakesEnd - .8) / .3); rx = 0; sc = 1; y = .45 - Math.sin(w * Math.PI) * .08; rz = Math.sin(w * Math.PI * 3) * 8 * (1 - w); }
+      if (p >= 1 && !GA.landed) { GA.landed = true; GA.quake = .7; gaSparks(capCol, 10, .6); if (!quiet) Snd.beep(90, .25, 'sawtooth', .9, -40); }
+      if (t - GA.shakesEnd < .05 && !GA.leapSnd) { GA.leapSnd = 1; if (!quiet) Snd.beep(300, .35, 'triangle', .7, 700); }
+    }
+    GA.cap.setLocalPosition(F0.x, F0.y + y, F0.z + z); GA.cap.setLocalEulerAngles(rx, 0, rz); GA.cap.setLocalScale(sc, sc * (GA.landed && t < GA.shakesEnd + 1.0 ? .92 : 1), sc);
+  }
+  // ---- 開く ----
+  if (t >= GA.open && !GA.opened) {
+    GA.opened = true; GA.leapSnd = 0; GA.flash = 1.2; GA.quake = .5; GA.cap.setLocalEulerAngles(0, 0, 0); GA.cap.setLocalScale(1, 1, 1); GA.ol.enabled = false; GA.band.enabled = false;
+    gaSparks(capCol, 22, 1.2);
+    if (!quiet) { Snd.beep(120, .3, 'sawtooth', .9, 300); setTimeout(() => Snd.beep(900, .4, 'sine', .6, -700), 60); }
+    gaCutin(GA.res); $('gaFlash').classList.remove('on'); void $('gaFlash').offsetWidth; $('gaFlash').classList.add('on');
+    const c = GA.cap.getPosition();
+    GA.puffs.forEach(p => { p.e.enabled = true; p.e.setPosition(c.x, c.y, c.z); p.e.setLocalScale(.01, .01, .01); });
+    if (GA.isChar) {
+      const a = makeChar(crewByKey[GA.res.ch]); a.pos = new Vec3(F0.x, F0.y, F0.z + 3.6); a.face = 0; a.root.enabled = false; GA.chr = a;
+    } else {
+      const im = new Image(); im.src = GA.res.src;
+      const keep = root; root = floors[2];
+      GA.item = decal((g, W, H) => { if (im.complete) g.drawImage(im, 0, 0, W, H); }, 128, 128, F0.x, F0.y + .9, F0.z + 3.7, .9, .9, '+z', { alpha: true, glow: .25 });
+      root = keep;
+      if (!im.complete) im.onload = () => { GA.item && (GA.item.ctx.drawImage(im, 0, 0, 128, 128), GA.item.tex.upload()); };
+    }
+  }
+  if (GA.opened) {
+    const u = t - GA.open, c = new Vec3(F0.x, F0.y + .45, F0.z + 3.6);
+    GA.top.setLocalPosition(0, ease(u / .5) * 1.6 + Math.max(0, u - .5) * -2, -ease(u / .5) * .4); GA.top.setLocalEulerAngles(-ease(u / .5) * 140, 0, 0);
+    const bs = Math.max(0, 1 - u / .5); GA.bot.setLocalScale(bs, bs, bs); GA.top.enabled = u < 1.0;
+    // 煙：キャラは濃くて長い、アイテムはすぐ消える
+    const op = GA.isChar ? (u < .15 ? u / .15 : u < 1.1 ? 1 : Math.max(0, 1 - (u - 1.1) / 1.7)) : (u < .08 ? u / .08 : Math.max(0, 1 - (u - .08) / .4));
+    GA.smokeMats.forEach((m, i) => { m.opacity = op * [.85, .8, .75][i]; m.update(); });
+    const spread = GA.isChar ? 1 : .7, tall = GA.isChar ? 1.7 : 1;
+    GA.puffs.forEach(p => {
+      const k = Math.max(0, u - p.d), g = ease(k / .6), s = (p.r0 + (p.r1 - p.r0) * g) * (GA.isChar ? 1.1 + k * .2 : 1);
+      p.e.enabled = op > .01;
+      p.e.setPosition(c.x + p.dir.x * (.2 + g * 1.1 * spread) + Math.sin(k * 1.3 + p.spin * 5) * .08, c.y + p.dir.y * (.15 + g * .8 * spread) * tall + k * .25, c.z + p.dir.z * (.2 + g * 1.0 * spread));
+      p.e.setLocalScale(s, s * .85, s);
+    });
+    if (GA.chr) {
+      // 煙がいちばん濃くなってから、中にキャラを置く（煙が晴れると見える）→ くるっと回ってポーズ
+      const a = GA.chr; a.root.enabled = u > 1.0;
+      const spin = u > 2.55 ? Math.min(1, (u - 2.55) / .5) : 0, hop = u > 2.55 && u < 3.05 ? Math.sin((u - 2.55) / .5 * Math.PI) * .6 : 0;
+      a.pos.y = F0.y + hop; a.face = ease(spin) * Math.PI * 2;
+      animate(a, false, false, dt, time); a.head.setLocalEulerAngles(-12, 0, 0);
+      if (u > 3.05) { const k = Math.min(1, (u - 3.05) / .15); a.arms[1].setLocalEulerAngles(-160 * k, 0, 25 * k); a.arms[0].setLocalEulerAngles(-20 * k, 0, -40 * k); a.body.setLocalPosition(0, Math.sin(time * 6) * .03, 0); }
+      if (u > 2.55 && !GA.hopped) { GA.hopped = 1; if (!quiet) Snd.beep(520, .15, 'triangle', .7, 500); }
+      if (u > 3.05 && GA.hopped === 1) { GA.hopped = 2; GA.quake = .25; if (!quiet) Snd.beep(1047, .12, 'square', .6); }
+      const f = a.root.findByName('float'); if (f) f.setLocalPosition(0, .25 + Math.sin(time * 3) * .06, .2);
+    }
+    if (GA.item) { const sc = Math.min(1, ease(u / .35) * 1.15); GA.item.holder.setLocalScale(sc, sc, sc); GA.item.holder.setLocalPosition(F0.x, F0.y + .95 + Math.sin(u * 3) * .08, F0.z + 3.7); GA.item.holder.setLocalEulerAngles(0, Math.sin(u * 2) * 18, 0); }
+  }
+  // 火花
+  for (const s of GA.sparks) {
+    if (s.life <= 0) { s.e.enabled = false; continue; }
+    s.life -= dt; s.v.y -= 9 * dt; const p = s.e.getPosition(); s.e.setPosition(p.x + s.v.x * dt, p.y + s.v.y * dt, p.z + s.v.z * dt);
+    const sc = .09 * Math.min(1, s.life * 2); s.e.setLocalScale(sc, sc, sc); s.e.setLocalEulerAngles(time * 400, time * 300, 0);
+  }
+  // ---- おわり：結果を出す ----
+  if (t >= GA.end && !GA.ended) { GA.ended = true; GA.skip = false; gaShowResult(); }
+  gaCamera(dt);
+}
+// フェーズ3：カプセルが開いた瞬間のカットイン（ななめの帯に「大当たり！！」など）
+function gaCutin(res) {
+  const T = GDATA.tiers[res.tier], el = $('gaRank');
+  el.className = ''; el.innerHTML = `<div class="band"><span>${esc(T.cutin)}</span></div>`;
+  el.style.setProperty('--c', T.color); void el.offsetWidth; el.className = 'on t-' + res.tier;
+  if (res.ti >= 1) [784, 988, 1319, 1568].slice(0, res.ti + 2).forEach((f, i) => setTimeout(() => Snd.beep(f, .1, 'triangle', .9), i * 80));
+}
+function gaShowResult() {
+  const res = GA.res, ti = res.ti, T = GDATA.tiers[res.tier], el = $('gaRes');
+  const big = !res.ch ? `${esc(res.name)} ×${res.n}` : res.isNew ? `${esc(res.name)}が<br>仲間になった！` : `${esc(res.name)}`;
+  const sub = !res.ch ? (res.it ? 'もちものに入れました' : '素材を手に入れました') : res.isNew ? '2F の結成ボードでメンバーに入れられます' : `かさなりボーナス：${res.lv ? 'Lv ＋' + res.lv : ''}${res.coins ? (res.lv ? '・' : '') + '朕銭 ＋' + fmt(res.coins) : ''}`;
+  el.innerHTML = `<div class="rib ${ti === 2 ? 'rainbow' : ''}" style="background:${T.color}">${T.label}　<span style="font-size:13px">（大当たり確率 ${pct1(res.rate)}）</span></div>
+    ${res.isNew ? '<div class="new">NEW!</div>' : ''}<div class="nm">${big}</div><div class="sb">${sub}</div><small>Enter／クリックで ガシャにもどる</small>`;
+  el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); $('gaHint').classList.remove('on');
+  if (ti === 2) { Snd.up(); setTimeout(() => Snd.up(), 260); setTimeout(() => [1568, 2093].forEach((f, i) => setTimeout(() => Snd.beep(f, .12, 'triangle', .9), i * 90)), 520); }
+  else if (ti === 1) { Snd.up(); setTimeout(() => Snd.ok(), 250); }
+  else Snd.buy();
+  dirty();
+}
+function gaSkip() {
+  if (!GA.on) return;
+  if (GA.ended) return gaEnd();
+  GA.skip = true; GA.t = Math.max(GA.t, GA.end - .02);
+}
+function gaEnd() {
+  const Fx = gachaFx, F0 = Fx.pos;
+  GA.on = false; GA.cap.enabled = false; GA.puffs.forEach(p => p.e.enabled = false); GA.sparks.forEach(s => { s.life = 0; s.e.enabled = false; });
+  if (GA.chr) { GA.chr.root.destroy(); GA.chr = null; }
+  if (GA.item) { GA.item.holder.destroy(); GA.item = null; }
+  Fx.mach.setLocalPosition(F0.x, F0.y, F0.z); Fx.crank.setLocalEulerAngles(0, 0, 0);
+  Fx.glow.emissive.set(1, .54, .16); Fx.glow.update(); Fx.lamp.light.color = new Color(1, .55, .2); Fx.lamp.light.intensity = 1.2;
+  camera.camera.fov = 40; sun.light.intensity = SUN_I; app.scene.ambientLight = AMB.clone(); camera.camera.clearColor = BG_SKY; GA.flames.forEach(f => f.e.enabled = false);
+  $('gaRes').classList.remove('on'); $('gaHint').classList.remove('on'); $('gaRank').className = ''; document.body.classList.remove('cine');
+  // カメラは今の位置からなめらかに戻す
+  const p = player.pos; cam.x = GA.camLook.x; cam.y = GA.camLook.y;
+  S.gc.last = GA.res; state.ui = null;
+  openScreen('gacha');
+}
+addEventListener('pointerdown', (e) => { if (state.ui === 'gacha3d') { e.preventDefault(); gaSkip(); } });
 
 // =====================================================================
 //  マルチ募集（PeerJS：ルームを作った人がサーバー役）
@@ -2070,6 +2902,7 @@ function interact(n) {
   else if (t.kind === 'quest') showTalk(t.name, t.text, () => openScreen('quest'));
   else if (t.kind === 'form') openScreen('nakama');
   else if (t.kind === 'multi') openScreen('multi');
+  else if (t.kind === 'gacha') openScreen('gacha');
   else if (t.kind === 'desk') {
     if (!save.gift) {
       save.gift = true; save.coins += 3000;
@@ -2098,6 +2931,7 @@ addEventListener('keydown', (e) => {
   if (titleOn) { if (e.code === 'Enter' || e.code === 'Space') startGame(); return; }
   if (state.busy) return;
   const k = e.code;
+  if (state.ui === 'gacha3d') { if (k === 'Enter' || k === 'Space' || k === 'Escape' || k === 'KeyE') { e.preventDefault(); gaSkip(); } return; }
   if (state.ui === 'talk') { if (k === 'Enter' || k === 'Space' || k === 'KeyE' || k === 'Escape') { e.preventDefault(); advanceTalk(); } return; }
   if (state.ui === 'pad') {
     e.preventDefault();
@@ -2115,6 +2949,7 @@ addEventListener('keydown', (e) => {
         const tabKey = S.cur === 'mochi' ? 'mo' : S.cur === 'zukan' ? 'zk' : 'ws', n = S.cur === 'mochi' ? 2 : 3;
         if (k === 'KeyL' || k === 'KeyR' && S.cur !== 'multi') { const T = S[tabKey]; T.tab = (T.tab + (k === 'KeyR' ? 1 : n - 1)) % n; if (tabKey !== 'ws') T.sel = 0; Snd.move(); renderScreen(); return; }
       }
+      if (S.cur === 'gacha' && (k === 'Enter' || k === 'Space')) return ACT.gcSpin();
       const b = map[k] && byKey(map[k]);
       if (b) { const [a, ...g] = b.dataset.act.split(':'); setFocus(b, true); doAct(a === 'hold' ? g[0] : a, a === 'hold' ? g.slice(1) : g); return; }
       if (k === 'Digit1' && S.cur === 'nakama') return;
