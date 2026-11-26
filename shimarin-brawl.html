@@ -861,6 +861,10 @@ const Snd = {
     this.osc('sawtooth', 200, 0.55, 0.05, 1400); this.osc('sawtooth', 1400, 0.55, 0.045, 200, 0.04);
     this.osc('sine', 90, 0.6, 0.15, 45); this.nz(0.6, 0.07, 'bandpass', 1200, 2, 0, 5000);
   },
+  galIn() { [660, 880, 990, 1320].forEach((f, i) => this.osc('square', f, 0.07, 0.035, null, i * 0.06)); },   // ミニバーサーカー登場「ピピピピッ」
+  galBeam() { this.osc('sine', 300, 1.0, 0.07, 900); this.osc('triangle', 610, 1.0, 0.03, 1800); },   // 光線「ウゥゥーン」
+  galCatch() { this.osc('square', 520, 0.12, 0.05, 260); this.osc('sine', 180, 0.4, 0.08, 520, 0.08); },   // つかまえた
+  galEscape() { this.osc('triangle', 400, 0.18, 0.06, 1200); this.nz(0.1, 0.06, 'highpass', 3000, 0.7); },   // 脱出
   moonAppear() { this.osc('sine', 55, 2.2, 0.2, 48); this.osc('sawtooth', 110, 2, 0.04, 98); this.osc('triangle', 233, 1.6, 0.05, 220, 0.2); this.nz(2, 0.06, 'lowpass', 300, 1, 0, 120); },   // 不気味な低い響き
   moonRumble(k = 0) { this.nz(0.7, 0.08 + k * 0.2, 'lowpass', 220, 1.2, 0, 80); this.osc('sine', 42, 0.7, 0.06 + k * 0.2, 34); },   // 地鳴り（近づくほど大きく）
   garlicEat() { for (let i = 0; i < 3; i++) this.nz(0.06, 0.12, 'bandpass', 900 + i * 150, 2, i * 0.11); this.osc('sine', 300, 0.25, 0.06, 180, 0.35); },   // もぐもぐ…ごくん
@@ -8590,6 +8594,7 @@ const ITEMS = {
   assist: { name: 'アシストフィギュア', w: 1, r: 56, draw: drawAssistItem, use: (B, F, it) => B.startAssist(F, it) },
   garlic: { name: 'にんにく臭の焼きそば', w: 1, r: 50, draw: drawGarlicItem, use: (B, F, it) => B.startGarlic(F, it) },
   moon: { name: '月', w: 1, r: 54, draw: drawMoonItem, use: (B, F, it) => B.startMoon(F, it) },
+  galaga: { name: 'ミニバーサーカー', w: 1, r: 50, draw: drawGalagaItem, use: (B, F, it) => B.startGalaga(F, it) },
 };
 // ---- アシストフィギュア（ステージに落ちているとき）：金色の台座にのった小さな人形 ----
 function drawAssistItem(it, t) {
@@ -8674,6 +8679,18 @@ function drawMoonFront(B, t) {
     ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = `rgba(255,240,220,${(a * a * 0.7).toFixed(3)})`; ctx.fillRect(0, 0, VW, VH);
     ctx.restore();
   }
+}
+// ---- ミニバーサーカー（ステージに落ちているとき）：小さなバーサーカーが立って待っている ----
+function drawGalagaItem(it, t, B) {
+  const bob = it.pi >= 0 ? Math.abs(Math.sin(it.t * 0.12)) * 5 : 0;
+  ctx.save();
+  if (it.life < 180 && (it.life >> 2) % 2) ctx.globalAlpha = 0.35;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= 0.5 + 0.2 * Math.sin(it.t * 0.15);
+  ctx.drawImage(glowSprite('rgba(255,40,40,.8)'), it.x - 60, it.y - 120, 120, 130); ctx.restore();
+  if (it.pi < 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= 0.5; ctx.drawImage(glowSprite('rgba(255,150,150,.8)'), it.x - 12, it.y - 220, 24, 150); ctx.restore(); }
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(it.x, it.y - 2, 24, 6, 0, 0, TAU); ctx.fill();
+  if (B && B.drawMini) B.drawMini(it.x, it.y - bob, 0.34, 'stand', Math.sin(it.t * 0.03) > 0 ? 1 : -1, t);
+  ctx.restore();
 }
 // ---- にんにく臭の焼きそば（ステージに落ちているとき）：口をしばったレジ袋。くさいにおいの線がゆらゆら立ちのぼる ----
 function drawGarlicItem(it, t) {
@@ -8940,7 +8957,7 @@ SC_.rules = (o = {}) => {
       : { label: 'ストック', val: String(r.stocks), ch: d => { r.stocks = clamp(r.stocks + d, 1, 9); }, sub: '1〜9' },
     { label: 'チャージ切り札', val: r.charge ? 'ON' : 'OFF', ch: d => { r.charge = !r.charge; }, sub: '攻撃を当てる・受けるとゲージがたまり、満タンで切り札が使える' },
     { label: 'スマッシュボール', val: BALL_TXT[r.ball], ch: d => { r.ball = clamp(r.ball + d, 0, 3); }, sub: '出てくる回数（なしにすると出てこない）' },
-    { label: 'アイテム', val: ITEM_TXT[r.items], ch: d => { r.items = clamp(r.items + d, 0, 3); }, sub: 'アシストフィギュア・にんにく臭の焼きそば・月などが落ちてくる回数' },
+    { label: 'アイテム', val: ITEM_TXT[r.items], ch: d => { r.items = clamp(r.items + d, 0, 3); }, sub: 'アシストフィギュア・焼きそば・月・ミニバーサーカーなどが落ちてくる回数' },
   ];
   const back = () => { Snd.back(); go(o.back || 'css', o.backArg); };
   const RX = VW / 2 - 400, RW = 800, RY = 112, RH = 76;   // 5行ぶん入るように少し詰める
@@ -9072,7 +9089,7 @@ SC_.battle = (o) => {
     kosp: [], cine: null, slow: 0, flashRGB: '255,255,255', hudShake: new Array(fs.length).fill(0), lostStock: null, scorePop: null, vcam: null,
     rules: RU, timeLeft: RU.time * 3600, ballK: [0, 2, 1, 0.5][RU.ball],
     ball: null, ballT: RU.ball ? R(420, 900) * [0, 2, 1, 0.5][RU.ball] : 1e9, sup: null, stall: 0, leaveT: 0, netLost: 0, rains: [],
-    items: [], itemK: [0, 2, 1, 0.5][RU.items ?? 2], itemT: 0, assist: null, moon: null, invT: 0, invMax: INV_LEN, invFade: 0, itemPop: null };
+    items: [], itemK: [0, 2, 1, 0.5][RU.items ?? 2], itemT: 0, assist: null, moon: null, gal: null, invT: 0, invMax: INV_LEN, invFade: 0, itemPop: null };
   B.itemT = B.itemK ? R(480, 900) * B.itemK : 1e9;
   BT = B;
   if (st.style === 'ichigo') { Snd.bgmStop(0.2); Snd.chipStart(); }
@@ -9364,6 +9381,92 @@ SC_.battle = (o) => {
     if (M.t === MOON_FALL) moonImpact(M);
     if (M.t >= MOON_END) B.moon = null;
   }
+  // ミニバーサーカー（ボス・ギャラガのような動き）：いちばん近い相手の真上まで飛んでいき、光線で捕まえて画面の上へ連れ去る。
+  //   捕まった人はボタン連打で脱出できる（ダメージが多いほど回数が増える）。上まで連れていかれると撃墜
+  const MBF = new Fighter({ id: -98, col: { main: '#c00018', light: '#ff4050', dark: '#600010', tag: '' }, cpu: false, stocks: 0, x: 0, dir: 1, ch: CHARS.find(c => c.berserk) });
+  MBF._noAura = true;   // 小さいのでオーラはつけない
+  const MB_POSE = {
+    stand: mk({ lean: 0.1, fa: A_(0.9, 1.6), ba: A_(0.7, 1.7), fl: G_(0.35, -0.2), bl: G_(-0.35, -0.1) }),
+    fly: mk({ lean: -0.15, hd: 0.15, fa: A_(2.3, 0.4), ba: A_(-2.3, 0.4), fl: G_(0.4, -0.7), bl: G_(-0.2, -0.9) }),
+    beam: mk({ lean: 0.2, hd: 0.35, fa: A_(0.4, 0.2), ba: A_(-0.4, 0.2), fl: G_(0.5, -0.6), bl: G_(-0.3, -0.7) }),
+    carry: mk({ lean: -0.05, hd: 0.3, fa: A_(0.15, 0.1), ba: A_(-0.15, 0.1), fl: G_(0.4, -0.5), bl: G_(-0.3, -0.6) }),
+  };
+  B.drawMini = (x, y, sc, pose, dir, t) => drawFigureAt(MBF, x, y, sc, MB_POSE[pose] || MB_POSE.stand, dir, t);
+  B.startGalaga = (F, it) => {
+    if (B.gal) { B.burst(it.x, it.y - 40, '#ff8080', 8); return; }   // もう飛んでいるなら何も起きない
+    B.gal = { x: it.x, y: it.y - 60, t: 0, ph: 'fly', by: F.id, tid: -1, dir: F.dir, bl: 0, bt: 0, ct: 0, mash: 0, need: 0, oy: 0 };
+    B.itemPop = { txt: 'ミニバーサーカー！', sub: '近くの相手をつかまえて、上へ連れ去る', life: 90, max: 90 };
+    B.burst(it.x, it.y - 50, '#ff5050', 14);
+    Snd.galIn();
+  };
+  function updGalaga() {
+    const G = B.gal; if (!G) return;
+    G.t++;
+    const A = fs.find(f => f.id === G.by) || null, T = G.tid >= 0 ? fs[G.tid] : null;
+    const prey = O => O.alive && O !== A && (!A || isFoe(A, O)) && O.state !== 'respawn' && O.state !== 'super' && O.state !== 'caught' && O.state !== 'held';
+    if (G.ph === 'fly') {   // いちばん近い相手の真上へ
+      let best = null, bd = 1e9;
+      for (const O of fs) { if (!prey(O)) continue; const d = Math.hypot(O.x - G.x, O.y - G.y); if (d < bd) { bd = d; best = O; } }
+      if (!best || G.t > 300) { G.ph = 'leave'; return; }
+      const dx = best.x - G.x, dy = best.y - 320 - G.y, d = Math.hypot(dx, dy) || 1, sp = Math.min(9, d);
+      G.x += dx / d * sp; G.y += dy / d * sp + Math.sin(G.t * 0.25) * 1.2;
+      if (Math.abs(dx) > 2) G.dir = sgn(dx);
+      if (d < 18) { G.ph = 'beam'; G.bt = 0; Snd.galBeam(); }
+    } else if (G.ph === 'beam') {   // 真下へ光線。入った相手をつかまえる（番号の小さい人から）
+      G.bt++; G.bl = Math.min(380, G.bt * 16);
+      for (const O of fs) {
+        if (!prey(O) || O.inv > 0 || O.intangible) continue;
+        const top = O.y - 160 * O.ch.scale, dy = O.y - G.y;
+        if (dy > 0 && top - G.y < G.bl && Math.abs(O.x - G.x) < 34 + dy * 0.3) {
+          O.move = null; O.setState('caught'); O.vx = 0; O.vy = 0; O.ground = null; O.hitlag = 0;
+          G.tid = fs.indexOf(O); G.ph = 'carry'; G.ct = 0; G.mash = 0; G.need = Math.round(12 + O.percent / 8); G.oy = O.y - G.y;
+          Snd.galCatch(); break;
+        }
+      }
+      if (G.ph === 'beam' && G.bt > 60) G.ph = 'leave';
+    } else if (G.ph === 'carry') {   // つかんだまま上へ。連打で脱出、上まで行ったら撃墜
+      if (!T || !T.alive || T.state !== 'caught') { G.ph = 'leave'; return; }
+      G.ct++;
+      G.oy = Math.max(120, G.oy - 4);
+      G.y -= Math.min(4.6, 0.8 + G.ct * 0.05);
+      T.x = G.x + Math.sin(G.ct * 0.6) * 3; T.y = G.y + G.oy; T.vx = 0; T.vy = 0;
+      const c = T.ctrl && T.ctrl.p;
+      if (T.cpu ? rng() < 0.12 + (T.level || 5) * 0.025 : c && (c.attack || c.special || c.jump || c.shield || c.grab || c.smash || c.up)) { G.mash++; T.pctShake = 4; }   // CPUも連打する
+      if (G.mash >= G.need) {
+        T.setState('air'); T.vy = -6; T.vx = 0; T.inv = 45; G.ph = 'leave'; G.tid = -1;
+        B.burst(T.x, T.y - 80, '#ffffff', 14); B.parts.push({ x: T.x, y: T.y - 80, ring: 1, r: 16, life: 16, max: 16, col: '#ffffff' });
+        Snd.galEscape(); return;
+      }
+      if (T.y < st.blast.t + 30) { T.setState('air'); G.ph = 'leave'; G.tid = -1; B.ko(T); }
+    } else if (G.ph === 'leave') {   // 去っていく
+      G.bl = Math.max(0, G.bl - 30); G.y -= 10;
+      if (G.y < st.blast.t - 260) B.gal = null;
+    }
+  }
+  function drawGalaga(G, t) {
+    const fy = G.y + 52;   // ミニバーサーカーの足もと（光線はここから出る）
+    if (G.bl > 0 || G.ph === 'carry') {   // 光線：下へ広がる赤い光の円すいと、下へ流れる輪
+      const L = G.ph === 'carry' ? Math.max(60, G.oy) : G.bl, w0 = 14, w1 = 34 + L * 0.3;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createLinearGradient(0, fy, 0, fy + L); g.addColorStop(0, 'rgba(255,90,90,.55)'); g.addColorStop(1, 'rgba(255,60,90,.08)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(G.x - w0, fy); ctx.lineTo(G.x + w0, fy); ctx.lineTo(G.x + w1, fy + L); ctx.lineTo(G.x - w1, fy + L); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,200,200,.8)'; ctx.lineWidth = 3;
+      for (let i = 0; i < 4; i++) { const q = (t * 0.04 + i / 4) % 1, yy = fy + q * L, ww = lerp(w0, w1, q); ctx.globalAlpha = 1 - q; ctx.beginPath(); ctx.ellipse(G.x, yy, ww, ww * 0.25, 0, 0, TAU); ctx.stroke(); }
+      ctx.restore();
+    }
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5; ctx.drawImage(glowSprite('rgba(255,40,40,.8)'), G.x - 60, G.y - 70, 120, 130); ctx.restore();
+    B.drawMini(G.x, fy, 0.42, G.ph === 'carry' ? 'carry' : G.ph === 'beam' ? 'beam' : 'fly', G.dir, t);
+    // 捕まった人の上に、連打のゲージ
+    const T = G.ph === 'carry' && G.tid >= 0 ? fs[G.tid] : null;
+    if (T) {
+      const x = T.x, y = T.y - 200 * T.ch.scale, q = Math.min(1, G.mash / Math.max(1, G.need)), sc = 1 / Math.max(0.5, B.cam.z);
+      ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc);
+      text('連打で脱出！', 0, -26, 24, (G.ct >> 3) % 2 ? '#ffd34e' : '#ffffff', 'center', '900', '#000', 5);
+      ctx.fillStyle = 'rgba(0,0,0,.6)'; rr(-70, -8, 140, 16, 8); ctx.fill();
+      ctx.fillStyle = '#ff5050'; rr(-68, -6, 136 * q, 12, 6); ctx.fill();
+      ctx.restore();
+    }
+  }
   function updItems() {
     // 操作反転の残り時間（切り札のカットイン・ムービー中は止まる）
     if (B.invT > 0 && --B.invT === 0) { B.invFade = 40; B.itemPop = { txt: 'もとにもどった！', sub: '', life: 70, max: 70 }; Snd.invertEnd(); }
@@ -9384,6 +9487,7 @@ SC_.battle = (o) => {
     if (B.phase !== 'fight') return;
     updGarlic();
     updMoon();
+    updGalaga();
     if (B.items.length < 2 && !B.sup && --B.itemT <= 0) spawnItem();
     for (const it of B.items) {
       it.t++; it.life--;
@@ -9408,8 +9512,9 @@ SC_.battle = (o) => {
     if (B.items.some(it => it.life <= 0)) B.items = B.items.filter(it => it.life > 0);
   }
   function drawItems() {
-    for (const it of B.items) ITEMS[it.k].draw(it, B.t);
+    for (const it of B.items) ITEMS[it.k].draw(it, B.t, B);
     if (B.assist) drawAssistFG(B.assist);
+    if (B.gal) drawGalaga(B.gal, B.t);
   }
   function hitBall(A, dmg, ds, ang) {
     const b = B.ball; if (!b || b.dying || !A) return;
