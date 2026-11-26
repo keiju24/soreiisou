@@ -17,12 +17,13 @@
   #mv.on { display:block; }
   .mvbar { position:absolute; left:0; right:0; height:9vh; background:#000; } .mvbar.t { top:0; } .mvbar.b { bottom:0; }
   #mvFlash { position:absolute; inset:0; background:radial-gradient(ellipse at center,#ff2a1a00 30%,#ff2a1acc 100%); opacity:0; }
-  #mvFlash.on { animation:mvfl .45s ease-out; } @keyframes mvfl { 0% { opacity:1; } 100% { opacity:0; } }
-  .mvcut { position:absolute; left:-5%; right:-5%; top:22%; text-align:center; opacity:0; transform:scale(2.2) rotate(-4deg); }
-  .mvcut.on { opacity:1; transform:scale(1) rotate(-4deg); transition:transform .12s cubic-bezier(.2,1.6,.5,1), opacity .06s; }
+  #mvFlash.on { animation:mvfl .6s ease-in-out; } @keyframes mvfl { 0% { opacity:0; } 25% { opacity:.6; } 100% { opacity:0; } }
+  .mvcut { position:absolute; left:-5%; right:-5%; top:22%; text-align:center; opacity:0; transform:translateX(-14%) rotate(-4deg); clip-path:inset(0 100% 0 0); transition:transform .5s cubic-bezier(.2,.9,.25,1), opacity .35s ease-out, clip-path .45s cubic-bezier(.2,.9,.25,1); }
+  .mvcut.on { opacity:1; transform:translateX(0) rotate(-4deg); clip-path:inset(0 0 0 0); }
+  .mvcut.sub { transform:translateX(14%) rotate(-4deg); clip-path:inset(0 0 0 100%); } .mvcut.sub.on { transform:translateX(0) rotate(-4deg); clip-path:inset(0 0 0 0); }
   .mvcut span { display:inline-block; padding:4px 60px; font:900 84px/1.1 "Arial Black",Impact,sans-serif; letter-spacing:.12em; color:#fff3d6; text-shadow:0 0 18px #ff2a1a;
     background:repeating-linear-gradient(135deg,#c8261a 0 26px,#8a1810 26px 52px); border-top:8px solid #1d1b19; border-bottom:8px solid #1d1b19; box-shadow:0 0 0 6px #cfae45; }
-  .mvcut.sub { top:44%; } .mvcut.sub span { font:900 60px/1.2 "Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif; background:#1d1b19; color:#cfae45; text-shadow:none; box-shadow:0 0 0 5px #cfae45; transform:rotate(3deg); }
+  .mvcut.sub { top:44%; } .mvcut.off { opacity:0 !important; transform:translateY(-12px) rotate(-4deg) !important; transition:opacity .3s, transform .3s; } .mvcut.sub span { font:900 60px/1.2 "Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif; background:#1d1b19; color:#cfae45; text-shadow:none; box-shadow:0 0 0 5px #cfae45; transform:rotate(3deg); }
   .mvcut.sub2 { top:60%; } .mvcut.sub2 span { font:900 64px/1.2 "Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif; background:#cfae45; color:#1d1b19; text-shadow:none; box-shadow:0 0 0 5px #1d1b19; }
   #mvLogo { position:absolute; left:50%; top:46%; transform:translate(-50%,-50%) scale(3); opacity:0; display:flex; flex-direction:column; align-items:center; }
   #mvLogo.on { opacity:1; transform:translate(-50%,-50%) scale(1); transition:transform .16s cubic-bezier(.2,1.7,.5,1), opacity .05s; }
@@ -3718,7 +3719,7 @@ function mvTick() {
   MV.shake *= Math.exp(-dt * 7);
   // 出来事（一度だけ）
   const once = (k, at, fn) => { if (t >= at && !MV.done[k]) { MV.done[k] = 1; fn(); } };
-  T.hits.forEach((h, i) => once('h' + i, h, () => { MV.shake = .35; mvFlash(); if (i === 0) mvCut('em'); if (i === 2) mvCut('nm'); if (i === 4) mvCut('rq'); }));
+  T.hits.forEach((h, i) => once('h' + i, h, () => { MV.shake = .06; mvFlash(); if (i === 0) mvCut('em'); if (i === 2) mvCut('nm'); if (i === 4) mvCut('rq'); }));
   once('s2', T.shot2 + .45, () => mvCut(null));
   MV.crew.forEach((a, i) => once('ld' + i, T.land[i], () => { MV.shake = .1; }));
   once('dopen', T.doorOpen, MVS.doorOpen);
@@ -3730,7 +3731,7 @@ function mvTick() {
   once('black', T.black, () => $('mvBlack').classList.add('on'));
   if (t >= T.end) { mvFinish(); return; }
   // 赤い警告ランプ（アラートの拍で明滅）
-  const hitK = Math.max(0, ...T.hits.map(h => t >= h ? 1 - (t - h) / .45 : 0));
+  const hitK = Math.max(0, ...T.hits.map(h => t >= h ? Math.exp(-(t - h) * 5) : 0));
   MV.alarmM.emissiveIntensity = .2 + (t < T.shot2 + .3 ? hitK * 5 : (Math.sin(t * 9) > 0 ? 2 : .3)); MV.alarmM.update();
   // 4人：それぞれのルートで救急車へ（ポール・階段から飛びおりる・ロビーから走る・工房から走る）
   MV.crew.forEach((a, i) => {
@@ -3774,7 +3775,7 @@ function mvTick() {
   MV.smoke = MV.smoke.filter(p => { if (p.life > 1.4) { p.e.destroy(); return false; } return true; });
   // カメラ
   if (t < T.shot2) {           // ① ガレージ全体の引き（拍ごとに少し寄る）
-    const k = T.hits.reduce((a, h) => a + mvE((t - h) / .3), 0) / 5;
+    const k = mvE(t / (T.shot2 + .4));
     mvCam(mvL(9.5, 11.0, k), mvL(7.5, 6.4, k), mvL(10, 7.8, k), 14, .8, -5.5, 44);
   } else if (t < T.shot3) {    // ② ポールの上にズーム → ポールとドアが入る構図へ
     // 階段・ポール・ロビー・工房と、救急車の後ろのドアがぜんぶ入る構図へ、ゆっくり寄っていく
@@ -3789,7 +3790,7 @@ function mvTick() {
   }
 }
 function mvFlash() { const f = $('mvFlash'); f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); }
-function mvCut(k) { ['em', 'nm', 'rq'].forEach(x => $('mv_' + x).classList.toggle('on', k != null && ['em', 'nm', 'rq'].indexOf(x) <= ['em', 'nm', 'rq'].indexOf(k))); }
+function mvCut(k) { ['em', 'nm', 'rq'].forEach(x => { const e = $('mv_' + x); if (k == null) { e.classList.add('off'); return; } e.classList.remove('off'); e.classList.toggle('on', ['em', 'nm', 'rq'].indexOf(x) <= ['em', 'nm', 'rq'].indexOf(k)); }); }
 function mvLogo() { $('mvLogo').classList.add('on'); }
 // ---- 開始・終了 ----
 async function playSortieMovie(q) {
@@ -3808,7 +3809,7 @@ async function playSortieMovie(q) {
   for (const z of [-9.9, -2.3]) ball(MV.alarmM, RW - .25, 3.95, z, .32, .32, .32, MV.g);
   for (const x of [4, 11, 17]) ball(MV.alarmM, x, WH - .15, -RD + .2, .3, .3, .3, MV.g);
   MV.clear = camera.camera.clearColor.clone(); camera.camera.clearColor = new Color(.04, .05, .09);
-  ['mv_em', 'mv_nm', 'mv_rq', 'mvLogo'].forEach(id => $(id).classList.remove('on'));
+  ['mv_em', 'mv_nm', 'mv_rq', 'mvLogo'].forEach(id => $(id).classList.remove('on', 'off'));
   // 最初のカクつき対策：暗転したまま、出てくるものを一度ぜんぶ描いておく（シェーダーの準備）
   MV.crew.forEach((a, i) => { a.root.enabled = true; a.root.setLocalPosition(8 + i, 0, -4); });
   MV.flame.forEach(f => f.setLocalScale(.3, 1, .3)); MV.hm.emissiveIntensity = 3; MV.hm.update();
