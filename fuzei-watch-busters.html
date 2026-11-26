@@ -147,6 +147,16 @@
   /* まだ仲間になっていない隊員（シルエット） */
   .face.lock img { filter:brightness(0) opacity(.45); }
   /* 朕銭ガシャ */
+  body.game.cine .hud { display:none; }
+  #gaRes { position:fixed; left:50%; top:46px; transform:translateX(-50%) scale(.85); opacity:0; transition:.25s; z-index:30; min-width:340px; max-width:calc(100% - 40px); text-align:center; background:linear-gradient(#e2d8b9,#cfc39c); color:var(--ink); border:5px solid var(--ink); border-radius:14px; box-shadow:0 6px 0 var(--ink); padding:26px 26px 12px; pointer-events:none; }
+  #gaRes.on { opacity:1; transform:translateX(-50%) scale(1); cursor:pointer; }
+  #gaRes .rib { position:absolute; left:18px; right:18px; top:-20px; border:4px solid var(--ink); border-radius:8px; font-weight:900; font-size:20px; padding:2px; color:var(--ink); }
+  #gaRes .rib.rainbow { background:linear-gradient(90deg,#ff8b7b,#ffd84a,#8fe08a,#7fd3ff,#c79bff) !important; }
+  #gaRes .nm { font-weight:900; font-size:30px; } #gaRes .sb { font-weight:800; font-size:15px; margin-top:4px; }
+  #gaRes .new { position:absolute; right:-20px; top:12px; transform:rotate(12deg); background:var(--red); color:#f4ecd8; border:4px solid var(--ink); border-radius:8px; font-weight:900; padding:0 10px; font-size:20px; }
+  #gaRes small { display:block; margin-top:8px; font:800 12px monospace; color:#4f4a3c; }
+  #gaHint { position:fixed; right:18px; bottom:16px; display:none; font-weight:900; color:#f4ecd8; background:#0009; padding:6px 12px; border-radius:8px; z-index:30; }
+  #gaHint.on { display:block; }
   .gcStage { padding:0; background:#1b1712; }
   .gcStage canvas { position:absolute; inset:0; width:100%; height:100%; cursor:pointer; }
   .gcBanner { position:absolute; left:10px; top:10px; z-index:2; display:flex; align-items:baseline; gap:6px; padding:4px 30px 6px 12px; background:linear-gradient(#2b2621,#151210); color:#f4ecd8; border:4px solid var(--ink); clip-path:polygon(0 0,100% 0,calc(100% - 18px) 100%,0 100%); pointer-events:none; }
@@ -179,6 +189,8 @@
 <div id="prompt"></div>
 <div id="talk"></div>
 <div id="toast"></div>
+<div id="gaRes"></div>
+<div id="gaHint"><span class="key">Enter</span>クリックで とばす</div>
 <div id="pad"><div class="dev"><div class="dbody">
   <div id="padHome" style="display:flex;flex-direction:column;gap:12px;height:100%">
     <div class="phead"><div class="logo">Hu-jo <b>Pad</b><small>FUJO WATCH BUSTERS 隊員用端末</small></div><div class="counter"><span class="coin"></span><span class="coinsTxt"></span></div><div class="x" id="padClose">×</div></div>
@@ -1003,44 +1015,50 @@ function facade() {
 }
 let gachaFx = null;
 // 朕銭ガシャ：古い鉄の釜（ボイラー）に、朕銭を入れて回すオリジナルの機械
+// 機械は1つのグループ（mach）にまとめて、演出でゆらせるようにする。座標はグループの中の位置
 function gachaMachine(cx, cz, y) {
-  const P = floors[2];
+  const keep = root, mach = new Entity('gacha'); mach.setLocalPosition(cx, y, cz); floors[2].addChild(mach); root = mach;
   const iron = cm('#3b322e', { gloss: .35, spec: .15 }), brass = cm('#c9a545', { gloss: .6, spec: .4 });
   const glow = mat('#ff8a2a', { emissive: '#ff8a2a', ei: 1.3 }), ember = mat('#ff6a2a', { emissive: '#ff6a2a', ei: 1.2 });
-  box(tmat(T.hazard, 3, 1), cx - 1.3, cx + 1.3, y, y + .35, cz - 1.15, cz + 1.15, false);
-  box(M.ink, cx - 1.32, cx + 1.32, y + .35, y + .38, cz - 1.17, cz + 1.17, false, false);
-  inked(P, 'cylinder', iron, [cx, y + 1.5, cz], [1.9, 2.3, 1.9]);
-  inked(P, 'sphere', iron, [cx, y + 2.62, cz], [1.75, 1.2, 1.75]);
-  for (const yy of [.62, 2.45]) piece(P, torusMesh(.97, .08), brass, [cx, y + yy, cz]);
-  for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; ball(brass, cx + Math.sin(a) * .98, y + .78, cz + Math.cos(a) * .98, .08, .08, .08); }
+  box(tmat(T.hazard, 3, 1), -1.3, 1.3, 0, .35, -1.15, 1.15, false);
+  box(M.ink, -1.32, 1.32, .35, .38, -1.17, 1.17, false, false);
+  inked(mach, 'cylinder', iron, [0, 1.5, 0], [1.9, 2.3, 1.9]);
+  inked(mach, 'sphere', iron, [0, 2.62, 0], [1.75, 1.2, 1.75]);
+  for (const yy of [.62, 2.45]) piece(mach, torusMesh(.97, .08), brass, [0, yy, 0]);
+  for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; ball(brass, Math.sin(a) * .98, .78, Math.cos(a) * .98, .08, .08, .08); }
   // 炉の窓（光る）
-  piece(P, 'cylinder', glow, [cx, y + 1.6, cz + .9], [1.05, .1, 1.05], [90, 0, 0]);
-  piece(P, torusMesh(.56, .08), brass, [cx, y + 1.6, cz + .96], null, [90, 0, 0]);
-  for (const dx of [-.22, 0, .22]) box(M.ink, cx + dx - .025, cx + dx + .025, y + 1.12, y + 2.08, cz + .96, cz + 1.0, false, false);
+  piece(mach, 'cylinder', glow, [0, 1.6, .9], [1.05, .1, 1.05], [90, 0, 0]);
+  piece(mach, torusMesh(.56, .08), brass, [0, 1.6, .96], null, [90, 0, 0]);
+  for (const dx of [-.22, 0, .22]) box(M.ink, dx - .025, dx + .025, 1.12, 2.08, .96, 1.0, false, false);
   // 名札・取り出し口・投入口
-  decal((g, W, H) => { g.fillStyle = '#e6dcc0'; g.fillRect(0, 0, W, H); g.strokeStyle = INK; g.lineWidth = 10; g.strokeRect(5, 5, W - 10, H - 10); g.fillStyle = INK; g.font = `900 52px ${JP}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('朕銭ガシャ', W / 2, H / 2 + 3); }, 320, 90, cx, y + .98, cz + .97, .95, .27);
-  box(cm('#120e0c'), cx - .34, cx + .34, y + .38, y + .66, cz + .7, cz + .99, false, false);
-  box(brass, cx - .4, cx + .4, y + .66, y + .71, cz + .7, cz + 1.0, false, false);
-  box(cm('#2b2421'), cx - .86, cx - .56, y + 1.5, y + 1.95, cz + .4, cz + .72, false, false);
-  box(M.ink, cx - .73, cx - .69, y + 1.58, y + 1.87, cz + .72, cz + .74, false, false);
-  // ハンドル（右）
-  cyl(brass, cx + 1.0, y + 1.6, cz, .16, .2, 'x');
-  bar(brass, [cx + 1.1, y + 1.6, cz], [cx + 1.12, y + 1.15, cz + .3], .08);
-  ball(M.red, cx + 1.12, y + 1.12, cz + .32, .22, .22, .22);
+  decal((g, W, H) => { g.fillStyle = '#e6dcc0'; g.fillRect(0, 0, W, H); g.strokeStyle = INK; g.lineWidth = 10; g.strokeRect(5, 5, W - 10, H - 10); g.fillStyle = INK; g.font = `900 52px ${JP}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('朕銭ガシャ', W / 2, H / 2 + 3); }, 320, 90, 0, .98, .97, .95, .27);
+  box(cm('#120e0c'), -.34, .34, .38, .66, .7, .99, false, false);
+  box(brass, -.4, .4, .66, .71, .7, 1.0, false, false);
+  box(cm('#2b2421'), -.86, -.56, 1.5, 1.95, .4, .72, false, false);
+  box(M.ink, -.73, -.69, 1.58, 1.87, .72, .74, false, false);
+  // ハンドル（右。演出で回る）
+  const crank = new Entity('crank'); crank.setLocalPosition(1.05, 1.6, 0); mach.addChild(crank);
+  cyl(brass, 0, 0, 0, .16, .2, 'x', 'cylinder', crank);
+  bar(brass, [.07, 0, 0], [.09, -.45, .3], .08, crank);
+  ball(M.red, .09, -.48, .32, .22, .22, .22, crank);
   // 煙突と、てっぺんで回る朕銭
-  cyl(iron, cx + .5, y + 3.25, cz - .25, .15, .9); cyl(brass, cx + .5, y + 3.68, cz - .25, .19, .1);
-  ball(ember, cx + .5, y + 3.74, cz - .25, .24, .1, .24);
-  const coin = new Entity(); coin.setLocalPosition(cx, y + 3.55, cz); P.addChild(coin);
+  cyl(iron, .5, 3.25, -.25, .15, .9); cyl(brass, .5, 3.68, -.25, .19, .1);
+  ball(ember, .5, 3.74, -.25, .24, .1, .24);
+  const coin = new Entity(); coin.setLocalPosition(0, 3.55, 0); mach.addChild(coin);
   piece(coin, 'cylinder', cm('#dcbc55', { gloss: .7, spec: .5 }), [0, 0, 0], [.7, .09, .7], [90, 0, 0]);
   piece(coin, 'box', M.ink, [0, 0, 0], [.17, .17, .11]);
   piece(coin, 'cylinder', outline, [0, 0, 0], [.76, .07, .76], [90, 0, 0]);
-  // ちょうちん（風情）
+  // 炉の明かり（床を照らす。演出で色が変わる）
+  const lamp = new Entity('gachaLamp'); lamp.addComponent('light', { type: 'omni', color: new Color(1, .55, .2), range: 4.5, intensity: 1.2, castShadows: false }); lamp.setLocalPosition(0, 1.6, 1.6); mach.addChild(lamp);
+  root = floors[2];
+  // ちょうちん（風情。機械の外）
   const lan = mat('#e0503c', { emissive: '#e0503c', ei: .7 });
   for (const x of [cx - 3.2, cx + 3.2]) bar(M.wood2, [x, y, cz - 1.3], [x, y + 3.6, cz - 1.3], .1);
   bar(M.ink, [cx - 3.2, y + 3.5, cz - 1.3], [cx + 3.2, y + 3.5, cz - 1.3], .025);
   for (let i = 0; i < 5; i++) { const x = cx - 2.4 + i * 1.2, yy = y + 3.05 - Math.sin(i / 4 * Math.PI) * .2; ball(lan, x, yy, cz - 1.3, .36, .46, .36); box(M.ink, x - .1, x + .1, yy + .2, yy + .3, cz - 1.4, cz - 1.2, false, false); box(M.ink, x - .1, x + .1, yy - .3, yy - .22, cz - 1.4, cz - 1.2, false, false); }
   addCol(cx - 1.3, cx + 1.3, y, y + 3.6, cz - 1.15, cz + 1.15);
-  gachaFx = { glow, ember, coin };
+  root = keep;
+  gachaFx = { glow, ember, coin, mach, crank, lamp, pos: new Vec3(cx, y, cz) };
 }
 function buildRoof() {
   root = floors[2];
@@ -1352,13 +1370,15 @@ app.on('update', (dt) => {
   for (const n of npcs) { if (n.floor !== fl) continue; const d = Math.hypot(n.pos.x - p.x, n.pos.z - p.z) - (n.fixed || n.thing ? .9 : 0); if (d < best) { best = d; nearNpc = n; } }
   promptEl.classList.toggle('on', !!nearNpc && !state.ui);
   if (nearNpc) promptEl.innerHTML = `<span class="key">Enter</span>${nearNpc.talk.name}${nearNpc.thing ? 'を調べる' : 'に話しかける'}`;
-  // カメラ（ラフの絵のような斜め見下ろし。今いる階を見る）
+  // カメラ（ラフの絵のような斜め見下ろし。今いる階を見る）。ガシャの演出中は演出のカメラ
+  if (GA.on) gaUpdate(dt); else {
   const tx = Math.max(7, Math.min(RW - 7, p.x)), ty = fl * FH + 1.0, tz = -5.4;
   const k = 1 - Math.exp(-dt * 4);
   cam.x += (tx - cam.x) * k; cam.y += (ty - cam.y) * (1 - Math.exp(-dt * 3)); cam.z = tz;
   const pr = VIEW.pitch * Math.PI / 180, dist = VIEW.dist * VIEW.zoom * Math.max(1, 1.5 / (canvas.clientWidth / Math.max(1, canvas.clientHeight)));
   camera.setPosition(cam.x, cam.y + Math.sin(pr) * dist, cam.z + Math.cos(pr) * dist);
   camera.lookAt(cam.x, cam.y, cam.z);
+  }
   // 救急車の赤色灯
   ambLights.forEach((m, i) => { m.emissiveIntensity = .3 + (Math.sin(time * 9 + i * Math.PI) > 0 ? 2.2 : 0); m.update(); });
   if (fl === 1 && Math.floor(time * 20) % 2 === 0) drawMonitor(time * 1000);
@@ -1393,7 +1413,7 @@ async function boot() {
   uiInit();
   requestAnimationFrame(titleLoop);
   document.body.dataset.ready = '1';
-  if (new URLSearchParams(location.search).has('debug')) window.__dbg = { app, get player() { return player; }, state, startGame, setPlayer, FH, npcs, openPad, openScreen, interact, save, NET };
+  if (new URLSearchParams(location.search).has('debug')) window.__dbg = { app, get player() { return player; }, state, startGame, setPlayer, FH, npcs, openPad, openScreen, interact, save, NET, GA };
 }
 
 // =====================================================================
@@ -2044,8 +2064,8 @@ function gcRoll(amt) {
   }
   return res;
 }
-S.gc = { amt: 100, phase: 'idle', t0: 0, res: null };
-const GC_SPIN = 1.5, GC_DROP = 2.25, GC_OPEN = 2.85;    // 演出の時間（秒）
+S.gc = { amt: 100, phase: 'idle', res: null, last: null };
+const GC_SPIN = 1.5, GC_DROP = 2.25;
 function gcResultText(res) {
   if (!res) return '';
   if (res.r === 0) return `おまけ：${res.name} ×${res.n}`;
@@ -2070,7 +2090,7 @@ SCREENS.gacha = () => {
           <div class="mono" style="text-align:center">仲間 ${ownedCrew().length}/${CREW.length}　／　まわした回数 ${save.gacha || 0}　／　持っている朕銭 <span class="coinsTxt"></span></div>
         </div>
       </div>`,
-    desc: G.phase === 'result' && G.res ? gcResultText(G.res) : 'つかう朕銭が多いほど、レアな隊員が出やすくなります（100朕銭ごとに大当たり確率が1倍ずつ上がる）。すでに仲間の隊員が出たら、その隊員のレベルが上がります',
+    desc: G.last ? '前の結果：' + gcResultText(G.last) : 'つかう朕銭が多いほど、レアな隊員が出やすくなります（100朕銭ごとに大当たり確率が1倍ずつ上がる）。すでに仲間の隊員が出たら、その隊員のレベルが上がります',
     foot: B('hold:gcDown', 'へらす', '◀') + B('hold:gcUp', 'ふやす', '▶'),
     after() {
       const rg = $('gcRange');
@@ -2078,7 +2098,6 @@ SCREENS.gacha = () => {
       rg.onchange = () => rg.blur();
       gcSync();
       if (!gcRaf) gcRaf = requestAnimationFrame(gcLoop);
-      $('gcCv').onclick = () => { const G = S.gc; if (G.phase === 'spin') G.t0 = performance.now() - GC_OPEN * 1000; else if (G.phase === 'result') { G.phase = 'idle'; renderScreen(); } };
     },
   };
 };
@@ -2091,11 +2110,10 @@ function gcSync() {
   $('gcAmt').parentElement.style.color = save.coins >= G.amt ? '' : '#e0503c';
 }
 function gcSetAmt(v, fromRange) {
-  const G = S.gc; if (G.phase === 'spin') { gcSync(); return; }
+  const G = S.gc;
   v = Math.max(GC.min, Math.min(GC.max, Math.round(v / GC.step) * GC.step));
   if (v === G.amt) { if (!fromRange) stopHold(); return; }
   G.amt = v; Snd.move();
-  if (G.phase === 'result') { G.phase = 'idle'; $('padScreenDesc').textContent = SCREENS.gacha().desc; }
   gcSync();
 }
 Object.assign(ACT, {
@@ -2103,33 +2121,18 @@ Object.assign(ACT, {
   gcDown() { gcSetAmt(S.gc.amt - GC.step); },
   gcSpin() {
     const G = S.gc;
-    if (G.phase === 'spin') { G.t0 = Math.min(G.t0, performance.now() - GC_OPEN * 1000); return; }   // 演出をとばす
+    if (GA.on) return;
+    if (!gachaFx || state.floor !== 2) { Snd.err(); toast('屋上の朕銭ガシャの前で回してください'); return; }
     if (save.coins < G.amt) { Snd.err(); toast('朕銭が足りません'); return; }
     save.coins -= G.amt; save.gacha = (save.gacha || 0) + 1;
     G.res = gcRoll(G.amt);
-    if (G.res.src) { G.res.img = new Image(); G.res.img.src = G.res.src; }
-    G.phase = 'spin'; G.t0 = performance.now(); G.done = false;
     writeSave(); updateCoins();
-    // ハンドルを回す音
-    for (let i = 0; i < 9; i++) setTimeout(() => Snd.beep(300 + i * 40, .05, 'square', .5), i * 150);
-    setTimeout(() => Snd.beep(160, .25, 'sawtooth', .7, -60), GC_SPIN * 1000);
-    setTimeout(() => Snd.beep(900, .12, 'triangle', .8, 600), GC_DROP * 1000);
+    gaStart(G.res);
   },
 });
-function gcFinish() {
-  const G = S.gc, r = G.res.r;
-  G.phase = 'result';
-  if (r === 3) { Snd.up(); setTimeout(() => Snd.up(), 260); setTimeout(() => [1568, 2093].forEach((f, i) => setTimeout(() => Snd.beep(f, .12, 'triangle', .9), i * 90)), 520); }
-  else if (r === 2) { Snd.up(); setTimeout(() => Snd.ok(), 250); }
-  else if (r === 1) Snd.up(); else Snd.buy();
-  dirty(); padAlerts();
-  if (S.cur === 'gacha') renderScreen();
-}
 let gcRaf = 0;
 function gcLoop(now) {
   if (S.cur !== 'gacha' || !$('pad').classList.contains('on')) { gcRaf = 0; return; }
-  const G = S.gc;
-  if (G.phase === 'spin' && (now - G.t0) / 1000 >= GC_OPEN + .35 && !G.done) { G.done = true; gcFinish(); }
   const cv = $('gcCv'); if (cv) gcDraw(cv, now);
   gcRaf = requestAnimationFrame(gcLoop);
 }
@@ -2139,7 +2142,7 @@ function gcDraw(cv, now) {
   if (!W || !H) return;
   if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
   const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const t = now / 1000, e = G.phase === 'spin' ? (now - G.t0) / 1000 : G.phase === 'result' ? 99 : -1;
+  const t = now / 1000, e = -1;
   const res = G.res, tier = res ? res.r : 1, tcol = (k = 0) => tier === 3 ? `hsl(${(t * 220 + k * 60) % 360},95%,62%)` : RARE_COL[tier];
   // 背景：夕方の屋上
   const sky = g.createLinearGradient(0, 0, 0, H * .7); sky.addColorStop(0, '#6f9fbe'); sky.addColorStop(.55, '#e8c98a'); sky.addColorStop(1, '#ef9f5c');
@@ -2230,57 +2233,235 @@ function gcDraw(cv, now) {
   g.lineWidth = 9; g.strokeStyle = INK; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 46); g.stroke(); g.lineWidth = 5; g.strokeStyle = '#c9a545'; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 46); g.stroke();
   g.strokeStyle = INK; g.lineWidth = 4; circ(g, 0, 50, 12, '#a9402f'); g.restore();
   g.restore();
-  // ---- カプセル ----
-  if (e >= GC_SPIN && e < GC_OPEN + .4) {
-    const p = Math.min(1, (e - GC_SPIN) / (GC_DROP - GC_SPIN)), ez = 1 - (1 - p) ** 3;
-    const x = cx + Math.sin(p * Math.PI) * 30 * s, y = (base - 36 * s) + (H * .52 - (base - 36 * s)) * ez - Math.sin(p * Math.PI) * 90 * s;
-    const sc = (.6 + ez * 1.3) * s, open = e >= GC_DROP ? Math.min(1, (e - GC_DROP) / (GC_OPEN - GC_DROP)) : 0;
-    g.save(); g.translate(x, y); g.scale(sc, sc); g.rotate(open ? 0 : (1 - p) * 6);
-    if (open) {
-      g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = open;
-      for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2 + t; g.fillStyle = tcol(i); g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, 60 + open * 140, a, a + .14); g.fill(); }
-      g.restore();
-    }
-    g.lineWidth = 4; g.strokeStyle = INK;
-    g.save(); g.translate(0, -open * 26); g.beginPath(); g.arc(0, 0, 30, Math.PI, 0); g.closePath(); g.fillStyle = tcol(); g.fill(); g.stroke();
-    g.globalAlpha = .35; g.fillStyle = '#fff'; g.beginPath(); g.ellipse(-12, -16, 8, 4, -.5, 0, 7); g.fill(); g.restore();
-    g.save(); g.translate(0, open * 26); g.beginPath(); g.arc(0, 0, 30, 0, Math.PI); g.closePath(); g.fillStyle = '#f2ecdc'; g.fill(); g.stroke(); g.restore();
-    g.restore();
+}
+
+// =====================================================================
+//  ガシャの3D演出（屋上の機械の前で）
+//  ハンドルが回る → カプセルが転がり出る → ゆれるたびに色が上がることがある（白→橙→青→金）
+//  → カプセルが開いて煙。キャラは煙が濃く出て、ゆっくり晴れるとキャラが見える。アイテムは煙がすぐ消える
+// =====================================================================
+const CAP_COL = ['#e9e4d6', '#ee8a2c', '#3f9be0', '#f2c230'];
+const GA = { on: false, t: 0 };
+const GT = { crank: 1.7, out: 2.6, shake: 1.1 };
+let hemiMeshC = null;
+function hemiMesh() {          // 半球（上半分）＋切り口のふた。半径 0.5
+  if (hemiMeshC) return hemiMeshC;
+  const pos = [], nrm = [], uv = [], idx = [], LAT = 8, LON = 22;
+  for (let i = 0; i <= LAT; i++) {
+    const th = i / LAT * Math.PI / 2;
+    for (let j = 0; j <= LON; j++) { const ph = j / LON * Math.PI * 2, x = Math.cos(th) * Math.cos(ph), y = Math.sin(th), z = Math.cos(th) * Math.sin(ph); pos.push(x * .5, y * .5, z * .5); nrm.push(x, y, z); uv.push(j / LON, i / LAT); }
   }
-  // ---- 結果 ----
-  if (res && (G.phase === 'result' || e >= GC_OPEN)) {
-    const a = G.phase === 'result' ? 1 : Math.min(1, (e - GC_OPEN) / .3);
-    g.save(); g.globalAlpha = a;
-    g.fillStyle = 'rgba(10,8,6,.55)'; g.fillRect(0, 0, W, H);
-    const ccx = W / 2, ccy = H * .5;
-    g.save(); g.translate(ccx, ccy); g.globalCompositeOperation = 'lighter'; g.globalAlpha = a * (tier >= 2 ? .5 : .28);
-    for (let i = 0; i < 16; i++) { const an = i / 16 * Math.PI * 2 + t * .4; g.fillStyle = tcol(i); g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, Math.max(W, H), an, an + .1); g.fill(); }
-    g.restore();
-    const cw = Math.min(W * .72, 330), ch = Math.min(H * .8, 300), x0 = ccx - cw / 2, y0 = ccy - ch / 2;
-    g.lineWidth = 5; g.strokeStyle = INK; rr(g, x0, y0, cw, ch, 14, '#e6dcc0');
-    rr(g, x0 + 14, y0 - 16, cw - 28, 36, 6, tier ? tcol() : '#b9ad88');
-    g.fillStyle = INK; g.font = `900 20px ${JP}`; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText(tier ? `${'★'.repeat(tier)} ${RARE_NAME[tier]}` : 'おまけ', ccx, y0 + 3);
-    const ir = Math.min(ch * .26, 70), iy = y0 + 30 + ir;
-    if (res.ch) {
-      const im = F[crewByKey[res.ch].img];
-      g.save(); g.beginPath(); g.arc(ccx, iy, ir, 0, 7); g.fillStyle = '#b9ad88'; g.fill(); g.clip();
-      if (im && im.width) { const sc = ir * 2.3 / im.height; g.drawImage(im, ccx - im.width * sc / 2, iy - ir * 1.05, im.width * sc, im.height * sc); }
-      g.restore(); g.lineWidth = 5; g.beginPath(); g.arc(ccx, iy, ir, 0, 7); g.stroke();
-    } else if (res.img && res.img.complete) g.drawImage(res.img, ccx - ir, iy - ir, ir * 2, ir * 2);
-    g.fillStyle = INK; g.font = `900 ${Math.round(Math.min(26, cw / 10))}px ${JP}`;
-    g.fillText(res.ch ? res.name : `${res.name} ×${res.n}`, ccx, iy + ir + 24, cw - 24);
-    g.font = `800 15px ${JP}`; g.fillStyle = '#4f4a3c';
-    const sub = res.r === 0 ? (res.it ? 'もちもの に入れました' : '素材を手に入れました') : res.isNew ? '仲間になった！' : `かさなり：${res.lv ? 'Lv ＋' + res.lv : ''}${res.coins ? (res.lv ? '・' : '') + '朕銭 ＋' + fmt(res.coins) : ''}`;
-    g.fillText(sub, ccx, iy + ir + 52, cw - 24);
-    if (res.isNew) {
-      g.save(); g.translate(x0 + cw - 34, y0 + 46); g.rotate(-.25); g.lineWidth = 4; g.fillStyle = '#a9402f'; g.beginPath(); g.roundRect(-36, -16, 72, 32, 6); g.fill(); g.stroke();
-      g.fillStyle = '#f4ecd8'; g.font = `900 20px ${JP}`; g.fillText('NEW!', 0, 1); g.restore();
-    }
-    g.font = `800 12px ${JP}`; g.fillStyle = '#e6dcc0'; g.fillText('クリック（Enter でもう一回）', ccx, y0 + ch + 18);
-    g.restore();
+  for (let i = 0; i < LAT; i++) for (let j = 0; j < LON; j++) { const a = i * (LON + 1) + j, b = a + LON + 1; idx.push(a, b, a + 1, b, b + 1, a + 1); }
+  const c = pos.length / 3; pos.push(0, 0, 0); nrm.push(0, -1, 0); uv.push(.5, .5);
+  for (let j = 0; j <= LON; j++) { const ph = j / LON * Math.PI * 2; pos.push(Math.cos(ph) * .5, 0, Math.sin(ph) * .5); nrm.push(0, -1, 0); uv.push(.5, .5); }
+  for (let j = 0; j < LON; j++) idx.push(c, c + 1 + j, c + 2 + j);
+  const m = new Mesh(app.graphicsDevice); m.setPositions(pos); m.setNormals(nrm); m.setUvs(0, uv); m.setIndices(idx); m.update();
+  return (hemiMeshC = m);
+}
+// カプセルの色の順番：[出てきたときの色, ゆれるたびの色…]。レアほど何回も色が上がる。ときどきフェイント
+function capSeq(r) {
+  let c = r === 0 ? 0 : r === 1 ? (Math.random() < .45 ? 0 : 1) : (Math.random() < .35 ? 0 : 1);
+  const seq = [c];
+  while (c < r) seq.push(++c);
+  if (r < 3 && Math.random() < .5) seq.push(c);
+  if (seq.length === 1) seq.push(c);
+  return seq;
+}
+const ease = (x) => 1 - (1 - Math.min(1, Math.max(0, x))) ** 3;
+const hexCol = (h) => new Color().fromString(h);
+function hslCol(h, sat, l) {   // h：0〜360
+  const k = (n) => (n + h / 30) % 12, a = sat * Math.min(l, 1 - l), f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+  return new Color(f(0), f(8), f(4));
+}
+function setCapColor(k, t) {
+  const m = GA.capMat, col = k === 3 ? hslCol((t * 200) % 360, .9, .62) : hexCol(CAP_COL[k]);
+  if (k === 3) { const g = hexCol(CAP_COL[3]); m.diffuse.set(g.r, g.g, g.b); } else m.diffuse.set(col.r, col.g, col.b);
+  m.emissive.set(col.r, col.g, col.b); m.emissiveIntensity = (k === 0 ? .05 : .35) + GA.flash * 2.2; m.update();
+  return col;
+}
+// ---- 部品（はじめの1回だけ作って、使いまわす） ----
+function gaParts() {
+  if (GA.cap) return;
+  const P = floors[2];
+  GA.capMat = mat('#e9e4d6', { emissive: '#e9e4d6', ei: .1, gloss: .7, spec: .4 });
+  const cap = new Entity('capsule'); P.addChild(cap);
+  const top = new Entity(); cap.addChild(top); piece(top, hemiMesh(), GA.capMat, [0, 0, 0], [.9, .9, .9]);
+  piece(top, 'sphere', cm('#ffffff', { emissive: '#ffffff', ei: .4 }), [-.16, .27, .16], [.14, .07, .1]);
+  const bot = new Entity(); cap.addChild(bot); piece(bot, hemiMesh(), cm('#f4efe2', { gloss: .6, spec: .3 }), [0, 0, 0], [.9, .9, .9], [180, 0, 0]);
+  const band = piece(cap, torusMesh(.45, .035), M.ink, [0, 0, 0]);
+  const ol = piece(cap, 'sphere', outline, [0, 0, 0], [.96, .96, .96]); ol.render.castShadows = false;
+  Object.assign(GA, { cap, top, bot, ol, band });
+  // 煙（白と灰色の玉）
+  GA.smokeMats = ['#f3f1ea', '#d9d6cc', '#bdb9ae'].map(h => { const m = new StandardMaterial(); m.diffuse = hexCol(h); m.emissive = hexCol(h); m.emissiveIntensity = .35; m.opacity = 0; m.blendType = BLEND_NORMAL; m.depthWrite = false; m.update(); return m; });
+  GA.puffs = Array.from({ length: 34 }, (_, i) => {
+    const e = new Entity(); e.addComponent('render', { type: 'sphere', material: GA.smokeMats[i % 3], castShadows: false }); P.addChild(e);
+    const a = Math.random() * Math.PI * 2, up = Math.random();
+    return { e, dir: new Vec3(Math.cos(a) * (1 - up * .5), up * 1.4 + .1, Math.sin(a) * (1 - up * .5) * .7), r0: .2 + Math.random() * .2, r1: .55 + Math.random() * .6, d: Math.random() * .25, spin: (Math.random() - .5) * 2 };
+  });
+  // 火花
+  GA.sparkMat = mat('#ffffff', { emissive: '#ffffff', ei: 2 });
+  GA.sparks = Array.from({ length: 22 }, () => { const e = new Entity(); e.addComponent('render', { type: 'box', material: GA.sparkMat, castShadows: false }); P.addChild(e); e.enabled = false; return { e, v: new Vec3(), life: 0 }; });
+  cap.enabled = false; GA.puffs.forEach(p => p.e.enabled = false);
+}
+function gaSparks(col, n = 14, power = 1) {
+  GA.sparkMat.emissive.set(col.r, col.g, col.b); GA.sparkMat.diffuse.set(col.r, col.g, col.b); GA.sparkMat.update();
+  const c = GA.cap.getPosition();
+  for (let i = 0; i < n; i++) {
+    const s = GA.sparks.find(s => s.life <= 0) || GA.sparks[i % GA.sparks.length], a = Math.random() * Math.PI * 2;
+    s.e.enabled = true; s.e.setPosition(c.x, c.y, c.z); s.life = .6 + Math.random() * .5;
+    s.v.set(Math.cos(a) * (1.5 + Math.random() * 2) * power, (2.5 + Math.random() * 3) * power, Math.sin(a) * (1.5 + Math.random() * 2) * power);
   }
 }
+function gaStart(res) {
+  gaParts();
+  const F0 = gachaFx.pos, seq = capSeq(res.r), isChar = !!res.ch;
+  const open = GT.out + .5 + (seq.length - 1) * GT.shake + .3;
+  Object.assign(GA, {
+    on: true, t: 0, res, seq, isChar, open, end: open + (isChar ? 3.0 : .9), shown: 0, flash: 0, opened: false, revealed: false, ended: false,
+    tick: 0, shakeDone: 0, chr: null, item: null, skip: false,
+    camPos: camera.getPosition().clone(), camLook: new Vec3(cam.x, cam.y, cam.z),
+  });
+  // 自分の隊員は機械の左に立って見守る
+  player.pos.set(F0.x - 2.4, F0.y, F0.z + 2.7); player.face = Math.PI / 2; player.vy = 0;
+  GA.cap.enabled = false; GA.top.setLocalPosition(0, 0, 0); GA.top.setLocalEulerAngles(0, 0, 0); GA.bot.setLocalScale(1, 1, 1); GA.ol.enabled = true; GA.band.enabled = true; GA.top.enabled = true;
+  $('pad').classList.remove('on'); S.cur = null; state.ui = 'gacha3d'; document.body.classList.add('cine');
+  $('gaHint').classList.add('on'); $('gaRes').classList.remove('on');
+}
+function gaCamera(dt) {
+  const F0 = gachaFx.pos, t = GA.t;
+  let pos, look;
+  if (t < GT.crank) { pos = [1.8, 2.9, 7.8]; look = [0, 1.6, 1.0]; }
+  else if (!GA.opened || !GA.isChar) { pos = [1.0, 1.75, 6.2]; look = [0, .7, 2.6]; }
+  else { pos = [.9, 2.5, 8.6]; look = [0, 1.25, 2.6]; }
+  const k = 1 - Math.exp(-dt * (GA.skip ? 30 : 3.2));
+  GA.camPos.x += (F0.x + pos[0] - GA.camPos.x) * k; GA.camPos.y += (F0.y + pos[1] - GA.camPos.y) * k; GA.camPos.z += (F0.z + pos[2] - GA.camPos.z) * k;
+  GA.camLook.x += (F0.x + look[0] - GA.camLook.x) * k; GA.camLook.y += (F0.y + look[1] - GA.camLook.y) * k; GA.camLook.z += (F0.z + look[2] - GA.camLook.z) * k;
+  camera.setPosition(GA.camPos); camera.lookAt(GA.camLook);
+}
+function gaUpdate(dt) {
+  const F0 = gachaFx.pos, Fx = gachaFx;
+  GA.t += dt; const t = GA.t, quiet = GA.skip;
+  GA.flash = Math.max(0, GA.flash - dt * 2.5);
+  // ---- 機械：ハンドルが回り、ゆれて、炉の火が強くなる ----
+  if (t < GT.crank) {
+    const p = t / GT.crank, amp = Math.min(1, t / .4) * .05;
+    Fx.mach.setLocalPosition(F0.x + Math.sin(t * 61) * amp, F0.y + Math.abs(Math.sin(t * 37)) * amp * .6, F0.z + Math.sin(t * 47) * amp * .5);
+    Fx.crank.setLocalEulerAngles(-ease(p) * 720, 0, 0);
+    if (t - GA.tick > .17) { GA.tick = t; if (!quiet) Snd.beep(280 + p * 260, .05, 'square', .5); }
+  } else Fx.mach.setLocalPosition(F0.x, F0.y, F0.z);
+  const heat = t < GT.crank ? 1.3 + t / GT.crank * 2.2 : 2.2;
+  // ---- カプセル ----
+  const nShake = GA.seq.length - 1;
+  let cur = GA.seq[0];
+  for (let i = 0; i < nShake; i++) { if (t >= GT.out + .5 + i * GT.shake + .7) cur = GA.seq[i + 1]; }
+  if (t >= GT.crank && !GA.cap.enabled) { GA.cap.enabled = true; GA.flash = .6; if (!quiet) Snd.beep(160, .25, 'sawtooth', .7, -60); }
+  const capCol = setCapColor(cur, t);
+  Fx.glow.emissive.set(...(t < GT.crank ? [1, .54, .16] : [capCol.r, capCol.g, capCol.b])); Fx.glow.emissiveIntensity = heat + GA.flash * 2; Fx.glow.update();
+  Fx.lamp.light.color = t < GT.crank ? new Color(1, .55, .2) : capCol; Fx.lamp.light.intensity = 1.2 + heat * .4 + GA.flash * 4;
+  if (GA.cap.enabled && !GA.opened) {
+    let x = 0, y = .45, z = 2.6, rx = 0, rz = 0;
+    if (t < GT.out) {
+      const p = (t - GT.crank) / (GT.out - GT.crank);
+      z = .85 + (2.6 - .85) * ease(p); y = .45 + Math.abs(Math.sin(p * Math.PI * 2.5)) * (1 - p) * .7; rx = z / .45 * 57.3;
+    } else {
+      rx = 2.6 / .45 * 57.3;
+      // ゆれ：ぷるぷる → ぴょん → 色が変わる（変わらないこともある）
+      for (let i = 0; i < nShake; i++) {
+        const u = t - (GT.out + .5 + i * GT.shake);
+        if (u >= 0 && u < .7) { const k = u / .7; rz = Math.sin(u * 42) * 16 * k; y += Math.max(0, Math.sin(u * 30)) * .06 * k; if (u > .62) y += (u - .62) / .08 * .25; }
+        else if (u >= .7 && u < 1.0) y += Math.max(0, .25 - (u - .7) * 1.2) ;
+        if (u >= .7 && GA.shakeDone === i) {
+          GA.shakeDone = i + 1; GA.flash = 1;
+          const up = GA.seq[i + 1] > GA.seq[i];
+          if (up) { gaSparks(hexCol(CAP_COL[GA.seq[i + 1]]), 16 + GA.seq[i + 1] * 4); if (!quiet) [660, 880, 1175, 1568].slice(0, 2 + GA.seq[i + 1]).forEach((f, j) => setTimeout(() => Snd.beep(f, .09, 'triangle', .9), j * 70)); }
+          else if (!quiet) Snd.beep(220, .12, 'square', .5, -40);
+        }
+        if (u >= 0 && u < .02 && !quiet && !GA['rattle' + i]) { GA['rattle' + i] = 1; for (let j = 0; j < 5; j++) setTimeout(() => Snd.beep(500 + Math.random() * 200, .03, 'square', .3), j * 110); }
+      }
+    }
+    GA.cap.setLocalPosition(F0.x + x, F0.y + y, F0.z + z); GA.cap.setLocalEulerAngles(rx, 0, rz);
+  }
+  // ---- 開く ----
+  if (t >= GA.open && !GA.opened) {
+    GA.opened = true; GA.flash = 1.2; GA.cap.setLocalEulerAngles(0, 0, 0); GA.ol.enabled = false; GA.band.enabled = false;
+    gaSparks(capCol, 22, 1.2);
+    if (!quiet) { Snd.beep(120, .3, 'sawtooth', .9, 300); setTimeout(() => Snd.beep(900, .4, 'sine', .6, -700), 60); }
+    const c = GA.cap.getPosition();
+    GA.puffs.forEach(p => { p.e.enabled = true; p.e.setPosition(c.x, c.y, c.z); p.e.setLocalScale(.01, .01, .01); });
+    if (GA.isChar) {
+      const a = makeChar(crewByKey[GA.res.ch]); a.pos = new Vec3(F0.x, F0.y, F0.z + 2.6); a.face = 0; a.root.enabled = false; GA.chr = a;
+    } else {
+      const im = new Image(); im.src = GA.res.src; GA.itemImg = im;
+      const keep = root; root = floors[2];
+      GA.item = decal((g, W, H) => { if (im.complete) g.drawImage(im, 0, 0, W, H); }, 128, 128, F0.x, F0.y + .9, F0.z + 2.7, .9, .9, '+z', { alpha: true, glow: .25 });
+      root = keep;
+      if (!im.complete) im.onload = () => { GA.item && (GA.item.ctx.drawImage(im, 0, 0, 128, 128), GA.item.tex.upload()); };
+    }
+  }
+  if (GA.opened) {
+    const u = t - GA.open, c = new Vec3(F0.x, F0.y + .45, F0.z + 2.6);
+    GA.top.setLocalPosition(0, ease(u / .5) * 1.6 + Math.max(0, u - .5) * -2, -ease(u / .5) * .4); GA.top.setLocalEulerAngles(-ease(u / .5) * 140, 0, 0);
+    const bs = Math.max(0, 1 - u / .5); GA.bot.setLocalScale(bs, bs, bs); GA.top.enabled = u < 1.0;
+    // 煙：キャラは濃くて長い、アイテムはすぐ消える
+    const op = GA.isChar ? (u < .15 ? u / .15 : u < 1.1 ? 1 : Math.max(0, 1 - (u - 1.1) / 1.7)) : (u < .08 ? u / .08 : Math.max(0, 1 - (u - .08) / .4));
+    GA.smokeMats.forEach((m, i) => { m.opacity = op * [.85, .8, .75][i]; m.update(); });
+    const spread = GA.isChar ? 1 : .7, tall = GA.isChar ? 1.7 : 1;
+    GA.puffs.forEach(p => {
+      const k = Math.max(0, u - p.d), g = ease(k / .6), s = (p.r0 + (p.r1 - p.r0) * g) * (GA.isChar ? 1.1 + k * .2 : 1);
+      p.e.enabled = op > .01;
+      p.e.setPosition(c.x + p.dir.x * (.2 + g * 1.1 * spread) + Math.sin(k * 1.3 + p.spin * 5) * .08, c.y + p.dir.y * (.15 + g * .8 * spread) * tall + k * .25, c.z + p.dir.z * (.2 + g * 1.0 * spread));
+      p.e.setLocalScale(s, s * .85, s);
+    });
+    if (GA.chr) {
+      // 煙がいちばん濃くなってから、中にキャラを置く（煙が晴れると見える）
+      GA.chr.root.enabled = u > 1.0;
+      const a = GA.chr, hop = u > 2.2 && u < 2.75 ? Math.sin((u - 2.2) / .55 * Math.PI) * .55 : 0;
+      a.pos.y = F0.y + hop; animate(a, false, false, dt, time);
+      if (u > 2.2 && !GA.hopped) { GA.hopped = 1; if (!quiet) Snd.beep(520, .12, 'triangle', .7, 400); }
+      const f = a.root.findByName('float'); if (f) f.setLocalPosition(0, .25 + Math.sin(time * 3) * .06, .2);
+    }
+    if (GA.item) { const sc = Math.min(1, ease(u / .35) * 1.15); GA.item.holder.setLocalScale(sc, sc, sc); GA.item.holder.setLocalPosition(F0.x, F0.y + .95 + Math.sin(u * 3) * .08, F0.z + 2.7); GA.item.holder.setLocalEulerAngles(0, Math.sin(u * 2) * 18, 0); }
+  }
+  // 火花
+  for (const s of GA.sparks) {
+    if (s.life <= 0) { s.e.enabled = false; continue; }
+    s.life -= dt; s.v.y -= 9 * dt; const p = s.e.getPosition(); s.e.setPosition(p.x + s.v.x * dt, p.y + s.v.y * dt, p.z + s.v.z * dt);
+    const sc = .09 * Math.min(1, s.life * 2); s.e.setLocalScale(sc, sc, sc); s.e.setLocalEulerAngles(time * 400, time * 300, 0);
+  }
+  // ---- おわり：結果を出す ----
+  if (t >= GA.end && !GA.ended) { GA.ended = true; GA.skip = false; gaShowResult(); }
+  gaCamera(dt);
+}
+function gaShowResult() {
+  const res = GA.res, r = res.r, el = $('gaRes');
+  const sub = r === 0 ? (res.it ? 'もちものに入れました' : '素材を手に入れました') : res.isNew ? '仲間になった！ 2F の結成ボードでメンバーに入れられます' : `かさなり：${res.lv ? 'Lv ＋' + res.lv : ''}${res.coins ? (res.lv ? '・' : '') + '朕銭 ＋' + fmt(res.coins) : ''}`;
+  el.innerHTML = `<div class="rib ${r === 3 ? 'rainbow' : ''}" style="background:${r ? RARE_COL[r] : '#b9ad88'}">${r ? '★'.repeat(r) + ' ' + RARE_NAME[r] : 'おまけ'}</div>
+    ${res.isNew ? '<div class="new">NEW!</div>' : ''}<div class="nm">${esc(res.ch ? res.name : res.name + ' ×' + res.n)}</div><div class="sb">${sub}</div><small>Enter／クリックで ガシャにもどる</small>`;
+  el.classList.add('on'); $('gaHint').classList.remove('on');
+  if (r === 3) { Snd.up(); setTimeout(() => Snd.up(), 260); setTimeout(() => [1568, 2093].forEach((f, i) => setTimeout(() => Snd.beep(f, .12, 'triangle', .9), i * 90)), 520); }
+  else if (r === 2) { Snd.up(); setTimeout(() => Snd.ok(), 250); }
+  else if (r === 1) Snd.up(); else Snd.buy();
+  dirty();
+}
+function gaSkip() {
+  if (!GA.on) return;
+  if (GA.ended) return gaEnd();
+  GA.skip = true; GA.t = Math.max(GA.t, GA.end - .02);
+}
+function gaEnd() {
+  const Fx = gachaFx, F0 = Fx.pos;
+  GA.on = false; GA.cap.enabled = false; GA.puffs.forEach(p => p.e.enabled = false); GA.sparks.forEach(s => { s.life = 0; s.e.enabled = false; });
+  if (GA.chr) { GA.chr.root.destroy(); GA.chr = null; }
+  if (GA.item) { GA.item.holder.destroy(); GA.item = null; }
+  Fx.mach.setLocalPosition(F0.x, F0.y, F0.z); Fx.crank.setLocalEulerAngles(0, 0, 0);
+  Fx.glow.emissive.set(1, .54, .16); Fx.glow.update(); Fx.lamp.light.color = new Color(1, .55, .2); Fx.lamp.light.intensity = 1.2;
+  $('gaRes').classList.remove('on'); $('gaHint').classList.remove('on'); document.body.classList.remove('cine');
+  // カメラは今の位置からなめらかに戻す
+  const p = player.pos; cam.x = GA.camLook.x; cam.y = GA.camLook.y;
+  S.gc.last = GA.res; state.ui = null;
+  openScreen('gacha');
+}
+addEventListener('pointerdown', (e) => { if (state.ui === 'gacha3d') { e.preventDefault(); gaSkip(); } });
 
 // =====================================================================
 //  マルチ募集（PeerJS：ルームを作った人がサーバー役）
@@ -2562,6 +2743,7 @@ addEventListener('keydown', (e) => {
   if (titleOn) { if (e.code === 'Enter' || e.code === 'Space') startGame(); return; }
   if (state.busy) return;
   const k = e.code;
+  if (state.ui === 'gacha3d') { if (k === 'Enter' || k === 'Space' || k === 'Escape' || k === 'KeyE') { e.preventDefault(); gaSkip(); } return; }
   if (state.ui === 'talk') { if (k === 'Enter' || k === 'Space' || k === 'KeyE' || k === 'Escape') { e.preventDefault(); advanceTalk(); } return; }
   if (state.ui === 'pad') {
     e.preventDefault();
