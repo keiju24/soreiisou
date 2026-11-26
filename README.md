@@ -6,7 +6,6 @@
 | --- | --- | --- |
 | `soreiisou.html` | それ、言いそう！ | 3〜8人（オンライン） |
 | `shimarin-brawl.html` | 大乱交しまりんブラザーズ（Phaser 3） | CPU と最大8人・チーム戦 / オンライン最大8人 |
-| `chinta-legend.html` | 朕太の伝説 〜狂戦士の城〜（Three.js・3D。章ごとに公開、いまは第1章） | 1人 |
 | `fire-station-3d.html` | 消防署さんぽ（PlayCanvas・3D。写真をもとにした消防署と、4階建ての室内を歩きまわる） | 1人 |
 
 ## オンラインのしくみ
@@ -19,15 +18,6 @@
 - ホストが抜けるとルームは閉じます。
 
 以前の招待リンク（`index.html?room=XXXX`）は、自動で `soreiisou.html` に転送されます。
-
-## 朕太の伝説（3D）
-
-- `chinta-legend.html` が本体です。Three.js は `lib/three.module.min.js`（r170）、ブルームなどの後処理は `lib/addons/`（Three.js 付属のもの）を使います。
-- メニューで「高画質／軽量」を切り替えられます（スマホは最初から軽量）。
-- 顔画像と朕太の声は、しまりんブラザーズと同じものを `chinta-assets.js` にまとめています。
-- 効果音は `se/` のものを使います。ES モジュールを使うので、ファイルを直接開くのではなく GitHub Pages かローカルサーバーで開いてください。
-- 通貨は「朕銭」と「響晶」。敵の落とし物は `DROPS`、アイテムは `ITEMS` で決めます。持ち物・クリア状況・開けた宝箱はブラウザの localStorage（`chinta3d`）に保存します。
-- 章は `CHAPTERS` に並んでいます。新しい章を出すときは `ready: true` にして、その章のマップと敵を足します。
 
 ## 消防署さんぽ（3D）
 
