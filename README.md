@@ -70,3 +70,16 @@
   - リザルトにクリアランク（S〜C：タイム・ダウン数・ミニミッション・サブミッションで決まる）。
 - セーブは localStorage（`fwb.save.v2`。仲間は `own`、ガシャの回数は `gacha`、きょうの回数は `gday`）。
 - デモプレイ用：せっていの「朕銭（デモ用）」が「むげん」（いまは最初から「むげん」）のあいだは朕銭がへらず、表示は ∞ になります。本当の朕銭は別にとってあり、セーブにもそちらを書くので、「ふつう」にもどせば元の朕銭にもどります。
+
+## 黒ねこ 3D デバッグ（`debug-kuroneko.html`）
+
+参考画像（正面・横・後ろ）の黒ねこを Blender で 3D 化したモデルの動作確認ページ。
+
+- 操作：WASD/矢印で歩く、Shift で走る、Space でジャンプ、J/左クリックでねこパンチ、K でしっぽ回転、1〜7 でアニメ直接再生、右ドラッグで視点、ホイールでズーム
+- パネル：状態・アニメ時間・速度・接地・座標・FPS、再生速度/歩く速さ/走る速さ/ジャンプ力のスライダー、骨・当たり判定の表示、ターンテーブル
+- モデル：`models/kuroneko.glb`（アニメ：idle / walk / run / jump / fall / attack / attack2）、元データ `models/kuroneko.blend`
+- 作り直し：`tools/blender/kuroneko_build.py` を Blender の Python で実行（`pip install bpy` の bpy でも可）
+
+```
+python tools/blender/kuroneko_build.py models/kuroneko.glb
+```

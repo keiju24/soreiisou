@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>黒ねこ デバッグ</title>
+<style>
+  :root { --ink:#1d1b19; --panel:rgba(18,20,24,.86); --line:#3a3f48; --hi:#9fe28c; --warn:#ffd166; }
+  html, body { margin:0; height:100%; overflow:hidden; background:#cfd8e3; font-family:"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif; }
+  canvas { display:block; width:100%; height:100%; touch-action:none; }
+  #panel { position:fixed; left:12px; top:12px; width:292px; background:var(--panel); color:#e8ecf2; border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:12px; line-height:1.5; }
+  #panel h1 { margin:0 0 6px; font-size:14px; display:flex; justify-content:space-between; align-items:center; }
+  #panel h1 small { color:#9aa3ae; font-weight:400; }
+  .grid { display:grid; grid-template-columns:auto 1fr; gap:1px 10px; font-family:ui-monospace,Menlo,monospace; }
+  .grid b { color:#9aa3ae; font-weight:400; } .grid span { color:var(--hi); }
+  .sec { margin-top:8px; padding-top:6px; border-top:1px solid var(--line); }
+  .btns { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
+  button { font:inherit; font-size:12px; color:#e8ecf2; background:#2a2f37; border:1px solid #444b56; border-radius:6px; padding:3px 8px; cursor:pointer; }
+  button.on { background:#3d6b3a; border-color:#5f9b58; }
+  label { display:flex; align-items:center; gap:6px; } input[type=range] { flex:1; }
+  #keys { position:fixed; right:12px; bottom:12px; background:var(--panel); color:#e8ecf2; border:1px solid var(--line); border-radius:10px; padding:8px 12px; font-size:12px; line-height:1.7; }
+  kbd { background:#2a2f37; border:1px solid #555; border-radius:4px; padding:0 5px; font-family:ui-monospace,monospace; }
+  #log { position:fixed; right:12px; top:12px; width:260px; max-height:40vh; overflow:auto; background:var(--panel); color:#cfd6df; border:1px solid var(--line); border-radius:10px; padding:6px 10px; font:11px/1.5 ui-monospace,monospace; }
+  #log div.hit { color:var(--warn); }
+  #loading { position:fixed; inset:0; display:grid; place-items:center; font-weight:900; color:#333; }
+</style>
+<script type="importmap">{ "imports": { "playcanvas": "./lib/playcanvas.min.mjs" } }</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="loading">モデルを読みこみ中…</div>
+<div id="panel">
+  <h1>黒ねこ デバッグ <small>models/kuroneko.glb</small></h1>
+  <div class="grid">
+    <b>状態</b><span id="vState">-</span>
+    <b>アニメ</b><span id="vClip">-</span>
+    <b>速さ</b><span id="vSpeed">-</span>
+    <b>接地</b><span id="vGround">-</span>
+    <b>位置</b><span id="vPos">-</span>
+    <b>FPS</b><span id="vFps">-</span>
+  </div>
+  <div class="sec">アニメを直接再生
+    <div class="btns" id="clipBtns"></div>
+  </div>
+  <div class="sec">
+    <label>再生速度 <input type="range" id="tScale" min="0.1" max="2" step="0.05" value="1"><span id="tScaleV">1.00</span></label>
+    <label>歩く速さ <input type="range" id="walkSp" min="1" max="6" step="0.1" value="2.8"><span id="walkSpV">2.8</span></label>
+    <label>走る速さ <input type="range" id="runSp" min="3" max="12" step="0.1" value="6.5"><span id="runSpV">6.5</span></label>
+    <label>ジャンプ力 <input type="range" id="jumpV" min="3" max="14" step="0.1" value="7.5"><span id="jumpVV">7.5</span></label>
+  </div>
+  <div class="sec btns">
+    <button id="tBones">骨を表示</button><button id="tHit">当たり判定</button><button id="tCam">カメラ固定</button><button id="tSpin">ターンテーブル</button><button id="tReset">位置リセット</button>
+  </div>
+</div>
+<div id="log"></div>
+<div id="keys">
+  <kbd>WASD</kbd>/<kbd>矢印</kbd> 歩く　<kbd>Shift</kbd> 走る　<kbd>Space</kbd> ジャンプ<br>
+  <kbd>J</kbd>/左クリック ねこパンチ　<kbd>K</kbd> しっぽ回転<br>
+  右ドラッグ 視点　ホイール ズーム　<kbd>1</kbd>〜<kbd>7</kbd> アニメ直接
+</div>
+<script type="module">
+import {
+  Application, Entity, Color, Vec3, Quat, StandardMaterial, Asset,
+  FILLMODE_FILL_WINDOW, RESOLUTION_AUTO, TONEMAP_ACES, GAMMA_SRGB, SHADOW_PCF3_32F, ANIM_LAYER_OVERWRITE
+} from 'playcanvas';
+
+const $ = (id) => document.getElementById(id);
+const canvas = $('c');
+const app = new Application(canvas, { mouse: undefined, graphicsDeviceOptions: { antialias: true } });
+app.setCanvasFillMode(FILLMODE_FILL_WINDOW); app.setCanvasResolution(RESOLUTION_AUTO);
+app.graphicsDevice.maxPixelRatio = Math.min(2, devicePixelRatio || 1);
+addEventListener('resize', () => app.resizeCanvas());
+app.scene.ambientLight = new Color(.55, .58, .66);
+app.start();
+
+const mat = (hex, o = {}) => { const m = new StandardMaterial(); m.diffuse = new Color().fromString(hex); m.gloss = o.gloss ?? .25; if (o.emissive) { m.emissive = new Color().fromString(o.emissive); } if (o.opacity != null) { m.opacity = o.opacity; m.blendType = 2; m.depthWrite = false; } m.update(); return m; };
+function box(m, p, s, parent = app.root) { const e = new Entity(); e.addComponent('render', { type: 'box', material: m }); e.setLocalPosition(...p); e.setLocalScale(...s); parent.addChild(e); return e; }
+
+// ---- 光：やわらかい正面の光＋うしろからの縁どり（妖怪ウォッチ風の見え方） ----
+const sun = new Entity(); sun.addComponent('light', { type: 'directional', color: new Color(1, .97, .92), intensity: 1.5, castShadows: true, shadowDistance: 30, shadowResolution: 2048, shadowBias: .3, normalOffsetBias: .05, shadowType: SHADOW_PCF3_32F });
+sun.setLocalEulerAngles(50, 30, 0); app.root.addChild(sun);
+const rim = new Entity(); rim.addComponent('light', { type: 'directional', color: new Color(.75, .85, 1), intensity: .9 }); rim.setLocalEulerAngles(-150, 20, 0); app.root.addChild(rim);
+const fill = new Entity(); fill.addComponent('light', { type: 'directional', color: new Color(1, .95, .9), intensity: .45 }); fill.setLocalEulerAngles(30, -140, 0); app.root.addChild(fill);
+
+// ---- 床・足場・まと ----
+const gA = mat('#b9c6a4'), gB = mat('#aebc98');
+for (let x = -10; x < 10; x++) for (let z = -10; z < 10; z++) box((x + z) & 1 ? gA : gB, [x * 2 + 1, -.05, z * 2 + 1], [2, .1, 2]);
+const plat = [];
+for (const [x, y, z, w, d] of [[6, .4, -4, 3, 3], [9, 1.0, -4, 2.5, 2.5], [11.5, 1.7, -6, 2.5, 2.5], [-6, .6, 5, 4, 2]]) {
+  plat.push({ x0: x - w / 2, x1: x + w / 2, z0: z - d / 2, z1: z + d / 2, y });
+  box(mat('#d8c8a0'), [x, y / 2, z], [w, y, d]);
+}
+const dummies = [];
+for (const [x, z] of [[-3, -4], [-5, -2], [3, 4]]) {
+  const e = new Entity(); app.root.addChild(e); e.setLocalPosition(x, 0, z);
+  const m = mat('#c0533f'); box(m, [0, .6, 0], [.5, 1.2, .5], e); box(mat('#e9d8b0'), [0, 1.35, 0], [.6, .3, .6], e);
+  dummies.push({ e, m, x, z, hp: 100, kb: new Vec3(), flash: 0 });
+}
+
+// ---- カメラ（3人称・右ドラッグで回す） ----
+const camE = new Entity(); camE.addComponent('camera', { clearColor: new Color(.81, .85, .89), fov: 45, nearClip: .1, farClip: 200, toneMapping: TONEMAP_ACES, gammaCorrection: GAMMA_SRGB });
+app.root.addChild(camE);
+const cam = { yaw: 0, pitch: 18, dist: 6.5, tgt: new Vec3() };
+
+// ---- 入力 ----
+const keys = new Set();
+addEventListener('keydown', (e) => { if (e.target.tagName === 'INPUT') return; keys.add(e.code); if (e.code === 'Space') { e.preventDefault(); P.wantJump = true; } if (e.code === 'KeyJ') P.wantAtk = 'attack'; if (e.code === 'KeyK') P.wantAtk = 'attack2'; const n = +e.key; if (n >= 1 && n <= CLIPS.length) playDirect(CLIPS[n - 1]); });
+addEventListener('keyup', (e) => keys.delete(e.code));
+let drag = null;
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+canvas.addEventListener('pointerdown', (e) => { if (e.button === 0) P.wantAtk = 'attack'; else drag = { x: e.clientX, y: e.clientY }; });
+addEventListener('pointerup', () => drag = null);
+addEventListener('pointermove', (e) => { if (!drag) return; cam.yaw -= (e.clientX - drag.x) * .3; cam.pitch = Math.max(-5, Math.min(70, cam.pitch + (e.clientY - drag.y) * .25)); drag = { x: e.clientX, y: e.clientY }; });
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); cam.dist = Math.max(2.5, Math.min(18, cam.dist * Math.exp(e.deltaY * .001))); }, { passive: false });
+
+// ---- デバッグ表示 ----
+const opt = { bones: false, hit: false, camLock: false, spin: false, tScale: 1, walk: 2.8, run: 6.5, jump: 7.5 };
+const tog = (id, k) => { $(id).onclick = () => { opt[k] = !opt[k]; $(id).classList.toggle('on', opt[k]); }; };
+tog('tBones', 'bones'); tog('tHit', 'hit'); tog('tCam', 'camLock'); tog('tSpin', 'spin');
+$('tReset').onclick = () => { P.pos.set(0, 0, 0); P.vy = 0; };
+for (const [id, k] of [['tScale', 'tScale'], ['walkSp', 'walk'], ['runSp', 'run'], ['jumpV', 'jump']]) { const el = $(id); el.oninput = () => { opt[k] = +el.value; $(id + 'V').textContent = (+el.value).toFixed(id === 'tScale' ? 2 : 1); }; }
+const logEl = $('log');
+function log(msg, cls = '') { const d = document.createElement('div'); d.className = cls; d.textContent = `${(performance.now() / 1000).toFixed(2)}s ${msg}`; logEl.prepend(d); while (logEl.children.length > 40) logEl.lastChild.remove(); }
+
+// ---- キャラ ----
+const CLIPS = ['idle', 'walk', 'run', 'jump', 'fall', 'attack', 'attack2'];
+const LOOP = { idle: true, walk: true, run: true, fall: true, jump: false, attack: false, attack2: false };
+const P = { pos: new Vec3(), vy: 0, face: 0, grounded: true, state: 'idle', clip: '', clipT: 0, atk: null, atkT: 0, hitDone: new Set(), wantJump: false, wantAtk: null, direct: null };
+let hero = null, anim = null, clipLen = {};
+function play(name, fade = .15) {
+  if (P.clip === name && LOOP[name]) return;
+  P.clip = name; P.clipT = 0;
+  anim.baseLayer.transition(name, fade);
+}
+function playDirect(name) { P.direct = name; play(name, .1); P.clip = name; log('直接再生: ' + name); }
+CLIPS.forEach((n, i) => { const b = document.createElement('button'); b.textContent = `${i + 1} ${n}`; b.onclick = () => playDirect(n); $('clipBtns').appendChild(b); });
+
+const asset = new Asset('kuroneko', 'container', { url: 'models/kuroneko.glb' });
+app.assets.add(asset);
+asset.ready(() => {
+  hero = asset.resource.instantiateRenderEntity({ castShadows: true, receiveShadows: true });
+  app.root.addChild(hero);
+  hero.addComponent('anim', { activate: true, speed: 1 });
+  for (const a of asset.resource.animations) {
+    const tr = a.resource, nm = tr.name.replace(/^.*\|/, '');
+    hero.anim.assignAnimation(nm, tr, undefined, 1, LOOP[nm] !== false);
+    clipLen[nm] = tr.duration;
+  }
+  anim = hero.anim;
+  play('idle', 0);
+  $('loading').remove();
+  log('読みこみ完了：アニメ ' + Object.keys(clipLen).join(', '));
+  window.__dbg = { app, P, hero, clipLen };
+});
+asset.on('error', (e) => { $('loading').textContent = '読みこみ失敗：' + e; });
+app.assets.load(asset);
+
+// ---- 当たり判定（足場に乗る・ジャンプ） ----
+function groundAt(x, z, y) {
+  let g = 0;
+  for (const p of plat) if (x > p.x0 - .2 && x < p.x1 + .2 && z > p.z0 - .2 && z < p.z1 + .2 && y >= p.y - .3) g = Math.max(g, p.y);
+  return g;
+}
+function blocked(x, z, y) { for (const p of plat) if (x > p.x0 - .25 && x < p.x1 + .25 && z > p.z0 - .25 && z < p.z1 + .25 && y < p.y - .3) return true; return false; }
+const angTo = (a, b) => { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
+
+let fpsT = 0, fpsN = 0;
+app.on('update', (rdt) => {
+  fpsT += rdt; fpsN++; if (fpsT > .5) { $('vFps').textContent = (fpsN / fpsT).toFixed(0); fpsT = 0; fpsN = 0; }
+  if (!hero) return;
+  const dt = Math.min(.05, rdt) * opt.tScale;
+  anim.speed = opt.tScale;
+  P.clipT += dt;
+  // 入力
+  let ix = 0, iz = 0;
+  if (keys.has('KeyD') || keys.has('ArrowRight')) ix += 1; if (keys.has('KeyA') || keys.has('ArrowLeft')) ix -= 1;
+  if (keys.has('KeyW') || keys.has('ArrowUp')) iz += 1; if (keys.has('KeyS') || keys.has('ArrowDown')) iz -= 1;
+  const il = Math.hypot(ix, iz); if (il > 1) { ix /= il; iz /= il; }
+  const run = keys.has('ShiftLeft') || keys.has('ShiftRight');
+  const yr = cam.yaw * Math.PI / 180;
+  let mx = -Math.sin(yr) * iz + Math.cos(yr) * ix, mz = -Math.cos(yr) * iz - Math.sin(yr) * ix;
+  if (il > 0) P.direct = null;
+  // 攻撃
+  if (P.wantAtk && !P.atk) { P.atk = P.wantAtk; P.atkT = 0; P.hitDone.clear(); P.direct = null; play(P.atk, .06); log('攻撃: ' + P.atk); }
+  P.wantAtk = null;
+  if (P.atk) { P.atkT += dt; mx *= .25; mz *= .25; if (P.atkT >= (clipLen[P.atk] || .6) - .05) P.atk = null; }
+  // ジャンプ
+  if (P.wantJump && P.grounded && !P.atk) { P.vy = opt.jump; P.grounded = false; play('jump', .05); P.direct = null; log('ジャンプ'); }
+  P.wantJump = false;
+  // 移動
+  const sp = (run ? opt.run : opt.walk) * Math.min(1, il);
+  const moving = il > .05 && !(P.atk && P.atk === 'attack2');
+  if (moving) {
+    const nx = P.pos.x + mx * sp * dt, nz = P.pos.z + mz * sp * dt;
+    if (!blocked(nx, P.pos.z, P.pos.y)) P.pos.x = nx; if (!blocked(P.pos.x, nz, P.pos.y)) P.pos.z = nz;
+    if (!P.atk) P.face += angTo(P.face, Math.atan2(mx, mz)) * Math.min(1, dt * 12);
+  }
+  if (P.atk === 'attack' && P.atkT > .12 && P.atkT < .3) { P.pos.x += Math.sin(P.face) * 2.2 * dt; P.pos.z += Math.cos(P.face) * 2.2 * dt; }
+  P.pos.x = Math.max(-19, Math.min(19, P.pos.x)); P.pos.z = Math.max(-19, Math.min(19, P.pos.z));
+  // 重力
+  P.vy -= 22 * dt; P.pos.y += P.vy * dt;
+  const g = groundAt(P.pos.x, P.pos.z, P.pos.y);
+  if (P.pos.y <= g) { if (!P.grounded && P.vy < -2) log('着地'); P.pos.y = g; P.vy = 0; P.grounded = true; } else if (P.pos.y > g + .05) P.grounded = false;
+  // 状態 → アニメ
+  let st;
+  if (P.atk) st = P.atk;
+  else if (!P.grounded) st = P.vy > 0 ? 'jump' : 'fall';
+  else if (moving) st = run ? 'run' : 'walk';
+  else st = 'idle';
+  if (P.direct && st === 'idle') st = P.direct;
+  if (st !== P.state) { P.state = st; if (!P.atk && st !== 'jump') play(st, st === 'fall' ? .25 : .15); }
+  if (opt.spin && !moving) P.face += dt * .8;
+  hero.setLocalPosition(P.pos); hero.setLocalEulerAngles(0, P.face * 180 / Math.PI, 0);
+  // 攻撃の当たり
+  const reach = P.atk === 'attack' ? { r: 1.1, from: .15, to: .35, fwd: .8, dmg: 12 } : P.atk === 'attack2' ? { r: 1.6, from: .2, to: .45, fwd: 0, dmg: 18 } : null;
+  if (reach && P.atkT > reach.from && P.atkT < reach.to) {
+    const hx = P.pos.x + Math.sin(P.face) * reach.fwd, hz = P.pos.z + Math.cos(P.face) * reach.fwd;
+    if (opt.hit) for (let a = 0; a < 24; a++) { const t0 = a / 24 * 6.283, t1 = (a + 1) / 24 * 6.283; app.drawLine(new Vec3(hx + Math.cos(t0) * reach.r, P.pos.y + .5, hz + Math.sin(t0) * reach.r), new Vec3(hx + Math.cos(t1) * reach.r, P.pos.y + .5, hz + Math.sin(t1) * reach.r), new Color(1, .3, .2)); }
+    for (const d of dummies) {
+      if (P.hitDone.has(d) || Math.hypot(d.x - hx, d.z - hz) > reach.r + .3) continue;
+      P.hitDone.add(d); d.hp = Math.max(0, d.hp - reach.dmg); d.flash = .2;
+      const dx = d.x - P.pos.x, dz = d.z - P.pos.z, l = Math.hypot(dx, dz) || 1; d.kb.set(dx / l * 4, 0, dz / l * 4);
+      log(`ヒット！ まと HP ${d.hp}`, 'hit');
+    }
+  }
+  for (const d of dummies) {
+    d.x += d.kb.x * dt; d.z += d.kb.z * dt; d.kb.mulScalar(Math.exp(-dt * 6)); d.e.setLocalPosition(d.x, 0, d.z);
+    d.flash = Math.max(0, d.flash - dt); d.m.emissive = d.flash > 0 ? new Color(1, 1, 1) : new Color(0, 0, 0); d.m.update();
+    if (d.hp <= 0 && !d.dead) { d.dead = true; log('まとをたおした', 'hit'); setTimeout(() => { d.hp = 100; d.dead = false; }, 1500); }
+    if (opt.hit) app.drawWireSphere ? 0 : 0;
+  }
+  // 骨の表示
+  if (opt.bones) {
+    const walk = (e) => { for (const c of e.children) { if (c.children && /^(root|hips|spine|head|arm|leg|tail)/.test(c.name)) { app.drawLine(e.getPosition(), c.getPosition(), new Color(.2, 1, .4), false); } walk(c); } };
+    walk(hero);
+  }
+  if (opt.hit) { const p = P.pos; for (let a = 0; a < 16; a++) { const t0 = a / 16 * 6.283, t1 = (a + 1) / 16 * 6.283; app.drawLine(new Vec3(p.x + Math.cos(t0) * .4, p.y + .05, p.z + Math.sin(t0) * .4), new Vec3(p.x + Math.cos(t1) * .4, p.y + .05, p.z + Math.sin(t1) * .4), new Color(.3, .8, 1)); } }
+  // カメラ
+  if (!opt.camLock) cam.tgt.lerp(cam.tgt, new Vec3(P.pos.x, P.pos.y + 1.0, P.pos.z), Math.min(1, rdt * 8));
+  const yy = cam.yaw * Math.PI / 180, pp = cam.pitch * Math.PI / 180;
+  camE.setPosition(cam.tgt.x + Math.sin(yy) * Math.cos(pp) * cam.dist, cam.tgt.y + Math.sin(pp) * cam.dist, cam.tgt.z + Math.cos(yy) * Math.cos(pp) * cam.dist);
+  camE.lookAt(cam.tgt);
+  // 表示
+  $('vState').textContent = P.state; $('vClip').textContent = `${P.clip}  ${P.clipT.toFixed(2)} / ${(clipLen[P.clip] || 0).toFixed(2)}s`;
+  $('vSpeed').textContent = (moving ? sp : 0).toFixed(2) + ' m/s'; $('vGround').textContent = P.grounded ? 'はい' : `いいえ (vy ${P.vy.toFixed(1)})`;
+  $('vPos').textContent = `${P.pos.x.toFixed(2)}, ${P.pos.y.toFixed(2)}, ${P.pos.z.toFixed(2)}`;
+});
+</script>
+</body>
+</html>
