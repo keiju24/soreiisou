@@ -354,6 +354,21 @@
   @media (max-width: 1000px), (max-height: 620px) { #hqPanel { width:390px; } #hqPanel .hqf small { display:none; } #hqPanel .hqf { height:32px; } #hqPanel .hqm { height:36px; } #hqPanel .hqm .face { width:36px !important; height:36px !important; } body.game #help { display:none; } }
   /* ダッシュのゲージ */
   #stam { position:fixed; left:0; top:0; width:32px; height:32px; z-index:16; pointer-events:none; display:none; filter:drop-shadow(0 2px 2px #0008); }
+  /* ===== 隊員メダル ===== */
+  .mgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; overflow:auto; min-height:0; padding:2px; }
+  .mcell { display:flex; flex-direction:column; align-items:center; gap:1px; padding:6px 2px 4px; border:3px solid transparent; border-radius:10px; cursor:pointer; background:#efe7cd; }
+  .mcell:hover { border-color:#b9ad88; } .mcell.on { border-color:var(--ink); background:#f6e9b0; box-shadow:0 3px 0 var(--ink); }
+  .mcell .no { font:800 10px monospace; color:#6a6452; } .mcell b { font-size:11px; font-weight:900; text-align:center; line-height:1.15; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .mcell.unk b { color:#8a8270; }
+  .medal { display:block; filter:drop-shadow(0 3px 0 #0006); }
+  .mcell.on .medal { animation:mSpin 2.4s ease-in-out infinite; }
+  @keyframes mSpin { 0%,70%,100% { transform:rotateY(0); } 85% { transform:rotateY(180deg) scale(1.05); } }
+  .mbook { background:linear-gradient(#f4ecd2,#e6dcc0); }
+  .mhead { display:flex; gap:16px; align-items:center; } .mhead .medal { flex:none; }
+  .mno { font:900 14px monospace; color:#6a6452; }
+  .mtags { display:flex; flex-wrap:wrap; gap:6px; } .mtags span { color:#fff; font-weight:900; font-size:13px; padding:2px 10px; border:3px solid var(--ink); border-radius:999px; } .mtags .st { background:#1d1b19; color:#ffd84a; }
+  .mdesc { margin:0; font-size:15px; line-height:1.7; font-weight:700; background:#fffaf0; border:3px dashed #b9ad88; border-radius:10px; padding:8px 12px; }
+  .mmoves { display:grid; grid-template-columns:1fr 1fr; gap:6px 12px; margin-top:4px; } .mmoves div { display:flex; align-items:center; gap:6px; } .mmoves small { font:800 10px monospace; color:#c9c3ad; } .mmoves b { font-size:13px; }
   /* ===== ごうせい・しんか ===== */
   .gsbox { display:flex; flex-direction:column; padding:14px; gap:6px; min-height:0; }
   .gspot { display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; padding:14px 8px; background:radial-gradient(circle,#4a3a5a,#2a2230); border:4px solid var(--ink); border-radius:14px; color:var(--cream); }
@@ -2531,8 +2546,74 @@ Object.assign(ACT, {
 // =====================================================================
 //  ずかん
 // =====================================================================
+// ---- 隊員メダル：種族（このゲームのオリジナル）と属性（火・水・雷・土・風・氷）----
+const TRIBES = {
+  netsu: { name: 'ネッケツ族', col: '#c0392b', desc: '熱い心でまっすぐ突っ走る' },
+  kairiki: { name: 'カイリキ族', col: '#8a5a2b', desc: '力じまんで、体が大きい' },
+  tekno: { name: 'テクノ族', col: '#4f6f86', desc: '道具や機械をあやつる' },
+  misty: { name: 'ミスティ族', col: '#7a4fa8', desc: 'ふしぎな力を持っている' },
+  shippu: { name: 'シップウ族', col: '#3f8a5a', desc: '風のように素早い' },
+  shinshi: { name: 'シンシ族', col: '#3a3a44', desc: '礼儀正しく、ふるまいが上品' },
+  deep: { name: 'ディープ族', col: '#2d6e8a', desc: '海や水べが大好き' },
+  royal: { name: 'ロイヤル族', col: '#c99a28', desc: '生まれながらの王さま気質' },
+};
+const ELEMS = {
+  fire: { name: '火', col: '#e0503c' }, water: { name: '水', col: '#3f8fe0' }, thunder: { name: '雷', col: '#e8b82a' },
+  earth: { name: '土', col: '#9a6a3a' }, wind: { name: '風', col: '#4fb06a' }, ice: { name: '氷', col: '#6fc8e8' },
+};
+const MEDAL = {
+  homura: { t: 'netsu', e: 'fire', desc: 'いつも一番に飛びだす炎の隊員。マフラーは本人いわく「気合いの証」。' },
+  berserker: { t: 'kairiki', e: 'earth', desc: 'ひと声で地面がゆれる力持ち。毛皮のえりは、じつは寒がりだから。' },
+  nagata: { t: 'tekno', e: 'fire', desc: 'ヘルメットは寝るときもかぶっている、射撃の名手。' },
+  shimarin: { t: 'misty', e: 'wind', desc: 'ふわふわ浮かぶ、ちょっと不思議な回復役。フードの中は秘密。' },
+  henry: { t: 'shippu', e: 'thunder', desc: '本部いちの俊足。同じジャージを3着、着回している。' },
+  kotan: { t: 'shinshi', e: 'water', desc: 'どんなときも礼儀を忘れない紳士。シルクハットの中に予備の傘。' },
+  archer: { t: 'shippu', e: 'ice', desc: '月夜にまぎれる弓の名人。無口だが、矢文はおしゃべり。' },
+  imai: { t: 'deep', e: 'water', desc: '海の男。長ぐつは雨の日だけでなく、晴れの日もはいている。' },
+  chinta: { t: 'royal', e: 'thunder', desc: '「朕」と名のる歌うまの王さま。マントは手作り。' },
+  ichigo: { t: 'netsu', e: 'wind', desc: '紅白のはかまで舞う二刀流。好物はもちろんいちご。' },
+  unko: { t: 'misty', e: 'earth', desc: 'うずまき帽子の魔法使い。運がいいのか悪いのか、だれにもわからない。' },
+  kenshin: { t: 'tekno', e: 'thunder', desc: '工具を手ばなさない発明家。背中のアンテナで電波をひろう。' },
+};
+const MEDAL_CACHE = {};
+// メダルの絵（キャンバス）：種族の色のふち・ギザギザ・顔・属性のしるし・★
+function medalURL(key, opt = {}) {
+  const evo = !!opt.evo, lock = !!opt.lock, id = key + (evo ? ':e' : '') + (lock ? ':l' : '');
+  if (MEDAL_CACHE[id]) return MEDAL_CACHE[id];
+  const M2 = MEDAL[key], T = TRIBES[M2.t], E = ELEMS[M2.e], c = crewByKey[key], im = F[c.img];
+  const cv = document.createElement('canvas'); cv.width = cv.height = 320; const g = cv.getContext('2d'); g.scale(2, 2);
+  const C = 80, rim = evo ? '#e8c24a' : lock ? '#5a5650' : T.col;
+  // 外のふち（コインのギザギザ）
+  g.fillStyle = '#1d1b19'; g.beginPath();
+  for (let i = 0; i < 48; i++) { const a = i / 48 * Math.PI * 2, r = i % 2 ? 76 : 79; g.lineTo(C + Math.cos(a) * r, C + Math.sin(a) * r); } g.closePath(); g.fill();
+  const gr = g.createRadialGradient(C - 20, C - 24, 10, C, C, 76); gr.addColorStop(0, '#ffffff'); gr.addColorStop(.25, rim); gr.addColorStop(1, '#1d1b19');
+  g.fillStyle = gr; g.beginPath(); g.arc(C, C, 72, 0, 7); g.fill();
+  g.globalAlpha = .35; g.strokeStyle = '#fff'; g.lineWidth = 2; g.beginPath(); g.arc(C, C, 66, Math.PI * 1.05, Math.PI * 1.6); g.stroke(); g.globalAlpha = 1;
+  // 内がわ
+  g.fillStyle = lock ? '#3a3834' : '#f4ecd2'; g.beginPath(); g.arc(C, C, 58, 0, 7); g.fill(); g.lineWidth = 4; g.strokeStyle = '#1d1b19'; g.stroke();
+  g.save(); g.beginPath(); g.arc(C, C, 54, 0, 7); g.clip();
+  g.fillStyle = lock ? '#2a2826' : T.col + '33'; g.fillRect(0, 0, 160, 160);
+  if (im && im.width) { const s = 112 / im.height; if (lock) g.filter = 'brightness(0) opacity(.6)'; g.drawImage(im, C - im.width * s / 2, C - 54, im.width * s, im.height * s); g.filter = 'none'; }
+  g.restore();
+  if (lock) { g.fillStyle = '#e6dcc0'; g.font = '900 38px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('？', C, C + 4); }
+  // 属性のしるし（右下）
+  if (!lock) {
+    g.fillStyle = '#1d1b19'; g.beginPath(); g.arc(C + 46, C + 46, 17, 0, 7); g.fill();
+    g.fillStyle = E.col; g.beginPath(); g.arc(C + 46, C + 46, 14, 0, 7); g.fill();
+    g.fillStyle = '#fff'; g.font = `900 17px ${JP}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(E.name, C + 46, C + 47);
+    // ★（下）
+    const n = CREW_RARE[key] + (evo ? 1 : 0);
+    for (let i = 0; i < n; i++) { const x = C - (n - 1) * 9 + i * 18, y = C + 64; g.fillStyle = '#1d1b19'; starP(g, x, y, 8.5, '#1d1b19'); starP(g, x, y, 6.5, evo ? '#fff3b0' : '#ffd84a'); }
+  }
+  if (evo) { g.globalAlpha = .8; starP(g, C - 50, C - 50, 9, '#fffbe0'); starP(g, C + 54, C - 36, 6, '#fffbe0'); g.globalAlpha = 1; }
+  return (MEDAL_CACHE[id] = cv.toDataURL());
+}
+const medalImg = (key, size, opt) => `<img class="medal" style="width:${size}px;height:${size}px" src="${medalURL(key, opt)}">`;
+
 SCREENS.zukan = () => {
-  const Z = S.zk, tab = Z.tab;
+  const Z = S.zk;
+  if (Z.tab === 0) return medalScreen();
+  const tab = Z.tab - 1;   // 1 ブスイ・2 ボス・3 装備
   const list = tab === 0 ? ENEMIES : tab === 1 ? BOSSES : Object.keys(EQUIPS);
   Z.sel = Math.min(Z.sel, list.length - 1);
   let left, right, count;
@@ -2558,7 +2639,7 @@ SCREENS.zukan = () => {
   return {
     title: 'ずかん', sub: 'FILES / ブスイ調査ファイル', cols: '1fr 1.25fr',
     html: `<div class="card" style="padding:10px 12px;display:flex;flex-direction:column;gap:6px;min-height:0">
-        <div style="display:flex;gap:6px;align-items:center">${['ブスイ', 'ボス', '装備'].map((t, i) => `<button class="pill ${tab === i ? 'on' : ''}" data-act="zkTab:${i}">${t}</button>`).join('')}<span style="margin-left:auto;font-weight:900">${tab < 2 ? '調査済' : '作った'} ${count} / ${list.length}</span></div>
+        <div style="display:flex;gap:6px;align-items:center">${ZK_TABS.map((t, i) => `<button class="pill ${Z.tab === i ? 'on' : ''}" data-act="zkTab:${i}">${t}</button>`).join('')}<span style="margin-left:auto;font-weight:900">${tab < 2 ? '調査済' : '作った'} ${count} / ${list.length}</span></div>
         <div class="rows">${left}</div></div>
       <div class="card" style="padding:14px;display:flex;flex-direction:column;gap:12px;min-height:0">${right}</div>`,
     desc: tab < 2 ? '倒した敵と、手に入れた素材が記録されます' : '工房で作った装備が記録されます',
@@ -2566,6 +2647,33 @@ SCREENS.zukan = () => {
   };
 };
 Object.assign(ACT, { zkTab(i) { S.zk.tab = +i; S.zk.sel = 0; Snd.move(); renderScreen(); }, zkSel(i) { S.zk.sel = +i; Snd.move(); renderScreen(); } });
+const ZK_TABS = ['メダル', 'ブスイ', 'ボス', '装備'];
+// ---- 隊員メダル（大事典ふう：左にメダルの一覧、右にくわしい説明）----
+function medalScreen() {
+  const Z = S.zk; Z.sel = Math.min(Z.sel, CREW.length - 1);
+  const c = CREW[Z.sel], k = c.key, own = owned(k), ev = isEvo(k), M2 = MEDAL[k], T = TRIBES[M2.t], E = ELEMS[M2.e];
+  const count = ownedCrew().length;
+  const grid = CREW.map((x, i) => { const o = owned(x.key); return `<div class="mcell ${i === Z.sel ? 'on' : ''} ${o ? '' : 'unk'}" data-act="zkSel:${i}">${medalImg(x.key, 74, { evo: isEvo(x.key), lock: !o })}<span class="no">No.${String(i + 1).padStart(3, '0')}</span><b>${o ? esc(cname(x.key)) : '？？？'}</b></div>`; }).join('');
+  const right = own ? `<div class="mhead">${medalImg(k, 180, { evo: ev })}<div>
+        <div class="mno">No.${String(Z.sel + 1).padStart(3, '0')}${ev ? '<span class="evtag">進化</span>' : ''}</div><div class="h3" style="margin:2px 0 6px">${esc(cname(k))}</div>
+        <div class="mtags"><span style="background:${T.col}">${T.name}</span><span style="background:${E.col}">${E.name}属性</span><span style="background:${ROLE[c.role][1]}">${ROLE[c.role][0]}</span><span class="st">${'★'.repeat(CREW_RARE[k] + (ev ? 1 : 0))}</span></div>
+        <div class="small" style="margin-top:6px">${T.name}：${T.desc}</div></div></div>
+      <p class="mdesc">${esc(M2.desc)}</p>
+      <div class="card dark" style="padding:8px 12px"><span class="lbl">わざ</span><div class="mmoves">${c.moves.map((m, i) => `<div>${icSk(i, c.role, 26)}<small>${MOVE_TYPES[i]}</small><b>${esc(mvName(k, i))}</b></div>`).join('')}</div></div>
+      <div class="mono">Lv${chOf(k).lv}${ev ? '' : `　／　進化すると「${esc(EVO[k].name)}」に`}</div>`
+    : `<div class="mhead">${medalImg(k, 180, { lock: true })}<div><div class="mno">No.${String(Z.sel + 1).padStart(3, '0')}</div><div class="h3">？？？</div>
+        <div class="mtags"><span style="background:#6a6452">種族 ？？？</span><span style="background:#6a6452">？属性</span><span class="st">${'★'.repeat(CREW_RARE[k])}</span></div></div></div>
+      <p class="mdesc">まだ仲間になっていない隊員です。屋上の朕銭ガシャで仲間になると、メダルがもらえます。</p>`;
+  return {
+    title: 'ずかん', sub: 'MEDALS / 隊員メダル大事典', cols: '1fr 1.15fr',
+    html: `<div class="card" style="padding:10px 12px;display:flex;flex-direction:column;gap:6px;min-height:0">
+        <div style="display:flex;gap:6px;align-items:center">${ZK_TABS.map((t, i) => `<button class="pill ${Z.tab === i ? 'on' : ''}" data-act="zkTab:${i}">${t}</button>`).join('')}<span style="margin-left:auto;font-weight:900">メダル ${count} / ${CREW.length}</span></div>
+        <div class="mgrid">${grid}</div></div>
+      <div class="card mbook" style="padding:14px;display:flex;flex-direction:column;gap:10px;min-height:0">${right}</div>`,
+    desc: '仲間になった隊員のメダルが集まります。種族と属性、わざを調べられます',
+    foot: '',
+  };
+}
 
 // =====================================================================
 //  せってい
@@ -5087,7 +5195,7 @@ addEventListener('keydown', (e) => {
       const byKey = (label) => foot.find(b => (b.querySelector('.key') || {}).textContent === label);
       const map = { Enter: 'Enter', ShiftLeft: 'Shift', ShiftRight: 'Shift', KeyX: 'X', KeyQ: 'Q', KeyR: 'R', KeyY: 'Y', KeyZ: 'Z', KeyC: 'C' };
       if (S.cur === 'mochi' || S.cur === 'zukan' || S.cur === 'workshop' || S.cur === 'gousei') {
-        const tabKey = S.cur === 'mochi' ? 'mo' : S.cur === 'zukan' ? 'zk' : S.cur === 'gousei' ? 'gs' : 'ws', n = S.cur === 'mochi' || S.cur === 'gousei' ? 2 : 3;
+        const tabKey = S.cur === 'mochi' ? 'mo' : S.cur === 'zukan' ? 'zk' : S.cur === 'gousei' ? 'gs' : 'ws', n = S.cur === 'mochi' || S.cur === 'gousei' ? 2 : S.cur === 'zukan' ? 4 : 3;
         if (k === 'KeyL' || k === 'KeyR' && S.cur !== 'multi') { const T = S[tabKey]; T.tab = (T.tab + (k === 'KeyR' ? 1 : n - 1)) % n; if (tabKey !== 'ws') T.sel = 0; Snd.move(); renderScreen(); return; }
       }
       if (S.cur === 'gacha' && (k === 'Enter' || k === 'Space')) return ACT.gcSpin();
