@@ -159,6 +159,11 @@
         },
         {
           "type": "char",
+          "id": "shima",
+          "weight": 10
+        },
+        {
+          "type": "char",
           "id": "homura",
           "weight": 3
         },
