@@ -591,7 +591,7 @@ const CREW = [
   { key: 'ichigo', name: 'いちご', img: 'ICHI', role: 'A', prop: 'swords', moves: ['二刀連斬', 'いちご返し', '回転斬り', '紅白乱舞'] },
   { key: 'unko', name: 'うんこいちご', img: 'UNKO', role: 'H', prop: 'staff', moves: ['ぺちぺち', '毒の沼', '謎の煙', '運気上昇'] },
   { key: 'kenshin', name: 'Kenshin', img: 'KENSHIN', role: 'R', prop: 'wrench', moves: ['レンチ打ち', '砲台設置', 'バリア展開', '試作機起動'] },
-  { key: 'kuroneko', name: '黒ねこ', img: 'KURO', role: 'A', prop: 'none', tw: { sub: 5 }, moves: ['ねこパンチ', 'しっぽ回転', '鬼火とばし', 'ふたまた鬼火'] },
+  { key: 'kuroneko', name: 'インポニャン', img: 'KURO', role: 'A', prop: 'none', tw: { sub: 5 }, moves: ['ねこパンチ', 'しっぽ回転', '鬼火とばし', 'ふたまた鬼火'] },
   { key: 'shima', name: 'シマさん', img: 'SHIMA', role: 'R', prop: 'none', moves: ['うずまき投げ', '青火のにらみ', 'ふろしき花火', '風情うずまき大砲'] },
 ];
 const crewByKey = Object.fromEntries(CREW.map(c => [c.key, c]));
@@ -1546,7 +1546,7 @@ const EVO = {
   ichigo: { name: '剣聖いちご', ult: '紅白百花乱舞' },
   unko: { name: '黄金うんこいちご', ult: '運気大上昇' },
   kenshin: { name: 'Kenshin MkII', ult: '量産機起動' },
-  kuroneko: { name: '大妖 黒ねこ', ult: '百鬼ふたまた鬼火' },
+  kuroneko: { name: '大妖 インポニャン', ult: '百鬼ふたまた鬼火' },
   shima: { name: '大風呂敷シマさん', ult: '風情うずまき大砲・極' },
 };
 const EVO_NEED = { lv: 30, orb: 1, coins: 3000 };
@@ -1665,7 +1665,8 @@ function makeGlbChar(c, evo) {
   const G = GLB[c.key];
   const rootE = new Entity(c.key), body = new Entity('body'); rootE.addChild(body);
   const model = glbRes[c.key].instantiateRenderEntity({ castShadows: true });
-  model.setLocalScale(G.scale, G.scale, G.scale); model.setLocalEulerAngles(0, 180, 0); body.addChild(model);
+  // glb は前が +Z（Blender の -Y）で、ゲームの隊員の前（+Z）とそろっているので回さない
+  model.setLocalScale(G.scale, G.scale, G.scale); body.addChild(model);
   // てかりをおさえる（ほかの隊員になじむように）
   model.findComponents('render').forEach(r => r.meshInstances.forEach(mi => { const m = mi.material; if (m.__matte) return; m.__matte = 1; if (m.glossInvert) m.gloss = Math.max(m.gloss, .78); else m.gloss = Math.min(m.gloss, .22); m.specularityFactor = .3; m.update(); }));
   const bone = (n) => model.findByName(n);
@@ -2658,7 +2659,7 @@ const MEDAL = {
   ichigo: { t: 'netsu', e: 'wind', desc: '紅白のはかまで舞う二刀流。好物はもちろんいちご。' },
   unko: { t: 'misty', e: 'earth', desc: 'うずまき帽子の魔法使い。運がいいのか悪いのか、だれにもわからない。' },
   kenshin: { t: 'tekno', e: 'thunder', desc: '工具を手ばなさない発明家。背中のアンテナで電波をひろう。' },
-  kuroneko: { t: 'misty', e: 'fire', desc: '鬼火をあやつる黒ねこ。しっぽは二また。気まぐれだが、ねこパンチは本気。' },
+  kuroneko: { t: 'misty', e: 'fire', desc: '鬼火をあやつる黒ねこ、インポニャン。しっぽは二また。気まぐれだが、ねこパンチは本気。' },
   shima: { t: 'misty', e: 'water', desc: '額に青い火をともす、ふしぎな隊員。背中の風呂敷の中身は、だれも見たことがない。' },
 };
 const MEDAL_CACHE = {};
