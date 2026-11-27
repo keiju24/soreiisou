@@ -313,6 +313,8 @@
   .gcRate.r3 .t i { color:#1b1519; } .gcRate.r2 .t i { color:#d8402f; } .gcRate.r1 .t i { color:#3f8fe0; }
   .btn.huge { font-size:21px; padding:8px 18px; justify-content:center; }
 
+  /* ダッシュのゲージ */
+  #stam { position:fixed; left:0; top:0; width:68px; height:68px; z-index:16; pointer-events:none; display:none; filter:drop-shadow(0 2px 2px #0008); }
   /* ===== ごうせい・しんか ===== */
   .gsbox { display:flex; flex-direction:column; padding:14px; gap:6px; min-height:0; }
   .gspot { display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; padding:14px 8px; background:radial-gradient(circle,#4a3a5a,#2a2230); border:4px solid var(--ink); border-radius:14px; color:var(--cream); }
@@ -434,6 +436,7 @@
 <div id="prompt"></div>
 <div id="talk"></div>
 <div id="toast"></div>
+<canvas id="stam" width="68" height="68"></canvas>
 <div id="gaRes"></div>
 <div id="fxLayer" onclick="this.classList.contains('done') && window.__fxClose && window.__fxClose()"></div>
 <div id="gaRank"></div>
@@ -451,7 +454,7 @@
   <div id="btBossSkill"></div>
   <div id="btCut"></div>
   <div id="btBoss"></div>
-  <div id="btHelp">WASD 移動・J／左クリック こうげき・K スキル1・L スキル2・U 必殺技・Space 回避・1/2 アイテム・E 調べる／長押しで仲間を起こす・Esc ポーズ</div>
+  <div id="btHelp">WASD 移動・Shift ダッシュ・J／左クリック こうげき・K スキル1・L スキル2・U 必殺技・Space 回避・1/2 アイテム・E 調べる／長押しで仲間を起こす・Esc ポーズ</div>
   <div id="btPause"><div class="rp"><h2>ポーズ</h2><p><span class="key">Enter</span>つづける　<span class="key">Q</span>リタイアして本部にもどる</p></div></div>
   <div id="btResult"></div>
 </div>
@@ -1687,7 +1690,7 @@ app.on('update', (dt) => {
     if (keys.has('KeyS') || keys.has('ArrowDown')) iz += 1;
   }
   const l = Math.hypot(ix, iz); if (l > 1) { ix /= l; iz /= l; }
-  const run = keys.has('ShiftLeft') || keys.has('ShiftRight');
+  const run = stamTick((keys.has('ShiftLeft') || keys.has('ShiftRight')) && l > .05 && !state.ui, dt);
   const sp = run ? 6.5 : 3.6, moving = l > .05, p = player.pos;
   player.moving = moving;
   if (moving) {
@@ -1703,6 +1706,7 @@ app.on('update', (dt) => {
   player.vy -= 20 * dt; p.y += player.vy * dt;
   if (p.y <= g) { p.y = g; player.vy = 0; player.grounded = true; } else if (p.y > g + .05) player.grounded = false;
   if (p.y < -5) { p.set(9.5, 0, -2.6); player.vy = 0; }
+  stamDraw(state.ui ? null : p);
   animate(player, moving, run, dt, time);
   // NPC・オンラインの仲間
   for (const a of actors) {
@@ -1776,7 +1780,7 @@ async function boot() {
   uiInit();
   requestAnimationFrame(titleLoop);
   document.body.dataset.ready = '1';
-  if (new URLSearchParams(location.search).has('debug')) window.__dbg = { app, get player() { return player; }, state, startGame, setPlayer, FH, npcs, openPad, openScreen, interact, save, NET, GA, Snd, BT, startSortie, QUESTS, MV, playSortieMovie , makeChar, CREW, animate};
+  if (new URLSearchParams(location.search).has('debug')) window.__dbg = { app, get player() { return player; }, state, startGame, setPlayer, FH, npcs, openPad, openScreen, interact, save, NET, GA, Snd, BT, startSortie, QUESTS, MV, playSortieMovie , makeChar, CREW, animate, STAM};
 }
 
 // =====================================================================
@@ -3536,6 +3540,55 @@ function interact(n) {
 }
 
 // =====================================================================
+//  ダッシュのゲージ（操作中のキャラの左横に出る、6区切りの丸いゲージ）
+//  ダッシュ中は 1.1 秒ごとに1区切りへる。空になると、満タンにもどるまでダッシュできない。
+//  ダッシュをやめて 0.6 秒たつと、1区切り 0.5 秒で回復する
+// =====================================================================
+const STAM = { v: 6, max: 6, drain: 1.1, regen: .5, wait: .6, idle: 0, tired: false, alpha: 0, hideT: 0 };
+const stScr = new Vec3(), stW = new Vec3();
+function stamTick(want, dt) {
+  const s = STAM;
+  if (s.tired && s.v >= s.max) s.tired = false;
+  const can = want && !s.tired && s.v > 0;
+  if (can) { s.v = Math.max(0, s.v - dt / s.drain); s.idle = 0; if (s.v <= 0) { s.tired = true; Snd.beep(180, .12, 'square', .4, -60); } }
+  else { s.idle += dt; if (s.idle > s.wait) s.v = Math.min(s.max, s.v + dt / s.regen); }
+  // 使っているあいだと、回復中だけ見せる（満タンになって少ししたら消える）
+  s.hideT = s.v < s.max || can ? 0 : s.hideT + dt;
+  s.alpha += ((s.hideT < .6 ? 1 : 0) - s.alpha) * Math.min(1, dt * 10);
+  return can;
+}
+function stamDraw(pos, h = 1.3) {
+  const el = $('stam'), s = STAM;
+  if (s.alpha < .02 || !pos) { el.style.display = 'none'; return; }
+  stW.set(pos.x, pos.y + h, pos.z); camera.camera.worldToScreen(stW, stScr);
+  el.style.display = 'block'; el.style.opacity = s.alpha.toFixed(2);
+  el.style.transform = `translate(${stScr.x - 74}px,${stScr.y}px) translate(-50%,-50%)`;
+  const g = el.getContext('2d'), R = 30, c = 34;
+  g.clearRect(0, 0, 68, 68);
+  // ふち（クリーム色）と、くらい下地
+  g.fillStyle = '#efe6cc'; g.beginPath(); g.arc(c, c, R + 3, 0, 7); g.fill();
+  g.lineWidth = 2; g.strokeStyle = '#1d1b19'; g.stroke();
+  g.fillStyle = '#26301a'; g.beginPath(); g.arc(c, c, R - 1, 0, 7); g.fill();
+  // 6つの区切り（上から時計回りに、へるのは最後の区切りから）
+  const full = Math.floor(s.v + 1e-6), frac = s.v - full;
+  for (let i = 0; i < 6; i++) {
+    const a0 = -Math.PI / 2 + i * Math.PI / 3 + .07, a1 = a0 + Math.PI / 3 - .14;
+    let col = null, al = 1;
+    if (i < full) col = s.tired ? '#e0503c' : '#d6ee3e';
+    else if (i === full && frac > .001) { col = s.tired ? '#e0503c' : '#d6ee3e'; al = .35 + frac * .5; }
+    if (!col) continue;
+    const gr = g.createRadialGradient(c, c, 6, c, c, R); gr.addColorStop(0, '#fbffd0'); gr.addColorStop(1, col);
+    g.globalAlpha = al; g.fillStyle = gr; g.beginPath(); g.moveTo(c, c); g.arc(c, c, R - 3, a0, a1); g.closePath(); g.fill(); g.globalAlpha = 1;
+  }
+  // 区切りの線（スポーク）
+  g.strokeStyle = '#2f4a1e'; g.lineWidth = 3.5;
+  for (let i = 0; i < 6; i++) { const a = -Math.PI / 2 + i * Math.PI / 3; g.beginPath(); g.moveTo(c + Math.cos(a) * 9, c + Math.sin(a) * 9); g.lineTo(c + Math.cos(a) * (R - 2), c + Math.sin(a) * (R - 2)); g.stroke(); }
+  // まん中の白い丸
+  g.fillStyle = '#5a6a3a'; g.beginPath(); g.arc(c, c, 10, 0, 7); g.fill();
+  g.fillStyle = s.tired ? '#ffd6cc' : '#fffbea'; g.beginPath(); g.arc(c, c, 7.5, 0, 7); g.fill();
+}
+
+// =====================================================================
 //  ごうせい・しんか
 //  合成：素材やアイテムを組み合わせて、べつの物をつくる（★素材アップ・アイテム・進化の玉）
 //  進化：Lv30 ＋ 進化の玉 ＋ 朕銭 で、隊員が進化する（名前・必殺技・見た目が変わり、能力が 1.2 倍）
@@ -4601,6 +4654,7 @@ function btHud() {
 }
 const scrTmp = new Vec3(), wTmp = new Vec3();
 function btTags(dt) {
+  stamDraw(BT.leader && !BT.leader.down && BT.phase === 'play' ? BT.leader.pos : null, 1.4);
   for (const e of BT.enemies) {
     if (e.boss || e.dead || !e.root.enabled || e.hp >= e.hpMax) { if (!e.boss) e.bar.style.display = 'none'; continue; }
     wTmp.set(e.pos.x, e.h + .35, e.pos.z); camera.camera.worldToScreen(wTmp, scrTmp);
@@ -4764,8 +4818,9 @@ function btLeaderInput(m, dt) {
   if (keys.has('KeyW') || keys.has('ArrowUp')) iz -= 1; if (keys.has('KeyS') || keys.has('ArrowDown')) iz += 1;
   const l = Math.hypot(ix, iz); if (l > 1) { ix /= l; iz /= l; }
   if (l > .05) m.moveAng = Math.atan2(ix, iz);
-  if (m.act > 0) return false;
-  if (l > .05) { const sp = 6.2 * (m.buf.slow > 0 ? .55 : 1); btMove(m, ix * sp, iz * sp, dt); m.face += angleTo(m.face, m.moveAng) * Math.min(1, dt * 14); m.aim = m.face; return true; }
+  if (m.act > 0) { stamTick(false, dt); return false; }
+  const dash = stamTick((keys.has('ShiftLeft') || keys.has('ShiftRight')) && l > .05, dt);
+  if (l > .05) { const sp = (dash ? 9.5 : 6.2) * (m.buf.slow > 0 ? .55 : 1); btMove(m, ix * sp, iz * sp, dt); m.face += angleTo(m.face, m.moveAng) * Math.min(1, dt * 14); m.aim = m.face; return true; }
   return false;
 }
 function btLeaderAct(what) {
