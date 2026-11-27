@@ -389,6 +389,21 @@
   .pm .dn { display:none; position:absolute; right:8px; top:4px; font-weight:900; font-size:11px; background:#a9402f; padding:0 6px; border-radius:4px; }
   .pm.down { filter:grayscale(.8); } .pm.down .dn { display:block; }
   #btSkills { position:absolute; right:16px; bottom:40px; display:flex; gap:8px; align-items:flex-end; }
+  #btSkills .sk[data-bt] { pointer-events:auto; cursor:pointer; transition:transform .08s, filter .15s; }
+  #btSkills .sk[data-bt]:hover { transform:translateY(-3px); border-color:var(--hazard); }
+  #btSkills .sk.press { transform:translateY(2px) scale(.95) !important; }
+  #btSkills .sk.off { filter:grayscale(.85) brightness(.7); }
+  #btSkills .sk .ty { position:absolute; right:4px; top:3px; font:800 9px monospace; color:#e6dcc0aa; z-index:2; }
+  #btSkills .sk .ct { position:absolute; left:0; right:0; bottom:4px; text-align:center; font:900 18px "Courier New",monospace; color:#fff; text-shadow:0 2px 0 #000; z-index:3; }
+  .pm .metag { position:absolute; left:-4px; top:-10px; font-weight:900; font-size:10px; background:var(--hazard); color:var(--ink); border:2px solid var(--ink); border-radius:4px; padding:0 4px; }
+  /* 小さい画面では戦闘のUIを小さくする */
+  @media (max-width: 1100px), (max-height: 640px) {
+    #btSkills .sk { width:62px; height:62px; } #btSkills .sk.ult { width:72px; height:72px; } #btSkills .sk.dg, #btSkills .sk.it { width:50px; height:50px; }
+    #btSkills .sk .nm { font-size:10px; } .pm { width:200px; padding:2px 6px; } .pm .face { width:32px; height:32px; }
+    #btMission { font-size:11px; } #btTime { font-size:24px; }
+  }
+  @media (max-width: 1000px) { #btHelp { display:none; } #btParty, #btSkills { bottom:16px; } }
+  @media (max-width: 820px) { #btParty { bottom:110px; } }
   .sk { position:relative; width:78px; height:78px; border:4px solid var(--ink); border-radius:12px; background:linear-gradient(#585d54,#3a3d36); display:grid; place-items:center; text-align:center; overflow:hidden; box-shadow:0 4px 0 var(--ink); }
   .sk .nm { font-weight:900; font-size:12px; line-height:1.15; padding:0 4px; z-index:1; }
   .sk .kk { position:absolute; left:3px; top:3px; font:900 11px monospace; background:var(--ink); padding:0 4px; border-radius:3px; z-index:2; }
@@ -1942,6 +1957,7 @@ const PAD_TILES = [
   ['nakama', 'なかま', '隊員名簿とメンバー編成。自分で操作するリーダーと、一緒に出動するCPUの隊員を決めます'],
   ['ikusei', 'いくせい', '朕銭を使って、隊員のレベルを上げます（技も自動で強くなります）'],
   ['gousei', 'ごうせい・しんか', '素材やアイテムを合成します。Lv30 の隊員は「進化の玉」で進化できます'],
+  ['soubi', 'そうび', '隊員に装備をつけたり、はずしたりします（装備は工房でつくれます）'],
   ['mochi', 'もちもの', 'お助けアイテムと素材を確認します。出動セット（2つまで）もここで決めます'],
   ['zukan', 'ずかん', 'ブスイの調査ファイルと、装備の記録です'],
   ['multi', 'マルチ募集', 'オンラインで一緒に出動する隊員を募集・参加します'],
@@ -4625,14 +4641,21 @@ function btCutin(m) {
 // ---------------------------------------------------------------------
 function btHudInit() {
   $('bt').classList.add('on');
-  $('btParty').innerHTML = BT.party.map((m, i) => `<div class="pm ${i ? '' : 'me'}" id="pm${i}"><span class="face"><img src="${F[m.c.img].src}"></span><div class="pi"><b>${esc(cname(m.key))}<em>Lv${m.lv}</em></b><div class="hp"><i></i></div><div class="gg"><i></i></div></div><span class="dn">ダウン</span></div>`).join('');
-  const L = BT.leader, items = save.set.map((k, i) => k ? `<div class="sk it" id="sk-i${i}">${icIt(k, 34)}<span class="kk">${i + 1}</span><em id="sk-n${i}">${save.items[k] || 0}</em></div>` : `<div class="sk it off"><span class="kk">${i + 1}</span></div>`).join('');
+  $('btParty').innerHTML = BT.party.map((m, i) => `<div class="pm ${i ? '' : 'me'}" id="pm${i}">${i ? '' : '<span class="metag">操作中</span>'}<span class="face"><img src="${F[m.c.img].src}"></span><div class="pi"><b>${esc(cname(m.key))}<em>Lv${m.lv}</em></b><div class="hp"><i></i></div><div class="gg"><i></i></div></div><span class="dn">ダウン</span></div>`).join('');
+  // 操作ボタン（クリックでも、キーと同じ処理を呼ぶ）
+  const L = BT.leader, items = save.set.map((k, i) => k ? `<div class="sk it" id="sk-i${i}" data-bt="i${i}" title="${esc(itemByKey[k].name)}">${icIt(k, 34)}<span class="kk">${i + 1}</span><em id="sk-n${i}">${save.items[k] || 0}</em></div>` : `<div class="sk it off"><span class="kk">${i + 1}</span></div>`).join('');
   $('btSkills').innerHTML = `${items}
-    <div class="sk" id="sk0"><span class="nm">${esc(L.c.moves[0])}</span><span class="kk">J</span></div>
-    <div class="sk" id="sk1"><span class="nm">${esc(L.c.moves[1])}</span><span class="kk">K</span><i class="cd"></i></div>
-    <div class="sk" id="sk2"><span class="nm">${esc(L.c.moves[2])}</span><span class="kk">L</span><i class="cd"></i></div>
-    <div class="sk ult" id="sk3"><span class="nm">${esc(mvName(L.key, 3))}</span><span class="kk">U</span><i class="cd"></i></div>
-    <div class="sk dg"><span class="nm">回避</span><span class="kk">Space</span></div>`;
+    <div class="sk" id="sk0" data-bt="atk"><span class="nm">${esc(L.c.moves[0])}</span><span class="kk">J</span><small class="ty">通常</small></div>
+    <div class="sk" id="sk1" data-bt="s1"><span class="nm">${esc(L.c.moves[1])}</span><span class="kk">K</span><small class="ty">技1</small><i class="cd"></i><b class="ct"></b></div>
+    <div class="sk" id="sk2" data-bt="s2"><span class="nm">${esc(L.c.moves[2])}</span><span class="kk">L</span><small class="ty">技2</small><i class="cd"></i><b class="ct"></b></div>
+    <div class="sk ult" id="sk3" data-bt="ult"><span class="nm">${esc(mvName(L.key, 3))}</span><span class="kk">U</span><small class="ty">必殺技</small><i class="cd"></i><b class="ct"></b></div>
+    <div class="sk dg" id="skD" data-bt="dodge"><span class="nm">回避</span><span class="kk">Space</span><i class="cd"></i></div>`;
+  $('btSkills').onpointerdown = (e) => {
+    const el = e.target.closest('[data-bt]'); if (!el) return;
+    e.preventDefault(); e.stopPropagation();
+    const a = el.dataset.bt; el.classList.add('press'); setTimeout(() => el.classList.remove('press'), 120);
+    if (a[0] === 'i') btUseItem(+a.slice(1)); else btLeaderAct(a);
+  };
   $('btTags').innerHTML = ''; BT.enemies.forEach(e => $('btTags').appendChild(e.bar)); BT.party.forEach(m => $('btTags').appendChild(m.bub));
   $('btBossBar').innerHTML = `<span>BOSS　${esc(BT.boss.c.name)}</span><div class="bb"><i></i></div><div class="bk"><i></i></div><em>ブレイク</em>`;
   $('btResult').onclick = () => { if (BT.done) btEnd(); };
@@ -4643,9 +4666,15 @@ function btHud() {
     el.querySelector('.hp i').style.width = (m.hp / m.hpMax * 100) + '%'; el.querySelector('.hp i').style.background = m.hp / m.hpMax < .3 ? '#e0503c' : '#8fe08a';
     el.querySelector('.gg i').style.width = m.gauge + '%'; el.classList.toggle('down', m.down); el.classList.toggle('full', m.gauge >= 100);
   });
-  const L = BT.leader;
-  for (let i = 1; i <= 2; i++) { const cd = $('sk' + i).querySelector('.cd'); cd.style.height = (L.cd[i] / MOVE_CD[L.role][i] * 100) + '%'; }
-  $('sk3').querySelector('.cd').style.height = (100 - L.gauge) + '%'; $('sk3').classList.toggle('ready', L.gauge >= 100);
+  const L = BT.leader, busy = L.down || BT.phase !== 'play';
+  // 技1・技2：クールタイムの残り（秒）と、使える／使えない
+  for (let i = 1; i <= 2; i++) { const el = $('sk' + i), cd = L.cd[i]; el.querySelector('.cd').style.height = (cd / MOVE_CD[L.role][i] * 100) + '%'; el.querySelector('.ct').textContent = cd > 0 ? cd.toFixed(1) : ''; el.classList.toggle('off', busy || cd > 0); }
+  // 必殺技：ゲージがたまるまで使えない（ゲージの％を表示）
+  $('sk3').querySelector('.cd').style.height = (100 - L.gauge) + '%'; $('sk3').classList.toggle('ready', L.gauge >= 100 && !busy); $('sk3').classList.toggle('off', busy || L.gauge < 100);
+  $('sk3').querySelector('.ct').textContent = L.gauge < 100 ? Math.floor(L.gauge) + '%' : '';
+  $('sk0').classList.toggle('off', busy);
+  $('skD').querySelector('.cd').style.height = (L.cd[3] / .7 * 100) + '%'; $('skD').classList.toggle('off', busy || L.cd[3] > 0);
+  save.set.forEach((k, i) => { const el = $('sk-i' + i); if (el) el.classList.toggle('off', busy || !(save.items[k] > 0)); });
   save.set.forEach((k, i) => { const n = $('sk-n' + i); if (n) n.textContent = save.items[k] || 0; });
   const s = Math.max(0, Math.ceil(BT.left)); $('btTime').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; $('btTime').classList.toggle('low', s < 60);
   $('btMission').innerHTML = `<div class="${BT.phase === 'clear' ? 'ok' : ''}">★ ${esc(crewByKey[BT.q.boss].name)}を正気にもどせ</div><div class="${BT.kills >= 15 ? 'ok' : ''}">・ブスイを15体たおす（${Math.min(15, BT.kills)}/15）</div><div class="${BT.kira >= 3 ? 'ok' : ''}">・キラキラを3つしらべる（${Math.min(3, BT.kira)}/3）</div>${BT.mm ? `<div class="mm">ミニ：${esc(BT.mm.text)}${BT.mm.need ? `（${BT.mm.got}/${BT.mm.need}）` : ''}　<b>${Math.ceil(BT.mm.left)}</b></div>` : ''}`;
