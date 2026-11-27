@@ -30,15 +30,15 @@ def mat(name, rgb, rough=.45, metal=0.0):
     b = m.node_tree.nodes.get('Principled BSDF')
     b.inputs['Base Color'].default_value = (*rgb, 1); b.inputs['Roughness'].default_value = rough; b.inputs['Metallic'].default_value = metal
     return m
-M_HAIR = mat('hair', (.008, .008, .011), .32)
-M_BLACK = mat('black', (.012, .012, .016), .42)
-M_SHINE = mat('hair_shine', (.13, .14, .17), .45)
-M_SKIN = mat('skin', (.98, .78, .64), .55)
-M_WHITE = mat('white', (.90, .90, .92), .35)
-M_LINE = mat('band_line', (.62, .63, .66), .45)
-M_EARIN = mat('ear_inner', (.86, .85, .88), .45)
-M_SILVER = mat('silver', (.88, .89, .92), .26, .45)
-M_SWIRL = mat('silver_swirl', (.50, .51, .55), .3, .6)
+M_HAIR = mat('hair', (.010, .010, .013), .62)
+M_BLACK = mat('black', (.014, .014, .018), .7)
+M_SHINE = mat('hair_shine', (.075, .078, .09), .8)
+M_SKIN = mat('skin', (.98, .78, .64), .8)
+M_WHITE = mat('white', (.90, .90, .92), .7)
+M_LINE = mat('band_line', (.62, .63, .66), .7)
+M_EARIN = mat('ear_inner', (.86, .85, .88), .75)
+M_SILVER = mat('silver', (.86, .87, .90), .5, .2)
+M_SWIRL = mat('silver_swirl', (.50, .51, .55), .55, .3)
 M_INK = mat('ink', (.08, .05, .05), .6)
 
 PARTS = []      # (オブジェクト, ボーン名 または ('tail', 'L'/'R'))
@@ -120,9 +120,11 @@ for i in range(34):
 bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
 add(new_obj('hairShine', bm), 'head', M_SHINE)
 # 顔（前髪の下に少しだけ見える）
-ellipsoid('face', (0, -.12, .93), (.31, .30, .23), 'head', M_SKIN)
+FC, FR = (0, -.09, .93), (.31, .28, .23)
+ellipsoid('face', FC, FR, 'head', M_SKIN)
+def face_y(x, z): return FC[1] - FR[1] * math.sqrt(max(0, 1 - (x / FR[0]) ** 2 - ((z - FC[2]) / FR[2]) ** 2))
 # 口「ω」
-pts = [Vector(((u - .5) * .11, -.405 + .004 * abs(u - .5), .80 - .022 * abs(math.sin(u * 2 * math.pi)))) for u in [i / 16 for i in range(17)]]
+pts = [Vector((x, face_y(x, z) - .003, z)) for x, z in (((u - .5) * .11, .80 - .022 * abs(math.sin(u * 2 * math.pi))) for u in [i / 16 for i in range(17)])]
 tube('mouth', pts, .0055, 'head', M_INK)
 # 耳：ふくらんだ三角（外は黒、内がわ白）。輪を積み上げて作る
 def ear_mesh(name, base, tip, rx, flat, bulge, bone, m):

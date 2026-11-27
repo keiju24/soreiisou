@@ -140,6 +140,7 @@ app.assets.add(asset);
 asset.ready(() => {
   hero = asset.resource.instantiateRenderEntity({ castShadows: true, receiveShadows: true });
   app.root.addChild(hero);
+  hero.findComponents('render').forEach(r => r.meshInstances.forEach(mi => { const m = mi.material; if (m.__matte) return; m.__matte = 1; if (m.glossInvert) m.gloss = Math.max(m.gloss, .78); else m.gloss = Math.min(m.gloss, .22); m.specularityFactor = .3; m.update(); }));   // てかりをおさえる
   hero.addComponent('anim', { activate: true, speed: 1 });
   for (const a of asset.resource.animations) {
     const tr = a.resource, nm = tr.name.replace(/^.*\|/, '');
