@@ -177,7 +177,11 @@
   .msdesc { margin:0 14px 14px; background:#f4ecd8; border:3px solid var(--ink); border-radius:10px; padding:10px 14px; font-weight:800; font-size:16px; line-height:1.6; }
   .kfocus { outline:4px solid #9fe28c !important; outline-offset:2px; box-shadow:0 0 0 7px #9fe28c55 !important; position:relative; z-index:1; }
   .btn:active { transform:translateY(2px); box-shadow:0 2px 0 var(--ink); }
-  .btn.go { background:linear-gradient(#d9bd5c,#b39436); } .btn.red { background:linear-gradient(#b5503d,#7d2a1e); color:#f0e3cf; } .btn.off { background:#9c978a; color:#5f5a4c; } .btn.sm { padding:1px 8px; font-size:13px; }
+  .btn.go { background:linear-gradient(#d9bd5c,#b39436); }
+  .btn.buyb { flex-direction:column; align-items:center; gap:0; min-width:104px; padding:4px 10px; line-height:1.15; }
+  .btn.buyb b { font-size:14px; } .btn.buyb small { font:800 11px monospace; }
+  .btn.buyb.off { background:repeating-linear-gradient(-45deg,#8f8a7c 0 6px,#857f71 6px 12px); color:#4a4538; cursor:not-allowed; box-shadow:none; transform:none; }
+  .btn.buyb.off b { text-decoration:line-through; } .btn.buyb.off small { color:#7d2a1e; } .btn.red { background:linear-gradient(#b5503d,#7d2a1e); color:#f0e3cf; } .btn.off { background:#9c978a; color:#5f5a4c; } .btn.sm { padding:1px 8px; font-size:13px; }
   #scr { flex:1; display:grid; gap:12px; min-height:0; }
   .card { background:linear-gradient(#e2d8b9,#cfc39c); border:4px solid var(--ink); border-radius:12px; box-shadow:0 5px 0 var(--ink); min-height:0; overflow:hidden; position:relative; color:var(--ink); }
   .card.dark { background:linear-gradient(#585d54,#43473f); color:var(--cream); }
@@ -357,6 +361,7 @@
   .gsout b { font-weight:900; font-size:15px; } .gsplus, .gsarrow { font-weight:900; font-size:24px; color:#f0c048; }
   .gshd { font-weight:900; font-size:12px; color:#6a6452; margin:6px 0 2px; border-bottom:2px solid #b9ad88; }
   .row.ng { opacity:.55; } .row.ng.on { opacity:1; }
+  .anyic.it { background:#7a5a3a; }
   .anyic { display:inline-grid; place-items:center; border:3px solid var(--ink); border-radius:10px; font:900 16px monospace; color:#fff; } .anyic.r1 { background:#8b9188; } .anyic.r2 { background:#4f6f86; } .anyic.r3 { background:#b5862a; }
   .evtag { display:inline-block; margin-left:6px; font-size:11px; font-weight:900; padding:1px 6px; border-radius:4px; background:#b5862a; color:#fff; vertical-align:middle; } .evtag.can { background:#a9402f; animation:b 1s steps(1) infinite; }
   .evbox { border:3px solid var(--ink); border-radius:10px; padding:8px 10px; background:#efe7cd; display:flex; flex-direction:column; gap:6px; }
@@ -2641,7 +2646,7 @@ SCREENS.workshop = () => {
   } else {
     html = `<div class="card dark" style="padding:12px;display:flex;flex-direction:column;gap:10px;grid-column:1/-1;min-height:0"><span class="lbl">お助けアイテム（朕銭で買う）</span>
       <div class="shop">${ITEMS.map(it => `<div class="sh">${icIt(it.key, 60)}<div style="flex:1;min-width:0"><b>${it.name}</b><div class="small">${it.desc}</div><div class="mono">持っている数 ${save.items[it.key] || 0}</div></div>
-        <div class="pr"><span class="coin"></span>${fmt(it.price)}</div><div style="display:flex;flex-direction:column;gap:4px">${B('buy:' + it.key + ':1', '1つ', '', save.coins >= it.price ? 'go' : 'off')}${B('buy:' + it.key + ':5', '5つ', '', save.coins >= it.price * 5 ? '' : 'off')}</div></div>`).join('')}</div></div>`;
+        <div class="pr"><span class="coin"></span>${fmt(it.price)}</div><div style="display:flex;flex-direction:column;gap:4px">${[1, 5].map(n => { const ok = save.coins >= it.price * n; return `<button class="btn buyb ${ok ? 'go' : 'off'}" data-act="buy:${it.key}:${n}" ${ok ? '' : 'aria-disabled="true"'}><b>${n}つ買う</b><small>${ok ? fmt(it.price * n) + ' 朕銭' : '朕銭が足りない'}</small></button>`; }).join('')}</div></div>`).join('')}</div></div>`;
     desc = '買ったアイテムは「もちもの」にしまわれます。出動セットに入れると、クエストで使えます';
   }
   return {
@@ -3696,14 +3701,30 @@ function stamDraw(pos, h = 1.3) {
 //  合成：素材やアイテムを組み合わせて、べつの物をつくる（★素材アップ・アイテム・進化の玉）
 //  進化：Lv30 ＋ 進化の玉 ＋ 朕銭 で、隊員が進化する（名前・必殺技・見た目が変わり、能力が 1.2 倍）
 // =====================================================================
+// 入れる物：{ mat } 決まった素材／{ item } 決まったアイテム／{ anyR } その★の素材どれでも／{ anyItem } アイテムどれでも
+// できる物：{ mat }／{ item }／{ randMat: ★ } その★の素材がランダムで1つ
 const RECIPES = [
   { key: 'orb', grp: '特別', out: { mat: 'x_evo', n: 1 }, ins: [{ anyR: 3, n: 2 }, { anyR: 2, n: 4 }], coins: 1000 },
-  { key: 'curry', grp: 'アイテム', out: { item: 'curry', n: 1 }, ins: [{ item: 'onigiri', n: 3 }], coins: 0 },
-  { key: 'sashi', grp: 'アイテム', out: { item: 'sashi', n: 1 }, ins: [{ item: 'curry', n: 2 }, { item: 'ume', n: 1 }], coins: 0 },
+  { key: 'orb2', grp: '特別', out: { mat: 'x_evo', n: 1 }, ins: [{ anyR: 2, n: 10 }], coins: 3000 },
+  { key: 'mix2', grp: 'まぜる', out: { randMat: 2, n: 1 }, ins: [{ anyR: 1, n: 4 }], coins: 50 },
+  { key: 'mix3', grp: 'まぜる', out: { randMat: 3, n: 1 }, ins: [{ anyR: 2, n: 4 }], coins: 200 },
+  { key: 'onigiri', grp: 'アイテム', out: { item: 'onigiri', n: 2 }, ins: [{ anyR: 1, n: 3 }], coins: 0 },
+  { key: 'ume', grp: 'アイテム', out: { item: 'ume', n: 2 }, ins: [{ anyR: 1, n: 2 }], coins: 0 },
+  { key: 'bakuchiku', grp: 'アイテム', out: { item: 'bakuchiku', n: 2 }, ins: [{ anyR: 1, n: 3 }], coins: 0 },
+  { key: 'drink', grp: 'アイテム', out: { item: 'drink', n: 1 }, ins: [{ anyR: 1, n: 2 }, { anyR: 2, n: 1 }], coins: 0 },
+  { key: 'gum', grp: 'アイテム', out: { item: 'gum', n: 1 }, ins: [{ anyR: 1, n: 2 }, { anyR: 2, n: 1 }], coins: 0 },
+  { key: 'curry', grp: 'アイテム', out: { item: 'curry', n: 1 }, ins: [{ item: 'onigiri', n: 2 }, { anyR: 1, n: 2 }], coins: 0 },
+  { key: 'curry2', grp: 'アイテム', out: { item: 'curry', n: 1 }, ins: [{ item: 'onigiri', n: 3 }], coins: 0 },
+  { key: 'sashi', grp: 'アイテム', out: { item: 'sashi', n: 1 }, ins: [{ item: 'curry', n: 1 }, { item: 'onigiri', n: 2 }], coins: 0 },
+  { key: 'yakisoba', grp: 'アイテム', out: { item: 'yakisoba', n: 1 }, ins: [{ item: 'onigiri', n: 1 }, { item: 'ume', n: 1 }, { anyR: 1, n: 2 }], coins: 0 },
   { key: 'candy', grp: 'アイテム', out: { item: 'candy', n: 1 }, ins: [{ item: 'drink', n: 1 }, { item: 'gum', n: 1 }], coins: 0 },
-  { key: 'clock', grp: 'アイテム', out: { item: 'clock', n: 1 }, ins: [{ anyR: 2, n: 3 }, { item: 'drink', n: 1 }], coins: 100 },
+  { key: 'candy2', grp: 'アイテム', out: { item: 'candy', n: 1 }, ins: [{ anyR: 2, n: 3 }], coins: 100 },
+  { key: 'candy3', grp: 'アイテム', out: { item: 'candy', n: 1 }, ins: [{ anyItem: true, n: 3 }], coins: 0 },
+  { key: 'minibers', grp: 'アイテム', out: { item: 'minibers', n: 1 }, ins: [{ anyR: 2, n: 2 }, { item: 'drink', n: 1 }], coins: 100 },
+  { key: 'clock', grp: 'アイテム', out: { item: 'clock', n: 1 }, ins: [{ anyR: 2, n: 3 }, { anyItem: true, n: 1 }], coins: 100 },
+  { key: 'clock2', grp: 'アイテム', out: { item: 'clock', n: 1 }, ins: [{ anyR: 3, n: 1 }, { anyR: 1, n: 3 }], coins: 100 },
   { key: 'assist', grp: 'アイテム', out: { item: 'assist', n: 1 }, ins: [{ item: 'bakuchiku', n: 2 }, { item: 'candy', n: 1 }], coins: 200 },
-  { key: 'onigiri', grp: 'アイテム', out: { item: 'onigiri', n: 2 }, ins: [{ anyR: 1, n: 5 }], coins: 0 },
+  { key: 'assist2', grp: 'アイテム', out: { item: 'assist', n: 1 }, ins: [{ anyR: 3, n: 2 }], coins: 200 },
 ];
 // 素材アップ：同じ素材の ★n を3つで ★n+1 を1つ（持っている素材だけ出す）
 function matUpRecipes() {
@@ -3715,20 +3736,24 @@ function matUpRecipes() {
 const allRecipes = () => [...RECIPES, ...matUpRecipes()];
 const anyMats = (r) => Object.keys(save.mats).filter(id => MATS[id] && MATS[id].r === r && id !== 'x_evo' && have(id) > 0);
 const anyCount = (r) => anyMats(r).reduce((a, id) => a + have(id), 0);
-const inHave = (x) => x.anyR ? anyCount(x.anyR) : x.mat ? have(x.mat) : (save.items[x.item] || 0);
-const recOk = (rc) => save.coins >= rc.coins && rc.ins.every(x => inHave(x) >= x.n);
-const recName = (o) => o.mat ? MATS[o.mat].name : itemByKey[o.item].name;
-const recIcon = (o, size) => o.mat ? icMat(o.mat, size) : o.item ? icIt(o.item, size) : anyIcon(o.anyR, size);
+const anyItems = (except) => ITEMS.filter(i => i.key !== except && (save.items[i.key] || 0) > 0).sort((a, b) => a.price - b.price);
+const inHave = (x, rc) => x.anyR ? anyCount(x.anyR) : x.anyItem ? anyItems(rc && rc.out.item).reduce((a, i) => a + save.items[i.key], 0) : x.mat ? have(x.mat) : (save.items[x.item] || 0);
+const recOk = (rc) => save.coins >= rc.coins && rc.ins.every(x => inHave(x, rc) >= x.n);
+const recName = (o) => o.randMat ? `★${o.randMat}素材（ランダム）` : o.mat ? MATS[o.mat].name : itemByKey[o.item].name;
+const recIcon = (o, size) => o.mat ? icMat(o.mat, size) : o.item ? icIt(o.item, size) : o.anyItem ? `<span class="anyic it" style="width:${size}px;height:${size}px">？</span>` : anyIcon(o.anyR || o.randMat, size);
 const anyIcon = (r, size) => `<span class="anyic r${r}" style="width:${size}px;height:${size}px">★${r}</span>`;
-const inLabel = (x) => x.anyR ? `★${x.anyR}素材（どれでも）` : recName(x);
+const inLabel = (x) => x.anyR ? `★${x.anyR}素材（どれでも）` : x.anyItem ? 'アイテム（どれでも）' : recName(x);
 function recPay(rc) {
   save.coins -= rc.coins;
   for (const x of rc.ins) {
     if (x.mat) save.mats[x.mat] = have(x.mat) - x.n;
     else if (x.item) save.items[x.item] -= x.n;
+    else if (x.anyItem) { let n = x.n; for (const it of anyItems(rc.out.item)) { const t = Math.min(n, save.items[it.key]); save.items[it.key] -= t; n -= t; if (!n) break; } }   // 安いアイテムから使う
     else { let n = x.n; for (const id of anyMats(x.anyR).sort((a, b) => have(b) - have(a))) { const t = Math.min(n, have(id)); save.mats[id] -= t; n -= t; if (!n) break; } }
   }
-  const o = rc.out; if (o.mat) save.mats[o.mat] = have(o.mat) + o.n; else save.items[o.item] = (save.items[o.item] || 0) + o.n;
+  const o = rc.out;
+  if (o.randMat) { const en = ENEMIES[Math.floor(Math.random() * ENEMIES.length)], id = en.key + o.randMat; save.mats[id] = have(id) + o.n; return id; }
+  if (o.mat) save.mats[o.mat] = have(o.mat) + o.n; else save.items[o.item] = (save.items[o.item] || 0) + o.n;
 }
 const canEvo = (k) => !isEvo(k) && chOf(k).lv >= EVO_NEED.lv && have('x_evo') >= EVO_NEED.orb && save.coins >= EVO_NEED.coins;
 S.gs = { tab: 0, sel: 0, key: null };
@@ -3742,14 +3767,14 @@ SCREENS.gousei = () => {
     return {
       title: 'ごうせい・しんか', sub: 'FUSION / 素材とアイテムを組み合わせる', cols: '1.05fr 1fr',
       html: `<div class="card gsbox">
-          <div class="gspot" id="gsPot">${rc.ins.map(x => `<div class="gsin ${inHave(x) >= x.n ? 'ok' : 'ng'}">${recIcon(x, 56)}<small>${inLabel(x)}</small><b>${inHave(x)}/${x.n}</b></div>`).join('<span class="gsplus">＋</span>')}
+          <div class="gspot" id="gsPot">${rc.ins.map(x => `<div class="gsin ${inHave(x, rc) >= x.n ? 'ok' : 'ng'}">${recIcon(x, 56)}<small>${inLabel(x)}</small><b>${inHave(x, rc)}/${x.n}</b></div>`).join('<span class="gsplus">＋</span>')}
             <span class="gsarrow">▶</span><div class="gsout">${recIcon(rc.out, 84)}<b>${recName(rc.out)}${rc.out.n > 1 ? ' ×' + rc.out.n : ''}</b></div></div>
-          <div class="b15" style="margin-top:6px">${rc.out.mat ? (rc.out.mat === 'x_evo' ? '隊員を進化させるのに使う、ふしぎな玉。「進化」タブで使います' : `素材 ${'★'.repeat(MATS[rc.out.mat].r)}（${MATS[rc.out.mat].src}）`) : itemByKey[rc.out.item].desc}</div>
-          <div class="mono" style="margin-top:4px">合成の費用 ${rc.coins ? fmt(rc.coins) + ' 朕銭' : 'なし'}　／　持っている数 ${rc.out.mat ? have(rc.out.mat) : save.items[rc.out.item] || 0}</div>
+          <div class="b15" style="margin-top:6px">${rc.out.randMat ? `ブスイの★${rc.out.randMat}素材のどれかが1つできます（なにが出るかはお楽しみ）` : rc.out.mat ? (rc.out.mat === 'x_evo' ? '隊員を進化させるのに使う、ふしぎな玉。「進化」タブで使います' : `素材 ${'★'.repeat(MATS[rc.out.mat].r)}（${MATS[rc.out.mat].src}）`) : itemByKey[rc.out.item].desc}</div>
+          <div class="mono" style="margin-top:4px">合成の費用 ${rc.coins ? fmt(rc.coins) + ' 朕銭' : 'なし'}　／　持っている数 ${rc.out.randMat ? anyCount(rc.out.randMat) + '（★' + rc.out.randMat + 'ぜんぶ）' : rc.out.mat ? have(rc.out.mat) : save.items[rc.out.item] || 0}</div>
           <button class="btn go huge" style="margin-top:auto" data-act="gsMake" ${ok ? '' : 'disabled'}><span class="key">Enter</span>${ok ? '合成する！' : '材料が足りない'}</button>
         </div>
         <div class="card" style="padding:10px 12px;display:flex;flex-direction:column;gap:8px;min-height:0">${tabs}<div class="rows">${rows}</div></div>`,
-      desc: '★の素材は3つで1つ上の★に。★3と★2の素材を集めて「進化の玉」をつくると、隊員を進化させられます',
+      desc: '「どれでも」の材料は、持っている素材やアイテムのどれを使ってもOK（多く持っている素材・安いアイテムから使います）。★の素材は同じもの3つか、どれでも4つで1つ上の★に',
       foot: '',
     };
   }
@@ -3777,9 +3802,10 @@ Object.assign(ACT, {
   gsMake() {
     const rc = allRecipes()[S.gs.sel]; if (!rc) return;
     if (!recOk(rc)) { Snd.err(); toast('材料が足りません'); return; }
-    const ins = rc.ins.map(x => recIcon(x, 64)), out = recIcon(rc.out, 110);
-    recPay(rc); dirty(); writeSave(); updateCoins();
-    fuseFx(ins, out, recName(rc.out) + (rc.out.n > 1 ? ' ×' + rc.out.n : ''));
+    const ins = rc.ins.map(x => recIcon(x, 64));
+    const got = recPay(rc); dirty(); writeSave(); updateCoins();
+    const out = got ? icMat(got, 110) : recIcon(rc.out, 110), name = got ? MATS[got].name : recName(rc.out) + (rc.out.n > 1 ? ' ×' + rc.out.n : '');
+    fuseFx(ins, out, name);
   },
   gsEvo() {
     const k = S.gs.key; if (!canEvo(k)) { Snd.err(); toast('進化の条件がそろっていません'); return; }
