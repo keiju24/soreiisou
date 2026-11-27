@@ -313,6 +313,34 @@
   .gcRate.r3 .t i { color:#1b1519; } .gcRate.r2 .t i { color:#d8402f; } .gcRate.r1 .t i { color:#3f8fe0; }
   .btn.huge { font-size:21px; padding:8px 18px; justify-content:center; }
 
+  /* 本部の案内パネル（右がわ） */
+  #hqPanel { position:fixed; right:18px; top:72px; width:252px; padding:8px; background:linear-gradient(#3a3d36ee,#2a2c27ee); border:4px solid var(--ink); border-radius:12px; box-shadow:0 5px 0 var(--ink); color:var(--cream); z-index:12; }
+  body.game #hqPanel.off { display:none; }
+  #hqPanel .hqh { display:flex; align-items:center; justify-content:space-between; margin:-2px 0 6px; }
+  #hqPanel .hqh span { font-weight:900; font-size:14px; background:var(--hazard); color:var(--ink); padding:1px 10px; border:3px solid var(--ink); border-radius:6px; transform:rotate(-2deg); }
+  #hqPanel .hqx { width:26px; height:24px; border:3px solid var(--ink); border-radius:6px; background:#cfcab9; font-weight:900; cursor:pointer; line-height:1; }
+  #hqPanel .hqh2 { font:900 11px monospace; color:#c9c3ad; letter-spacing:.2em; margin:8px 2px 4px; border-bottom:2px dashed #6a6452; }
+  #hqPanel .hqfl, #hqPanel .hqtm { display:flex; flex-direction:column; gap:4px; }
+  #hqPanel .hqf { position:relative; display:flex; align-items:center; gap:8px; padding:4px 6px; background:#e6dcc0; color:var(--ink); border:3px solid var(--ink); border-radius:8px; cursor:pointer; transition:transform .08s; }
+  #hqPanel .hqf:hover { transform:translateX(-3px); background:#f4ecd2; }
+  #hqPanel .hqf b { min-width:44px; text-align:center; font:900 15px "Courier New",monospace; background:#4f6f86; color:#fff; border:2px solid var(--ink); border-radius:5px; padding:1px 4px; }
+  #hqPanel .hqf span { display:flex; flex-direction:column; line-height:1.15; } #hqPanel .hqf em { font-style:normal; font-weight:900; font-size:14px; } #hqPanel .hqf small { font-size:10px; font-weight:800; color:#6a6452; }
+  #hqPanel .hqf.on { background:var(--hazard); cursor:default; } #hqPanel .hqf.on b { background:#a9402f; }
+  #hqPanel .hqf i { position:absolute; right:6px; top:-8px; font-style:normal; font-weight:900; font-size:10px; background:#a9402f; color:#fff; border:2px solid var(--ink); border-radius:4px; padding:0 4px; animation:b 1.2s steps(1) infinite; }
+  #hqPanel .hqm { display:flex; align-items:center; gap:8px; padding:3px 6px; background:#000a; border:2px solid #1d1b19; border-radius:8px; cursor:pointer; }
+  #hqPanel .hqm:hover { border-color:var(--hazard); }
+  #hqPanel .face { flex:none; display:inline-block; border-radius:50%; overflow:hidden; border:2px solid var(--ink); background:#b9ad88; } #hqPanel .face img { width:100%; height:100%; object-fit:cover; object-position:top; display:block; }
+  #hqPanel .hqm em, #hqPanel .hqf em { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } #hqPanel .hqm span:not(.role):not(.face) { min-width:0; }
+  #hqPanel .hqm span:not(.role):not(.face) { flex:1; display:flex; flex-direction:column; line-height:1.15; } #hqPanel .hqm small { font-weight:900; font-size:10px; } #hqPanel .hqm em { font-style:normal; font-weight:900; font-size:13px; }
+  #hqPanel .hqb { display:flex; gap:4px; margin-top:8px; }
+  #hqPanel .hqb button, #hqPanel .hqst button { flex:1; padding:5px 2px; font-weight:900; font-size:12px; border:3px solid var(--ink); border-radius:8px; background:linear-gradient(#cfcab9,#9c978a); color:var(--ink); cursor:pointer; box-shadow:0 3px 0 var(--ink); }
+  #hqPanel .hqb button:hover, #hqPanel .hqst button:hover { background:linear-gradient(#ead98a,#cfae45); }
+  #hqPanel .hqb button:active, #hqPanel .hqst button:active { transform:translateY(2px); box-shadow:0 1px 0 var(--ink); }
+  #hqPanel .hqb button.on { background:linear-gradient(#ead98a,#cfae45); }
+  #hqPanel .hqst { display:none; grid-template-columns:1fr 1fr; gap:4px; margin-top:6px; } #hqPanel .hqst.on { display:grid; }
+  #hqPanel .hqst b { font:900 10px monospace; background:var(--ink); color:#fff; padding:0 3px; border-radius:3px; margin-right:4px; }
+  #hqPanel.mini { width:auto; } #hqPanel.mini > :not(.hqh) { display:none !important; } #hqPanel.mini .hqh { margin:0; gap:8px; }
+  @media (max-width: 1000px), (max-height: 620px) { #hqPanel { width:214px; } #hqPanel .hqf small, #hqPanel .hqh2 { display:none; } #hqPanel .hqm .face { width:28px !important; height:28px !important; } }
   /* ダッシュのゲージ */
   #stam { position:fixed; left:0; top:0; width:32px; height:32px; z-index:16; pointer-events:none; display:none; filter:drop-shadow(0 2px 2px #0008); }
   /* ===== ごうせい・しんか ===== */
@@ -446,6 +474,7 @@
 <canvas id="c"></canvas>
 <canvas id="title"></canvas>
 <div class="hud" id="floorTag"></div>
+<div class="hud" id="hqPanel"></div>
 <button class="hud" id="padBtn">Hu-jo Pad <span class="key" style="margin:0 0 0 6px">Esc</span></button>
 <div class="hud" id="help">WASD／矢印で移動・Shift で走る・Enter で話す／調べる・1〜4 でスタンプ・Esc で Hu-jo Pad</div>
 <div id="prompt"></div>
@@ -1722,6 +1751,7 @@ app.on('update', (dt) => {
   if (p.y <= g) { p.y = g; player.vy = 0; player.grounded = true; } else if (p.y > g + .05) player.grounded = false;
   if (p.y < -5) { p.set(9.5, 0, -2.6); player.vy = 0; }
   stamDraw(state.ui ? null : p);
+  hqPanelTick();
   animate(player, moving, run, dt, time);
   // NPC・オンラインの仲間
   for (const a of actors) {
@@ -3554,6 +3584,54 @@ function interact(n) {
     showTalk('救急車', '出動は 2F 指令室のヘンリー隊長のところからだ。ミッションを選んで「出動!!」を押せば、この救急車で現場へ向かうぞ！');
   }
 }
+
+// =====================================================================
+//  本部の案内パネル（PC 版の「下の画面」：画面の右に出る）
+//  フロア案内（いまいる階が光る・クリックでその階へ）／出動メンバー（クリックで「なかま」）
+//  ／Hu-jo Pad・マルチ募集・スタンプのボタン。本部を歩いているときだけ出る
+// =====================================================================
+const HQ_FLOORS = [
+  { fl: 2, tag: '屋上', name: '屋上', sub: '朕銭ガシャ', pos: () => [12.5, RY, -4.6] },
+  { fl: 1, tag: '2F', name: '指令室', sub: '隊長・結成ボード・募集端末', pos: () => [10.5, FH, -6.5] },
+  { fl: 0, tag: '1F', name: 'エントランス', sub: '受付・工房・出動口', pos: () => [9.5, 0, -2.6] },
+];
+const HQP = { sig: '', stamp: false, moving: false };
+function hqPanelRender() {
+  const el = $('hqPanel'), mini = !!save.settings.panelMini;
+  const team = save.team.map((k, i) => ({ k, i })).filter(o => o.k);
+  el.classList.toggle('mini', mini);
+  el.innerHTML = `<div class="hqh"><span>ほんぶ案内</span><button class="hqx" data-hq="mini" title="${mini ? 'ひろげる' : 'たたむ'}">${mini ? '＋' : '－'}</button></div>
+    <div class="hqfl">${HQ_FLOORS.map(f => `<div class="hqf ${state.floor === f.fl ? 'on' : ''}" data-hq="fl:${f.fl}"><b>${f.tag}</b><span><em>${f.name}</em><small>${f.sub}</small></span>${state.floor === f.fl ? '<i>いまここ</i>' : ''}</div>`).join('')}</div>
+    <div class="hqh2">出動メンバー</div>
+    <div class="hqtm">${team.map(({ k, i }) => `<div class="hqm" data-hq="team">${faceImg(k, 36)}<span><small style="color:${i ? '#c9c3ad' : 'var(--hazard)'}">${i ? 'CPU' + i : 'リーダー'}</small><em>${esc(cname(k))}</em></span><span class="role" style="background:${ROLE[crewByKey[k].role][1]}">${crewByKey[k].role}</span></div>`).join('')}</div>
+    <div class="hqb"><button data-hq="pad">Hu-jo Pad</button><button data-hq="multi">マルチ募集</button><button data-hq="stamp" class="${HQP.stamp ? 'on' : ''}">スタンプ</button></div>
+    <div class="hqst ${HQP.stamp ? 'on' : ''}">${STAMPS.map((t, i) => `<button data-hq="st:${i}"><b>${i + 1}</b>${esc(t)}</button>`).join('')}</div>`;
+}
+function hqPanelTick() {
+  const el = $('hqPanel');
+  const show = document.body.classList.contains('game') && !state.ui && !BT.on && !titleOn;
+  el.classList.toggle('off', !show);
+  if (!show) { HQP.stamp = false; return; }
+  const sig = [state.floor, save.team.join(), save.team.map(k => k && isEvo(k)).join(), save.settings.panelMini, HQP.stamp].join('|');
+  if (sig !== HQP.sig) { HQP.sig = sig; hqPanelRender(); }
+}
+$('hqPanel').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-hq]'); if (!b || state.ui) return;
+  e.stopPropagation();
+  const [a, v] = b.dataset.hq.split(':');
+  if (a === 'mini') { save.settings.panelMini = save.settings.panelMini ? 0 : 1; dirty(); Snd.move(); }
+  else if (a === 'fl') {
+    const f = HQ_FLOORS.find(o => o.fl === +v); if (!f || f.fl === state.floor || HQP.moving) return;
+    HQP.moving = true; Snd.ok();
+    fade(() => { const [x, y, z] = f.pos(); player.pos.set(x, y, z); player.vy = 0; player.face = 0; HQP.moving = false; });
+  }
+  else if (a === 'team') { Snd.ok(); openPad(); openScreen('nakama', true); }
+  else if (a === 'pad') openPad();
+  else if (a === 'multi') { Snd.ok(); openPad(); openScreen('multi', true); }
+  else if (a === 'stamp') { HQP.stamp = !HQP.stamp; Snd.move(); }
+  else if (a === 'st') { sendStamp(+v); HQP.stamp = false; }
+  HQP.sig = ''; hqPanelTick();
+});
 
 // =====================================================================
 //  ダッシュのゲージ（操作中のキャラの左横に出る、6区切りの丸いゲージ）
