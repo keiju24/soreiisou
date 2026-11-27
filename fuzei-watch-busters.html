@@ -557,7 +557,7 @@
 <script type="module">
 import {
   Application, Entity, Color, Vec3, Vec2, StandardMaterial, Texture,
-  FILLMODE_FILL_WINDOW, RESOLUTION_AUTO, BLEND_NORMAL, PIXELFORMAT_SRGBA8,
+  FILLMODE_FILL_WINDOW, RESOLUTION_AUTO, BLEND_NORMAL, PIXELFORMAT_SRGBA8, PIXELFORMAT_RGBA8,
   FILTER_LINEAR, FILTER_LINEAR_MIPMAP_LINEAR, ADDRESS_CLAMP_TO_EDGE, ADDRESS_REPEAT,
   TONEMAP_ACES, GAMMA_SRGB, SHADOW_PCF3_32F, CULLFACE_FRONT, CULLFACE_NONE,
   Mesh, MeshInstance, TorusGeometry, Vec4, Quat
@@ -965,6 +965,11 @@ const outline = new StandardMaterial();
 outline.diffuse = new Color(0.09, 0.08, 0.07); outline.useLighting = false; outline.cull = CULLFACE_FRONT; outline.update();
 
 // ---- 手描き風のテクスチャ ----
+// 画像のテクスチャ（tools/textures/make_textures.py でつくったもの）。まず手描きの絵で表示して、
+// 画像が読みこめたら差しかえる。_n は法線マップ（でこぼこ）
+const TEX_FILES = ['concrete', 'tile', 'wood', 'wall', 'wall2', 'roof', 'shutter', 'hazard', 'grass', 'dirt', 'stone', 'sand'];
+const TEXN = {};
+function loadTexFile(t, url) { const img = new Image(); img.onload = () => t.setSource(img); img.src = url; }
 function makeTex(name, w, h, draw, repeat = true) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   draw(c.getContext('2d'), w, h);
@@ -974,6 +979,12 @@ function makeTex(name, w, h, draw, repeat = true) {
     addressU: repeat ? ADDRESS_REPEAT : ADDRESS_CLAMP_TO_EDGE, addressV: repeat ? ADDRESS_REPEAT : ADDRESS_CLAMP_TO_EDGE
   });
   t.setSource(c);
+  if (TEX_FILES.includes(name)) {
+    loadTexFile(t, `textures/${name}.jpg`);
+    const nc = document.createElement('canvas'); nc.width = nc.height = 4; const ng = nc.getContext('2d'); ng.fillStyle = 'rgb(128,128,255)'; ng.fillRect(0, 0, 4, 4);
+    const tn = new Texture(app.graphicsDevice, { name: name + '_n', width: 4, height: 4, format: PIXELFORMAT_RGBA8, mipmaps: true, anisotropy: 8, minFilter: FILTER_LINEAR_MIPMAP_LINEAR, magFilter: FILTER_LINEAR, addressU: repeat ? ADDRESS_REPEAT : ADDRESS_CLAMP_TO_EDGE, addressV: repeat ? ADDRESS_REPEAT : ADDRESS_CLAMP_TO_EDGE });
+    tn.setSource(nc); loadTexFile(tn, `textures/${name}_n.jpg`); TEXN[name] = tn;
+  }
   return t;
 }
 let ts = 4242; const tr = () => (ts = (ts * 16807) % 2147483647) / 2147483647;
@@ -995,7 +1006,9 @@ const TMC = {};
 function tmat(t, tu, tv, o = {}) {
   const key = t.name + tu.toFixed(2) + ',' + tv.toFixed(2);
   if (TMC[key]) return TMC[key];
-  const m = new StandardMaterial(); m.diffuseMap = t; m.diffuseMapTiling = new Vec2(tu, tv); m.gloss = o.gloss ?? 0.2; m.specular = new Color(0.04, 0.04, 0.04); m.update();
+  const m = new StandardMaterial(); m.diffuseMap = t; m.diffuseMapTiling = new Vec2(tu, tv); m.gloss = o.gloss ?? 0.2; m.specular = new Color(0.04, 0.04, 0.04);
+  if (TEXN[t.name]) { m.normalMap = TEXN[t.name]; m.normalMapTiling = new Vec2(tu, tv); m.bumpiness = .9; }
+  m.update();
   return (TMC[key] = m);
 }
 
