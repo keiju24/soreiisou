@@ -313,34 +313,41 @@
   .gcRate.r3 .t i { color:#1b1519; } .gcRate.r2 .t i { color:#d8402f; } .gcRate.r1 .t i { color:#3f8fe0; }
   .btn.huge { font-size:21px; padding:8px 18px; justify-content:center; }
 
-  /* 本部の案内パネル（右がわ） */
-  #hqPanel { position:fixed; right:18px; top:72px; width:252px; padding:8px; background:linear-gradient(#3a3d36ee,#2a2c27ee); border:4px solid var(--ink); border-radius:12px; box-shadow:0 5px 0 var(--ink); color:var(--cream); z-index:12; }
+  /* 本部の案内パネル（PC 版の下画面：右下） */
+  #hqPanel { position:fixed; right:16px; bottom:14px; width:468px; padding:10px 10px 8px; background:repeating-linear-gradient(45deg,#3b4038 0 14px,#363b33 14px 28px); border:5px solid var(--ink); border-radius:16px; box-shadow:0 6px 0 var(--ink), inset 0 0 0 3px #6a6f62; color:var(--cream); z-index:12; }
   body.game #hqPanel.off { display:none; }
-  #hqPanel .hqh { display:flex; align-items:center; justify-content:space-between; margin:-2px 0 6px; }
-  #hqPanel .hqh span { font-weight:900; font-size:14px; background:var(--hazard); color:var(--ink); padding:1px 10px; border:3px solid var(--ink); border-radius:6px; transform:rotate(-2deg); }
-  #hqPanel .hqx { width:26px; height:24px; border:3px solid var(--ink); border-radius:6px; background:#cfcab9; font-weight:900; cursor:pointer; line-height:1; }
-  #hqPanel .hqh2 { font:900 11px monospace; color:#c9c3ad; letter-spacing:.2em; margin:8px 2px 4px; border-bottom:2px dashed #6a6452; }
-  #hqPanel .hqfl, #hqPanel .hqtm { display:flex; flex-direction:column; gap:4px; }
-  #hqPanel .hqf { position:relative; display:flex; align-items:center; gap:8px; padding:4px 6px; background:#e6dcc0; color:var(--ink); border:3px solid var(--ink); border-radius:8px; cursor:pointer; transition:transform .08s; }
-  #hqPanel .hqf:hover { transform:translateX(-3px); background:#f4ecd2; }
-  #hqPanel .hqf b { min-width:44px; text-align:center; font:900 15px "Courier New",monospace; background:#4f6f86; color:#fff; border:2px solid var(--ink); border-radius:5px; padding:1px 4px; }
-  #hqPanel .hqf span { display:flex; flex-direction:column; line-height:1.15; } #hqPanel .hqf em { font-style:normal; font-weight:900; font-size:14px; } #hqPanel .hqf small { font-size:10px; font-weight:800; color:#6a6452; }
+  #hqPanel .hqx { position:absolute; right:8px; top:-18px; height:26px; padding:0 8px; border:3px solid var(--ink); border-radius:7px; background:#cfcab9; font-weight:900; cursor:pointer; z-index:2; }
+  #hqPanel .hqcols { display:grid; grid-template-columns:1.1fr 1fr; gap:10px; }
+  #hqPanel .hqh { margin:-2px 0 4px; } #hqPanel .hqh span { display:inline-block; font-weight:900; font-size:13px; letter-spacing:.15em; background:var(--hazard); color:var(--ink); padding:1px 14px; border:3px solid var(--ink); border-radius:6px; }
+  #hqPanel .hqfl { display:flex; flex-direction:column; gap:3px; background:#e6dcc0; border:3px solid var(--ink); border-radius:10px; padding:6px; }
+  #hqPanel .hqf { position:relative; display:flex; align-items:stretch; height:40px; cursor:pointer; border:3px solid var(--ink); border-radius:6px; overflow:hidden; background:#f4ecd2; color:var(--ink); transition:transform .08s; }
+  #hqPanel .hqf:hover { transform:translateX(3px); }
+  #hqPanel .hqf b { width:40px; display:grid; place-items:center; font:900 22px "Courier New",monospace; background:#4f6f86; color:#fff; border-right:3px solid var(--ink); }
+  #hqPanel .hqf span { flex:1; display:flex; flex-direction:column; justify-content:center; padding:0 8px; line-height:1.1; min-width:0; }
+  #hqPanel .hqf em { font-style:normal; font-weight:900; font-size:15px; white-space:nowrap; } #hqPanel .hqf small { font-size:10px; font-weight:800; color:#6a6452; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #hqPanel .hqf.on { background:var(--hazard); cursor:default; } #hqPanel .hqf.on b { background:#a9402f; }
-  #hqPanel .hqf i { position:absolute; right:6px; top:-8px; font-style:normal; font-weight:900; font-size:10px; background:#a9402f; color:#fff; border:2px solid var(--ink); border-radius:4px; padding:0 4px; animation:b 1.2s steps(1) infinite; }
-  #hqPanel .hqm { display:flex; align-items:center; gap:8px; padding:3px 6px; background:#000a; border:2px solid #1d1b19; border-radius:8px; cursor:pointer; }
-  #hqPanel .hqm:hover { border-color:var(--hazard); }
-  #hqPanel .face { flex:none; display:inline-block; border-radius:50%; overflow:hidden; border:2px solid var(--ink); background:#b9ad88; } #hqPanel .face img { width:100%; height:100%; object-fit:cover; object-position:top; display:block; }
-  #hqPanel .hqm em, #hqPanel .hqf em { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } #hqPanel .hqm span:not(.role):not(.face) { min-width:0; }
-  #hqPanel .hqm span:not(.role):not(.face) { flex:1; display:flex; flex-direction:column; line-height:1.15; } #hqPanel .hqm small { font-weight:900; font-size:10px; } #hqPanel .hqm em { font-style:normal; font-weight:900; font-size:13px; }
-  #hqPanel .hqb { display:flex; gap:4px; margin-top:8px; }
-  #hqPanel .hqb button, #hqPanel .hqst button { flex:1; padding:5px 2px; font-weight:900; font-size:12px; border:3px solid var(--ink); border-radius:8px; background:linear-gradient(#cfcab9,#9c978a); color:var(--ink); cursor:pointer; box-shadow:0 3px 0 var(--ink); }
-  #hqPanel .hqb button:hover, #hqPanel .hqst button:hover { background:linear-gradient(#ead98a,#cfae45); }
+  #hqPanel .hqf i { position:absolute; left:2px; top:2px; width:10px; height:10px; border-radius:50%; background:#fff; border:2px solid var(--ink); animation:b 1s steps(1) infinite; }
+  #hqPanel .hqtm { display:flex; flex-direction:column; justify-content:space-around; gap:4px; }
+  #hqPanel .hqm { position:relative; display:flex; align-items:center; height:44px; cursor:pointer; }
+  #hqPanel .hqm .face { position:relative; z-index:1; flex:none; border-radius:50%; overflow:hidden; border:3px solid var(--ink); background:#b9ad88; box-shadow:0 2px 0 var(--ink); }
+  #hqPanel .hqm .face img { width:100%; height:100%; object-fit:cover; object-position:top; display:block; }
+  #hqPanel .hqm span:not(.face) { flex:1; min-width:0; margin-left:-12px; padding:2px 8px 2px 18px; background:#a9402f; border:3px solid var(--ink); border-radius:0 18px 18px 0; display:flex; flex-direction:column; line-height:1.1; }
+  #hqPanel .hqm:not(:first-child) span:not(.face) { background:#5a6a4a; }
+  #hqPanel .hqm small { font-weight:900; font-size:10px; color:#e6dcc0; } #hqPanel .hqm small.ld { color:var(--hazard); }
+  #hqPanel .hqm em { font-style:normal; font-weight:900; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #hqPanel .hqm:hover span:not(.face) { filter:brightness(1.2); }
+  #hqPanel .hqb { display:grid; grid-template-columns:1fr 1.8fr 1fr; gap:6px; margin-top:8px; }
+  #hqPanel .hqb button, #hqPanel .hqst button { padding:6px 4px; font-weight:900; font-size:13px; border:3px solid var(--ink); border-radius:12px; background:linear-gradient(#f4ecd2,#cfc39c); color:var(--ink); cursor:pointer; box-shadow:0 3px 0 var(--ink); display:flex; align-items:center; justify-content:center; gap:4px; }
+  #hqPanel .hqb button.wide { background:linear-gradient(#ead98a,#cfae45); font-size:14px; border-radius:20px; }
+  #hqPanel .hqb button s { text-decoration:none; font-size:15px; }
+  #hqPanel .hqb button:hover, #hqPanel .hqst button:hover { filter:brightness(1.08); transform:translateY(-1px); }
   #hqPanel .hqb button:active, #hqPanel .hqst button:active { transform:translateY(2px); box-shadow:0 1px 0 var(--ink); }
   #hqPanel .hqb button.on { background:linear-gradient(#ead98a,#cfae45); }
-  #hqPanel .hqst { display:none; grid-template-columns:1fr 1fr; gap:4px; margin-top:6px; } #hqPanel .hqst.on { display:grid; }
-  #hqPanel .hqst b { font:900 10px monospace; background:var(--ink); color:#fff; padding:0 3px; border-radius:3px; margin-right:4px; }
-  #hqPanel.mini { width:auto; } #hqPanel.mini > :not(.hqh) { display:none !important; } #hqPanel.mini .hqh { margin:0; gap:8px; }
-  @media (max-width: 1000px), (max-height: 620px) { #hqPanel { width:214px; } #hqPanel .hqf small, #hqPanel .hqh2 { display:none; } #hqPanel .hqm .face { width:28px !important; height:28px !important; } }
+  #hqPanel .hqst { display:none; grid-template-columns:1fr 1fr 1fr 1fr; gap:4px; margin-top:6px; } #hqPanel .hqst.on { display:grid; } #hqPanel .hqst button { font-size:11px; }
+  #hqPanel .hqst b { font:900 10px monospace; background:var(--ink); color:#fff; padding:0 3px; border-radius:3px; }
+  #hqPanel.mini { width:auto; padding:0; border:none; background:none; box-shadow:none; } #hqPanel.mini > :not(.hqx) { display:none !important; } #hqPanel.mini .hqx { position:static; }
+  body.game #help { max-width:calc(100% - 520px); }
+  @media (max-width: 1000px), (max-height: 620px) { #hqPanel { width:390px; } #hqPanel .hqf small { display:none; } #hqPanel .hqf { height:32px; } #hqPanel .hqm { height:36px; } #hqPanel .hqm .face { width:36px !important; height:36px !important; } body.game #help { display:none; } }
   /* ダッシュのゲージ */
   #stam { position:fixed; left:0; top:0; width:32px; height:32px; z-index:16; pointer-events:none; display:none; filter:drop-shadow(0 2px 2px #0008); }
   /* ===== ごうせい・しんか ===== */
@@ -3600,11 +3607,13 @@ function hqPanelRender() {
   const el = $('hqPanel'), mini = !!save.settings.panelMini;
   const team = save.team.map((k, i) => ({ k, i })).filter(o => o.k);
   el.classList.toggle('mini', mini);
-  el.innerHTML = `<div class="hqh"><span>ほんぶ案内</span><button class="hqx" data-hq="mini" title="${mini ? 'ひろげる' : 'たたむ'}">${mini ? '＋' : '－'}</button></div>
-    <div class="hqfl">${HQ_FLOORS.map(f => `<div class="hqf ${state.floor === f.fl ? 'on' : ''}" data-hq="fl:${f.fl}"><b>${f.tag}</b><span><em>${f.name}</em><small>${f.sub}</small></span>${state.floor === f.fl ? '<i>いまここ</i>' : ''}</div>`).join('')}</div>
-    <div class="hqh2">出動メンバー</div>
-    <div class="hqtm">${team.map(({ k, i }) => `<div class="hqm" data-hq="team">${faceImg(k, 36)}<span><small style="color:${i ? '#c9c3ad' : 'var(--hazard)'}">${i ? 'CPU' + i : 'リーダー'}</small><em>${esc(cname(k))}</em></span><span class="role" style="background:${ROLE[crewByKey[k].role][1]}">${crewByKey[k].role}</span></div>`).join('')}</div>
-    <div class="hqb"><button data-hq="pad">Hu-jo Pad</button><button data-hq="multi">マルチ募集</button><button data-hq="stamp" class="${HQP.stamp ? 'on' : ''}">スタンプ</button></div>
+  // 下画面の作り：左にフロア案内、右に出動メンバー、下に横長のボタン
+  el.innerHTML = `<button class="hqx" data-hq="mini" title="${mini ? 'ひろげる' : 'たたむ'}">${mini ? '＋ ほんぶ案内' : '－'}</button>
+    <div class="hqcols">
+      <div class="hqfl"><div class="hqh"><span>ごあんない</span></div>${HQ_FLOORS.map(f => `<div class="hqf ${state.floor === f.fl ? 'on' : ''}" data-hq="fl:${f.fl}"><b>${f.tag === '屋上' ? 'R' : f.tag[0]}</b><span><em>${f.name}</em><small>${f.sub}</small></span>${state.floor === f.fl ? '<i></i>' : ''}</div>`).join('')}</div>
+      <div class="hqtm">${team.map(({ k, i }) => `<div class="hqm" data-hq="team">${faceImg(k, 44)}<span><small class="${i ? '' : 'ld'}">${i ? 'なかま' + i : 'リーダー'}</small><em>${esc(cname(k))}</em></span></div>`).join('')}</div>
+    </div>
+    <div class="hqb"><button data-hq="pad" class="sq"><s>▦</s>Hu-jo Pad</button><button data-hq="multi" class="wide"><s>⟳</s>みんなで協力する</button><button data-hq="stamp" class="sq ${HQP.stamp ? 'on' : ''}"><s>✎</s>スタンプ</button></div>
     <div class="hqst ${HQP.stamp ? 'on' : ''}">${STAMPS.map((t, i) => `<button data-hq="st:${i}"><b>${i + 1}</b>${esc(t)}</button>`).join('')}</div>`;
 }
 function hqPanelTick() {
