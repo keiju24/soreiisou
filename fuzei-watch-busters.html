@@ -8,9 +8,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&display=swap" rel="stylesheet">
 <style>
-:root { --navy: #14245a; --yel: #ffd21f; --black-bg: #2a2b31; --blue-bg: #a9dcff; --title-bg: #55D5F5; }
-/* フォント：ラグランパンチ UB（パソコンに入っていればそれ。なければ Mochiy Pop One） */
-@font-face { font-family: 'FWB'; src: local('ラグランパンチ UB'), local('RagranPunchStd-UB'), local('Ragran Punch Std UB'), local('RagranPunch-UB'); }
+:root { --navy: #14245a; --yel: #ffd21f; --black-bg: #2a2b31; --blue-bg: #a9dcff; --title-bg: linear-gradient(135deg, #55D5F5 0%, #29B6E9 50%, #0068C8 100%); }
+/* フォント：ラノベPOP v2（パソコンに入っていればそれ。なければ Mochiy Pop One） */
+@font-face { font-family: 'FWB'; src: local('ラノベPOP v2'), local('ラノベPOP V2'), local('LightNovelPOPv2'), local('LightNovelPOP-v2'), local('07LightNovelPOP v2'); }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: var(--title-bg); color: #fff; font-family: 'FWB', 'Mochiy Pop One', sans-serif; user-select: none; }
 .screen { position: fixed; inset: 0; display: none; }
@@ -33,19 +33,20 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--title-
 #select .head { position: fixed; top: 4vh; left: 0; right: 0; text-align: center; pointer-events: none; }
 
 /* タイトル */
-#title { flex-direction: column; align-items: center; justify-content: center; gap: 3vh; }
-#title img { width: min(80vw, 640px); max-height: 50vh; object-fit: contain; }
 #title { background: var(--title-bg); }
+/* ロゴは画面のまんなか、ボタンはその下 */
+#tWrap { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); display: flex; justify-content: center; pointer-events: none; }
+#title img { width: min(80vw, 600px); max-height: 50vh; object-fit: contain; }
 /* はじめから・つづきから：ふだんは紫、カーソルを合わせると黄色 */
-.menu { display: flex; flex-direction: column; gap: 2.2vh; visibility: hidden; }
+.menu { position: absolute; left: 0; right: 0; bottom: 5vh; display: flex; flex-direction: column; align-items: center; gap: 12px; visibility: hidden; }
 .menu.on { visibility: visible; }
-.mbtn { position: relative; width: min(52vw, 380px); padding: .55em 0 .5em; border: 5px solid #111; border-radius: 22px; font: inherit; font-size: clamp(24px, 3.4vw, 40px); color: #111; cursor: pointer;
-  background: linear-gradient(#c4a2f6 0 46%, #b48cf2 46% 100%); box-shadow: inset 0 0 0 4px #fff, 0 5px 0 #111; -webkit-text-stroke: .16em #fff; paint-order: stroke fill; }
-.mbtn::after { content: ''; position: absolute; left: 14px; right: 14px; top: 9px; height: 26%; border-radius: 12px; background: rgba(255, 255, 255, .35); pointer-events: none; }
-.mbtn.cur { background: linear-gradient(#ffe36a 0 46%, #ffd42b 46% 100%); }
-.mbtn:disabled { cursor: default; filter: grayscale(1); opacity: .55; }
-.mbtn:active:not(:disabled) { transform: translateY(3px); box-shadow: inset 0 0 0 4px #fff, 0 2px 0 #111; }
-#note { position: fixed; left: 0; right: 0; bottom: 6vh; text-align: center; font-size: 18px; color: #111; visibility: hidden; }
+.mbtn { position: relative; width: min(46vw, 230px); padding: .42em 0 .38em; border: 3px solid #0b0b0b; border-radius: 15px; font: inherit; font-size: clamp(18px, 2.2vw, 24px); color: #111; cursor: pointer;
+  background: #c393fd; box-shadow: inset 0 0 0 3px #fff, inset 0 0 8px 6px rgba(255, 255, 255, .7), 0 4px 0 #002a3e; -webkit-text-stroke: .14em #fff; paint-order: stroke fill; }
+.mbtn::after { content: ''; position: absolute; left: 8px; right: 8px; top: 6px; height: 42%; border-radius: 9px 9px 5px 5px; background: linear-gradient(rgba(255, 255, 255, .75), rgba(255, 255, 255, .2)); pointer-events: none; }
+.mbtn.cur { background: #ffd72c; }
+.mbtn:disabled { cursor: default; filter: grayscale(1); opacity: .6; }
+.mbtn:active:not(:disabled) { transform: translateY(3px); box-shadow: inset 0 0 0 3px #fff, inset 0 0 8px 6px rgba(255, 255, 255, .7), 0 1px 0 #002a3e; }
+#note { position: fixed; left: 0; right: 0; top: 3vh; text-align: center; font-size: 18px; color: #fff; -webkit-text-stroke: .2em #0b0b0b; paint-order: stroke fill; visibility: hidden; }
 #note.on { visibility: visible; }
 
 /* 上から落ちてきて、まんなかで跳ねる */
@@ -77,7 +78,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--title-
 </div>
 
 <div id="title" class="screen">
-  <img id="tLogo" alt="風情ウォッチバスターズ">
+  <div id="tWrap"><img id="tLogo" alt="風情ウォッチバスターズ"></div>
   <div class="menu" id="menu"><button class="mbtn cur" data-m="new">はじめから</button><button class="mbtn" data-m="cont">つづきから</button></div>
   <div id="note">この先は作っているところです</div>
 </div>
