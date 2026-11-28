@@ -301,14 +301,6 @@ const TEX = {
   lines: canvasTex(256, (g, s) => { g.translate(128, 128); for (let i = 0; i < 28; i++) { const a = i / 28 * Math.PI * 2 + Math.random() * .1, r0 = 50 + Math.random() * 20; g.beginPath(); g.moveTo(Math.cos(a - .02) * 126, Math.sin(a - .02) * 126); g.lineTo(Math.cos(a) * r0, Math.sin(a) * r0); g.lineTo(Math.cos(a + .02) * 126, Math.sin(a + .02) * 126); g.fillStyle = 'rgba(255,255,255,.95)'; g.fill(); } }),
   speed: canvasTex(128, (g, s) => { for (let i = 0; i < 7; i++) { const y = 14 + i * 16 + Math.random() * 6, x0 = Math.random() * 30; g.beginPath(); g.moveTo(x0, y); g.lineTo(128, y - 2); g.lineTo(128, y + 2); g.closePath(); g.fillStyle = 'rgba(255,255,255,.9)'; g.fill(); } }),
   paw: canvasTex(128, (g, s) => { g.fillStyle = 'rgba(255,255,255,.95)'; g.beginPath(); g.ellipse(64, 76, 30, 26, 0, 0, 7); g.fill(); for (const [x, y] of [[30, 40], [52, 26], [76, 26], [98, 40]]) { g.beginPath(); g.ellipse(x, y, 12, 14, 0, 0, 7); g.fill(); } g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(255,220,90,.55)'; g.fillRect(0, 0, 128, 128); }),
-  scratch: canvasTex(512, (g, s) => {   // ひっかき：3本の 太い爪あと（白い芯・黄色・オレンジのふち・黒い線）
-    for (let k = 0; k < 3; k++) {
-      const off = (k - 1) * 120, path = () => { g.beginPath(); g.moveTo(60 + off, 70); g.quadraticCurveTo(250 + off * .3, 230, 440 + off, 440); g.quadraticCurveTo(230 + off * .3, 270, 60 + off, 70); };
-      g.save(); g.translate(0, 0);
-      for (const [w, c] of [[76, 'rgba(40,20,0,.95)'], [62, '#ff7a10'], [44, '#ffd23a'], [22, '#fff']]) { path(); g.lineWidth = w; g.lineJoin = 'round'; g.lineCap = 'round'; g.strokeStyle = c; g.stroke(); }
-      path(); g.fillStyle = '#fff'; g.fill(); g.restore();
-    }
-  }),
   tele: canvasTex(256, (g, s) => { g.beginPath(); g.arc(128, 128, 118, 0, 7); g.fillStyle = 'rgba(255,60,40,.28)'; g.fill(); g.lineWidth = 10; g.strokeStyle = 'rgba(255,80,60,.95)'; g.stroke(); }),
 };
 const pools = {};
@@ -596,7 +588,7 @@ function startStep(i) {
   P.events = [mkEvent({ at: s.hitAt, dur: s.hitDur, power: s.power, stop: s.stop, shake: s.shake, knock: (s.knock || 0) * U, yokai: s.yokai,
     hitFx: big ? hitFxStrong : i === 1 ? hitFxStep2 : hitFxNormal,
     shape: () => shapes.sector(P.pos, P.face, s.range, s.angle, s.yMin, s.yMax),
-    onStart: () => { trail(i === 1 ? 'L' : 'R', s.range, big ? [1, .8, .5] : null); scratch(i, s.range); SFX[s.sfx](); if (big) fx('shock', P.pos.clone().add(fwd().mulScalar(s.range * U * .55)).add(new Vec3(0, .8, 0)), { life: FX.trailStrong.time, s0: .4, s1: s.range * U * 1.1, a0: .9, add: true, color: [1, .7, .3] }); } })];
+    onStart: () => { trail(i === 1 ? 'L' : 'R', s.range, big ? [1, .8, .5] : null); SFX[s.sfx](); if (big) fx('shock', P.pos.clone().add(fwd().mulScalar(s.range * U * .55)).add(new Vec3(0, .8, 0)), { life: FX.trailStrong.time, s0: .4, s1: s.range * U * 1.1, a0: .9, add: true, color: [1, .7, .3] }); } })];
 }
 function endCombo() { if (P.state.startsWith('Attack') || P.skill === 'triple') { startCooldown('triple'); P.skill = null; } }
 function startDodge(id) {
@@ -687,14 +679,6 @@ const hitFxStrong = (at) => {
   fx('ring', new Vec3(at.x, .06, at.z), { life: FX.hitStrong.time * 1.2, s0: .5, s1: FX.hitStrong.size * 2.6, a0: 1, mode: 'flat' });
   burst(at, 28, 7.5, { s: .32 }); screenFlash();
 };
-// 三段こうげきの ひっかき：大きさは 攻撃範囲（射程）に そろえる。1・2段目は向きが逆、3段目は ×の形
-function scratch(step, range) {
-  const E = FX.scratch || { time: .3, alpha: 1 }, size = range * U * 1.25, f = fwd(), c = P.pos.clone().add(f.clone().mulScalar(range * U * .55)).add(new Vec3(0, 1.0, 0));
-  const toCam = camE.getPosition().clone().sub(c); toCam.y = 0; const dc = toCam.length(); if (dc > .01) c.add(toCam.mulScalar(Math.min(.45, dc * .3) / dc));   // 敵にかくれないよう 少しカメラへ
-  const one = (rot) => fx('scratch', c, { life: E.time, s0: size * .75, s1: size * 1.05, a0: E.alpha, a1: .25, rot, ease: 'out' });
-  if (step === 0) one(-.5); else if (step === 1) one(.5 + Math.PI / 2); else { one(-.5); one(.5 + Math.PI / 2); }
-  burst(c, step === 2 ? 18 : 8, step === 2 ? 6 : 4, { s: .28, color: [1, .9, .5] });
-}
 // 拳の軌跡：攻撃範囲の扇の 弧に そろえる
 function trail(side, range, color) {
   const big = range >= 1.5, E = big ? FX.trailStrong : FX.trail, R = range * U, f = fwd(), yaw = P.face + (side === 'L' ? Math.PI : 0);
@@ -1078,7 +1062,7 @@ function runTests() {
   { const r = sim([{ at: s1.hitAt, dur: s1.hitDur, set: new Set() }], 1 / 30, s1.time + 1); ok('攻撃判定が モーションのあとに のこらない', r.after === 0); }
   { const out1 = sim(spEvents(), 1 / 60, Sp.time, (t) => t < 1.5 ? near() : 99); ok('とちゅうで範囲の外へ出たら それ以降は当たらない', out1.hits > 0 && out1.hits < Sp.hits, `${out1.hits}回`); }
   { const in1 = sim(spEvents(), 1 / 60, Sp.time, (t) => t < 1.5 ? 99 : near()); ok('とちゅうで範囲に入ったら のこりだけ当たる', in1.hits > 0 && in1.hits < Sp.hits, `${in1.hits}回`); }
-  { const big = s3.range * U * 1.25, rng = s3.range * U; ok('エフェクトの大きさが 攻撃範囲に そろっている', big >= rng && big <= rng * 1.6, `ひっかき ${big.toFixed(2)}m／射程 ${rng.toFixed(2)}m`); }
+  { const big = s3.range * U * 1.05, rng = s3.range * U; ok('エフェクトの大きさが 攻撃範囲に そろっている', big >= rng * .9 && big <= rng * 1.3, `拳の軌跡 ${big.toFixed(2)}m／射程 ${rng.toFixed(2)}m`); }
   return out;
 }
 $('bTest').onclick = () => { const r = runTests(); $('testOut').innerHTML = r.map(([n, p, i]) => `<div style="color:${p ? '#9fe28c' : '#ff7a6a'}">${p ? '○' : '×'} ${n}${i ? ` <small>(${i})</small>` : ''}</div>`).join('') + `<div>${r.filter(x => x[1]).length} / ${r.length} 合格</div>`; };
