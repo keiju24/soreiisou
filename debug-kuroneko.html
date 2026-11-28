@@ -140,10 +140,10 @@ CLIPS.forEach((n, i) => { const b = document.createElement('button'); b.textCont
 
 // ---- モデル：メニューから切りかえる（どれも同じ名前のアニメ 7 つ入り） ----
 const MODELS = [
-  { name: '黒ねこ（前のモデル）', url: 'models/kuroneko.glb' },
-  { name: 'Neko Toon V2', url: 'models/neko_toon_v2.glb' },
+  { name: '黒ねこ', url: 'models/kuroneko.glb' },
 ];
 MODELS.forEach((m, i) => { const o = document.createElement('option'); o.value = i; o.textContent = m.name; $('modelSel').appendChild(o); });
+if (MODELS.length < 2) document.querySelector('#panel .msel').style.display = 'none';   // 1つだけのときはメニューを出さない
 let loadNo = 0;
 function loadModel(i) {
   const M = MODELS[i], no = ++loadNo;
