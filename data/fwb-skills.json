@@ -1,0 +1,82 @@
+{
+  "_説明": "風情ウォッチバスターズの 技・キャラ・エフェクトの数値。ここを書きかえると debug-battle.html にそのまま反映される（時間は秒・距離はメートル・角度は度）",
+  "global": {
+    "fps": 30,
+    "move": { "walk": 2.0, "run": 4.2, "dashMul": 1.5, "turn": 14 },
+    "hitstop": { "normal": 0.04, "strong": 0.08, "rapid": 0.015 },
+    "assist": { "range": 3.0, "angle": 70, "maxTurn": 40 },
+    "crit": { "rate": 0.1, "mul": 1.5 },
+    "yokaiMax": 100,
+    "combatTime": 4.0,
+    "damage": { "light": { "stun": 0.25 }, "heavy": { "stun": 0.6 }, "knockback": { "speed": 5.0, "down": 1.0 } }
+  },
+  "skills": {
+    "triple": {
+      "name": "三段こうげき", "type": "combo", "attr": "なし", "icon": "fist", "cooldown": 1.2,
+      "desc": "パンチの3連続こうげき。ボタンを続けて押すと 2段目・3段目へつながる。3段目は とくに強い。",
+      "steps": [
+        { "anim": "atk1", "power": 30, "time": 0.6, "hitAt": 0.2, "hitDur": 0.1, "move": 0.15, "moveFrom": 0.08, "moveTo": 0.24, "fist": "R", "hitRadius": 0.55, "stop": "normal", "fx": "atk1", "sfx": "punch", "yokai": 4, "cancelFrom": 0.3, "comboWindow": 0.25 },
+        { "anim": "atk2", "power": 30, "time": 0.6, "hitAt": 0.2, "hitDur": 0.1, "move": 0.15, "moveFrom": 0.08, "moveTo": 0.24, "fist": "L", "hitRadius": 0.55, "stop": "normal", "fx": "atk2", "sfx": "punch", "yokai": 4, "cancelFrom": 0.3, "comboWindow": 0.25 },
+        { "anim": "atk3", "power": 60, "time": 1.0, "hitAt": 0.45, "hitDur": 0.12, "move": 0.3, "moveFrom": 0.32, "moveTo": 0.5, "fist": "R", "hitRadius": 0.7, "stop": "strong", "fx": "atk3", "sfx": "punchHeavy", "yokai": 8, "stiff": 0.35, "cancelFrom": 0.75, "shake": 0.1, "knock": "heavy" }
+      ]
+    },
+    "charge": {
+      "name": "チャージこうげき", "type": "charge", "attr": "なし", "icon": "chargeFist", "cooldown": 8,
+      "desc": "ボタンを長押しして力をため、はなすと強力なパンチ。ためるほど強くなる（2秒で最大）。",
+      "power": 80, "maxPower": 160, "maxCharge": 2.0, "range": 1.5, "angle": 70, "chargeMove": 0.5,
+      "anim": { "start": "charge_start", "loop": "charge_loop", "attack": "charge_atk" },
+      "startTime": 0.3, "attackTime": 0.8, "hitAt": 0.1, "hitDur": 0.12, "move": 0.25, "moveFrom": 0.0, "moveTo": 0.12, "stiff": 0.5,
+      "stop": "strong", "shake": 0.12, "yokai": 10, "knock": "knockback", "learn": null
+    },
+    "power": {
+      "name": "気合いの一発", "type": "single", "attr": "なし", "icon": "powerFist", "cooldown": 5,
+      "desc": "大きく振りかぶって、前方 90度に 強烈な一発。動きながらは使えない。",
+      "anim": "power", "power": 100, "time": 1.2, "hitAt": 0.5, "hitDur": 0.12, "range": 1.6, "angle": 90, "move": 0.4, "moveFrom": 0.36, "moveTo": 0.56,
+      "stop": "strong", "shake": 0.12, "yokai": 8, "knock": "knockback", "learn": { "level": 20, "text": "レベル20で 習得" }
+    },
+    "fire": {
+      "name": "火花の術", "type": "chargeShot", "attr": "火", "icon": "flame", "cooldown": 6,
+      "desc": "手元に炎を集めて、前の敵へ 炎の弾をとばす。長押しで 大きく強くなる。",
+      "anim": { "loop": "fire_charge", "attack": "fire" }, "power": 40, "maxPower": 80, "maxCharge": 2.0, "range": 5.0, "speed": 10.0, "chargeMove": 0.5,
+      "attackTime": 0.7, "launchAt": 0.2, "radius": 0.45, "blast": 1.0, "stop": "normal", "yokai": 6, "learn": { "level": 10, "text": "レベル10で 習得" }
+    },
+    "dodge": {
+      "name": "回避", "type": "dodge", "attr": "なし", "icon": "dodge", "cooldown": 3,
+      "desc": "入力した方向へ すばやく よける。方向を入れないと うしろへ。とちゅうは 無敵。",
+      "anim": { "f": "dodge_f", "b": "dodge_b" }, "dist": 2.0, "time": 0.5, "moveFrom": 0.04, "moveTo": 0.34, "invFrom": 0.05, "invTo": 0.4, "power": 0, "learn": null
+    },
+    "special": {
+      "name": "にくきゅうラッシュ", "type": "special", "attr": "なし", "icon": "paw",
+      "desc": "左右の拳で 目にもとまらぬ 連続パンチ。最後に大きな一発。妖気ゲージ 100% で使える。",
+      "anim": "special", "hitPower": 40, "hits": 10, "time": 3.0, "windup": 0.5, "firstHit": 0.6, "interval": 0.2, "range": 2.0, "angle": 120,
+      "gaugeCost": 100, "stop": "rapid", "finishStop": "strong", "shake": 0.15, "zoom": 0.6
+    },
+    "super_dodge": {
+      "name": "超回避", "type": "passive", "attr": "なし", "icon": "dodge",
+      "desc": "回避の 無敵時間が のびる（＋0.15秒）。", "invExtend": 0.15
+    }
+  },
+  "characters": {
+    "imponyan": {
+      "name": "インポニャン", "model": "models/imponyan.glb", "hp": 1000,
+      "fixed": { "A": "triple", "special": "special", "skill": "super_dodge" },
+      "selectable": ["charge", "fire", "dodge", "power"],
+      "defaultSet": { "X": "charge", "Y": "dodge" }
+    }
+  },
+  "effects": {
+    "trail": { "time": 0.15, "size": 0.8, "alpha": 0.95 },
+    "hit": { "time": 0.2, "size": 0.5, "alpha": 1.0 },
+    "trailStrong": { "time": 0.25, "size": 1.2, "alpha": 0.95 },
+    "hitStrong": { "time": 0.3, "size": 1.0, "alpha": 1.0 },
+    "afterimage": { "time": 0.15, "alpha": 0.45, "count": 3 },
+    "dust": { "time": 0.4, "size": 0.6, "alpha": 0.8 },
+    "fireBurst": { "time": 0.45, "size": 1.0, "alpha": 1.0 },
+    "specialFinish": { "time": 0.6, "size": 2.0, "alpha": 1.0 },
+    "damageNumber": { "time": 0.8 }
+  },
+  "enemies": {
+    "dummy": { "name": "ブスイ人形", "hp": 3000, "radius": 0.5 },
+    "attacker": { "name": "はんげきブスイ", "hp": 5000, "radius": 0.55, "range": 3.2, "every": 3.0, "windup": 0.8, "light": 60, "heavy": 180, "heavyEvery": 3 }
+  }
+}

@@ -88,6 +88,7 @@ function loadChar(i) {
     if (hero) hero.destroy();
     hero = a.resource.instantiateRenderEntity({ castShadows: true }); app.root.addChild(hero);
     hero.findComponents('render').forEach(r => r.meshInstances.forEach(mi => { const m = mi.material; if (m.__matte) return; m.__matte = 1; if (m.glossInvert) m.gloss = Math.max(m.gloss, .78); else m.gloss = Math.min(m.gloss, .22); m.specularityFactor = .3; m.update(); }));
+    hero.findComponents('render').forEach(r => r.meshInstances.forEach(mi => mi.cull = false));   // 骨で動くメッシュの箱が 原点のままなので、見えなくならないように
     hero.addComponent('anim', { activate: true });
     clipLen = {};
     for (const x of a.resource.animations) { const tr = x.resource, nm = tr.name.replace(/^.*\|/, ''); hero.anim.assignAnimation(nm, tr, undefined, 1, LOOP[nm] !== false); clipLen[nm] = tr.duration; }

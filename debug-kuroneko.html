@@ -160,6 +160,7 @@ function loadModel(i) {
     hero = asset.resource.instantiateRenderEntity({ castShadows: true, receiveShadows: true });
     app.root.addChild(hero);
     hero.findComponents('render').forEach(r => r.meshInstances.forEach(mi => { const m = mi.material; if (m.__matte) return; m.__matte = 1; if (m.glossInvert) m.gloss = Math.max(m.gloss, .78); else m.gloss = Math.min(m.gloss, .22); m.specularityFactor = .3; m.update(); }));   // てかりをおさえる
+    hero.findComponents('render').forEach(r => r.meshInstances.forEach(mi => mi.cull = false));   // 骨で動くメッシュの箱が 原点のままなので、見えなくならないように
     hero.addComponent('anim', { activate: true, speed: 1 });
     clipLen = {};
     for (const a of asset.resource.animations) {

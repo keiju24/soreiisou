@@ -173,6 +173,7 @@ body.playing #dbg { top: auto; bottom: 8px; right: auto; left: 8px; }
     <option value="play">キャラを動かす</option>
     <option value="hq">本部（3D）</option>
     <option value="schoolyard">校庭マップ（歩く）</option>
+    <option value="battle">バトル（インポニャン）</option>
   </select>
   <button data-d="drop">落下もう一回</button><button data-d="wipe">にっきを全部消す</button></div>
 
@@ -414,6 +415,7 @@ function jumpTo(v) {
   else if (v === 'play') openPlay();
   else if (v === 'hq') openPlay('debug-hq.html');
   else if (v === 'schoolyard') openPlay('debug-map.html?map=schoolyard');
+  else if (v === 'battle') openPlay('debug-battle.html');
 }
 $('dJump').addEventListener('change', (e) => { jumpTo(e.target.value); e.target.blur(); });
 $('dJump').addEventListener('pointerdown', (e) => e.stopPropagation());
