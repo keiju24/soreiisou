@@ -38,10 +38,9 @@
 ## 風情ウォッチバスターズ（作り直し中）
 
 - 前の本体は、作り直すために消しました（前の版は git の履歴に残っています）。
-- 新しい `fuzei-watch-busters.html`（いまはデバッグ用）：「クリックではじめる」（音を鳴らすため）→ タイトル（ロゴが上から落ちてきて、まんなかで跳ねる）→ 団をえらぶ（黒猫団／島犬隊。←→ でえらんで Enter、かくにん → 入団。えらんだ団は localStorage の `fwb2.team`）。
-  - ロゴ画像：`img/fwb-logo.png`（タイトル用・団名なし）、`img/fwb-logo-kuroneko.png`、`img/fwb-logo-shimainu.png`。黒猫団の横の黒ねこは `img/fwb-kuroneko.png`（Blender のモデルから描き出し）。
-  - 文字はロゴに合わせた太字（Dela Gothic One）＋紺と白のふち＋グラデーション（クラス `lt`、色は `red` / `blue` / `white`）。
-  - 右上のデバッグパネル：落下をもう一回・各画面へ移動・入団画面・セーブ消去・落ちる速さ・音を消す。
+- 新しい `fuzei-watch-busters.html`（いまはデバッグ用・シンプルな平面の画面。光の演出はなし）：最初に団をえらぶ（黒猫団／島犬隊。←→ かマウスでえらんで Enter／クリック。えらんだ団は localStorage の `fwb2.team`）→ タイトル（えらんだ団のロゴが上から落ちてきて、まんなかで跳ねる）→「クリックでスタート」（この先は制作中）。
+  - ロゴ画像：`img/fwb-logo-kuroneko.png`、`img/fwb-logo-shimainu.png`。
+  - 右下のデバッグ：落下もう一回・団えらびへ（Esc でも団えらびにもどる）。
 - 新しい版で使うために残しているもの：
   - BGM：`bgm/fwb-hq.mp3`（本部）、`bgm/fwb-sortie.mp3`（出動ムービー）
   - 効果音：`se/fwb-menu.mp3`・`se/fwb-move.mp3`・`se/fwb-ok.mp3`・`se/fwb-back.mp3`・`se/fwb-door-open.mp3`・`se/fwb-door-close.mp3`（ほか `se/` の効果音も）
