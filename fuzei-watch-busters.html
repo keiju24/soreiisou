@@ -124,6 +124,9 @@ function playBgm() {
   s.buffer = buf.title; s.loop = true; s.loopStart = 0; s.loopEnd = Math.min(BGM_LOOP_END, buf.title.duration); g.gain.value = .5;
   s.connect(g).connect(AC.destination); s.start(); bgmSrc = s;
 }
+// ブラウザはクリックかキーを押すまで音を出せないので、最初の操作で BGM を鳴らしはじめる（どの画面でも）
+function unlockAudio() { if (AC && AC.state === 'suspended') AC.resume(); playBgm(); }
+addEventListener('pointerdown', unlockAudio); addEventListener('keydown', unlockAudio);
 
 function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); }
 
