@@ -79,3 +79,10 @@ python tools/blender/shima_build.py models/shima.glb
 ```
 python tools/blender/kuroneko_build.py models/kuroneko.glb
 ```
+
+- モデルはパネル上の「モデル」メニューで切りかえられる：黒ねこ（前のモデル・`models/kuroneko.glb`）と Neko Toon V2（`models/neko_toon_v2.glb`）。`?model=1` で、はじめから Neko Toon V2 で開く。
+- Neko Toon V2：もらったスクリプト `tools/blender/neko_toon_v2.py` をそのまま使い、`tools/blender/neko_toon_v2_build.py` で glb にする（トゥーンの色をふつうのマテリアルに置きかえ、黒いふちとアニメ 7 つをつけ、0.5 倍にする）。
+
+```
+python tools/blender/neko_toon_v2_build.py models/neko_toon_v2.glb
+```

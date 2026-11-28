@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>黒ねこ デバッグ</title>
+<title>キャラ デバッグ</title>
 <style>
   :root { --ink:#1d1b19; --panel:rgba(18,20,24,.86); --line:#3a3f48; --hi:#9fe28c; --warn:#ffd166; }
   html, body { margin:0; height:100%; overflow:hidden; background:#cfd8e3; font-family:"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif; }
@@ -11,6 +11,8 @@
   #panel { position:fixed; left:12px; top:12px; width:292px; background:var(--panel); color:#e8ecf2; border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:12px; line-height:1.5; }
   #panel h1 { margin:0 0 6px; font-size:14px; display:flex; justify-content:space-between; align-items:center; }
   #panel h1 small { color:#9aa3ae; font-weight:400; }
+  #panel .msel { display:flex; align-items:center; gap:8px; margin:0 0 8px; }
+  #panel .msel select { flex:1; font:inherit; padding:3px 4px; border-radius:6px; border:1px solid var(--line); background:#232a38; color:#fff; }
   .grid { display:grid; grid-template-columns:auto 1fr; gap:1px 10px; font-family:ui-monospace,Menlo,monospace; }
   .grid b { color:#9aa3ae; font-weight:400; } .grid span { color:var(--hi); }
   .sec { margin-top:8px; padding-top:6px; border-top:1px solid var(--line); }
@@ -30,7 +32,8 @@
 <canvas id="c"></canvas>
 <div id="loading">モデルを読みこみ中…</div>
 <div id="panel">
-  <h1>黒ねこ デバッグ <small>models/kuroneko.glb</small></h1>
+  <h1>キャラ デバッグ <small id="vModel">models/kuroneko.glb</small></h1>
+  <label class="msel">モデル <select id="modelSel"></select></label>
   <div class="grid">
     <b>状態</b><span id="vState">-</span>
     <b>アニメ</b><span id="vClip">-</span>
@@ -104,7 +107,7 @@ const cam = { yaw: 0, pitch: 18, dist: 6.5, tgt: new Vec3() };
 
 // ---- 入力 ----
 const keys = new Set();
-addEventListener('keydown', (e) => { if (e.target.tagName === 'INPUT') return; keys.add(e.code); if (e.code === 'Space') { e.preventDefault(); P.wantJump = true; } if (e.code === 'KeyJ') P.wantAtk = 'attack'; if (e.code === 'KeyK') P.wantAtk = 'attack2'; const n = +e.key; if (n >= 1 && n <= CLIPS.length) playDirect(CLIPS[n - 1]); });
+addEventListener('keydown', (e) => { if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return; keys.add(e.code); if (e.code === 'Space') { e.preventDefault(); P.wantJump = true; } if (e.code === 'KeyJ') P.wantAtk = 'attack'; if (e.code === 'KeyK') P.wantAtk = 'attack2'; const n = +e.key; if (n >= 1 && n <= CLIPS.length) playDirect(CLIPS[n - 1]); });
 addEventListener('keyup', (e) => keys.delete(e.code));
 let drag = null;
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -135,26 +138,47 @@ function play(name, fade = .15) {
 function playDirect(name) { P.direct = name; play(name, .1); P.clip = name; log('直接再生: ' + name); }
 CLIPS.forEach((n, i) => { const b = document.createElement('button'); b.textContent = `${i + 1} ${n}`; b.onclick = () => playDirect(n); $('clipBtns').appendChild(b); });
 
-const asset = new Asset('kuroneko', 'container', { url: 'models/kuroneko.glb' });
-app.assets.add(asset);
-asset.ready(() => {
-  hero = asset.resource.instantiateRenderEntity({ castShadows: true, receiveShadows: true });
-  app.root.addChild(hero);
-  hero.findComponents('render').forEach(r => r.meshInstances.forEach(mi => { const m = mi.material; if (m.__matte) return; m.__matte = 1; if (m.glossInvert) m.gloss = Math.max(m.gloss, .78); else m.gloss = Math.min(m.gloss, .22); m.specularityFactor = .3; m.update(); }));   // てかりをおさえる
-  hero.addComponent('anim', { activate: true, speed: 1 });
-  for (const a of asset.resource.animations) {
-    const tr = a.resource, nm = tr.name.replace(/^.*\|/, '');
-    hero.anim.assignAnimation(nm, tr, undefined, 1, LOOP[nm] !== false);
-    clipLen[nm] = tr.duration;
-  }
-  anim = hero.anim;
-  play('idle', 0);
-  $('loading').remove();
-  log('読みこみ完了：アニメ ' + Object.keys(clipLen).join(', '));
-  window.__dbg = { app, P, hero, clipLen };
-});
-asset.on('error', (e) => { $('loading').textContent = '読みこみ失敗：' + e; });
-app.assets.load(asset);
+// ---- モデル：メニューから切りかえる（どれも同じ名前のアニメ 7 つ入り） ----
+const MODELS = [
+  { name: '黒ねこ（前のモデル）', url: 'models/kuroneko.glb' },
+  { name: 'Neko Toon V2', url: 'models/neko_toon_v2.glb' },
+];
+MODELS.forEach((m, i) => { const o = document.createElement('option'); o.value = i; o.textContent = m.name; $('modelSel').appendChild(o); });
+let loadNo = 0;
+function loadModel(i) {
+  const M = MODELS[i], no = ++loadNo;
+  $('vModel').textContent = M.url;
+  let ld = $('loading'); if (!ld) { ld = document.createElement('div'); ld.id = 'loading'; document.body.appendChild(ld); }
+  ld.textContent = 'モデルを読みこみ中…';
+  const asset = new Asset(M.url, 'container', { url: M.url });
+  app.assets.add(asset);
+  asset.ready(() => {
+    if (no !== loadNo) return;          // とちゅうで別のモデルにかえたとき
+    const keep = hero ? { pos: hero.getLocalPosition().clone() } : null;
+    if (hero) hero.destroy();
+    hero = asset.resource.instantiateRenderEntity({ castShadows: true, receiveShadows: true });
+    app.root.addChild(hero);
+    hero.findComponents('render').forEach(r => r.meshInstances.forEach(mi => { const m = mi.material; if (m.__matte) return; m.__matte = 1; if (m.glossInvert) m.gloss = Math.max(m.gloss, .78); else m.gloss = Math.min(m.gloss, .22); m.specularityFactor = .3; m.update(); }));   // てかりをおさえる
+    hero.addComponent('anim', { activate: true, speed: 1 });
+    clipLen = {};
+    for (const a of asset.resource.animations) {
+      const tr = a.resource, nm = tr.name.replace(/^.*\|/, '');
+      hero.anim.assignAnimation(nm, tr, undefined, 1, LOOP[nm] !== false);
+      clipLen[nm] = tr.duration;
+    }
+    anim = hero.anim;
+    P.clip = ''; P.atk = null; P.direct = null; play('idle', 0);
+    if (keep) hero.setLocalPosition(keep.pos);
+    const l = $('loading'); if (l) l.remove();
+    log(`読みこみ完了：${M.name}（アニメ ${Object.keys(clipLen).join(', ')}）`);
+    window.__dbg = { app, P, hero, clipLen, loadModel };
+  });
+  asset.on('error', (e) => { $('loading').textContent = '読みこみ失敗：' + e; });
+  app.assets.load(asset);
+}
+$('modelSel').addEventListener('change', (e) => { loadModel(+e.target.value); e.target.blur(); });
+// ?model=1 のようにすると、はじめから そのモデルで開く
+{ const q = +new URLSearchParams(location.search).get('model'); const i = MODELS[q] ? q : 0; $('modelSel').value = i; loadModel(i); }
 
 // ---- 当たり判定（足場に乗る・ジャンプ） ----
 function groundAt(x, z, y) {
