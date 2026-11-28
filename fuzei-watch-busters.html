@@ -4,15 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>風情ウォッチバスターズ</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&display=swap" rel="stylesheet">
+<link rel="preload" href="fonts/LightNovelPOPv2.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 :root { --navy: #14245a; --yel: #ffd21f; --black-bg: #2a2b31; --blue-bg: #a9dcff; --title-bg: linear-gradient(135deg, #55D5F5 0%, #29B6E9 50%, #0068C8 100%); }
-/* フォント：ラノベPOP v2（パソコンに入っていればそれ。なければ Mochiy Pop One） */
-@font-face { font-family: 'FWB'; src: local('ラノベPOP v2'), local('ラノベPOP V2'), local('LightNovelPOPv2'), local('LightNovelPOP-v2'), local('07LightNovelPOP v2'); }
+/* フォント：ラノベPOP v2（fonts/ に同梱。M+ FONTS のライセンス。説明は fonts/LightNovelPOPv2-ReadMe.html） */
+@font-face { font-family: 'FWB'; src: url('fonts/LightNovelPOPv2.woff2') format('woff2'); font-display: block; }
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; overflow: hidden; background: var(--title-bg); color: #fff; font-family: 'FWB', 'Mochiy Pop One', sans-serif; user-select: none; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--title-bg); color: #fff; font-family: 'FWB', sans-serif; user-select: none; }
 .screen { position: fixed; inset: 0; display: none; }
 .screen.on { display: flex; }
 
@@ -71,15 +69,15 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--title-
 .slot.cur .lab { border-right-color: rgba(170, 130, 0, .35); }
 .slot .lab span { font-size: clamp(16px, 2.6vw, 40px); -webkit-text-stroke: .14em #fff; paint-order: stroke fill; }
 .slot .lab i { font-style: italic; font-size: clamp(30px, 5.2vw, 78px); line-height: 1; transform: skewX(-6deg); -webkit-text-stroke: .1em #fff; paint-order: stroke fill; }
-.slot .body { position: relative; flex: 1; height: 100%; display: flex; align-items: center; padding: 0 4% 0 5%; font-family: system-ui, 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif; font-weight: 700; font-size: clamp(16px, 2.7vw, 42px); color: #2b2440; }
+.slot .body { position: relative; flex: 1; height: 100%; display: flex; align-items: center; padding: 0 4% 0 5%; font-family: 'FWB', sans-serif; font-weight: normal; font-size: clamp(16px, 2.7vw, 42px); color: #2b2440; }
 .slot .body .nm { flex: 1; }
-.slot .body .tm { display: flex; align-items: center; gap: .6em; font-family: 'FWB', 'Mochiy Pop One', sans-serif; font-weight: normal; font-size: .9em; letter-spacing: .08em; position: absolute; right: 4%; top: 14%; }
+.slot .body .tm { display: flex; align-items: center; gap: .6em; font-family: 'FWB', sans-serif; font-weight: normal; font-size: .9em; letter-spacing: .08em; position: absolute; right: 4%; top: 14%; }
 .slot .body .tm svg { width: 1em; height: 1em; }
 .slot .body .bar { position: absolute; left: 5%; right: 5%; bottom: 17%; height: 7px; border-radius: 4px; background: rgba(255, 255, 255, .55); overflow: hidden; }
 .slot .body .bar i { display: block; height: 100%; background: #1673e6; border-radius: 4px; }
 .slot .body.has .nm { align-self: center; margin-top: -2.2%; }
-.dhelp { margin-top: 3.6vh; width: min(66vw, 1090px); height: clamp(46px, 10.5vh, 100px); border-radius: 60px; background: #5a2fa8; display: flex; align-items: center; color: #fff; font-family: system-ui, 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif; font-weight: 700; font-size: clamp(15px, 2.4vw, 38px); }
-.dhelp .q { flex: none; width: 1.7em; height: 1.7em; margin: 0 7% 0 7%; border-radius: 50%; background: #ffe31a; color: #111; display: flex; align-items: center; justify-content: center; font-family: 'FWB', 'Mochiy Pop One', sans-serif; font-weight: normal; }
+.dhelp { margin-top: 3.6vh; width: min(66vw, 1090px); height: clamp(46px, 10.5vh, 100px); border-radius: 60px; background: #5a2fa8; display: flex; align-items: center; color: #fff; font-family: 'FWB', sans-serif; font-weight: normal; font-size: clamp(15px, 2.4vw, 38px); }
+.dhelp .q { flex: none; width: 1.7em; height: 1.7em; margin: 0 7% 0 7%; border-radius: 50%; background: #ffe31a; color: #111; display: flex; align-items: center; justify-content: center; font-family: 'FWB', sans-serif; font-weight: normal; }
 .dhelp rt { font-size: .45em; }
 .dbtn { position: absolute; bottom: 3.5vh; height: clamp(46px, 11vh, 104px); width: min(18vw, 300px); border: 4px solid #0b0b0b; border-radius: 16px; font: inherit; font-size: clamp(18px, 3vw, 44px); color: #111; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: .3em;
   -webkit-text-stroke: .12em #fff; paint-order: stroke fill; box-shadow: inset 0 0 0 3px #fff, inset 0 0 10px 6px rgba(255, 255, 255, .55), 0 4px 0 rgba(30, 0, 70, .55); transition: transform .12s cubic-bezier(.3, 1.6, .5, 1); }
