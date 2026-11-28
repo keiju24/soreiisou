@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>風情ウォッチバスターズ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #14245a; --red: #e0281e; --yel: #ffd21f; --sky: #8fd3ff;
+  --ink: #101018;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #0d1a44; color: #fff; font-family: 'M PLUS Rounded 1c', sans-serif; user-select: none; }
+.screen { position: fixed; inset: 0; display: none; }
+.screen.on { display: block; }
+
+/* ---- ロゴの文字のテイスト：グラデーションの太字＋紺のふち＋白のふち ---- */
+.lt { position: relative; display: inline-block; isolation: isolate; font-family: 'Dela Gothic One', sans-serif; letter-spacing: .02em; line-height: 1.1; white-space: nowrap;
+  color: transparent; transform: skewX(-8deg); }
+.lt > .f { position: relative; z-index: 1; background: linear-gradient(#fff7a0 0%, #ffd21f 45%, #ff9a0a 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lt::before, .lt::after { content: attr(data-t); position: absolute; inset: 0; z-index: -1; color: transparent; }
+.lt::before { -webkit-text-stroke: .34em #fff; filter: drop-shadow(0 .08em 0 rgba(0, 0, 0, .35)); }
+.lt::after { -webkit-text-stroke: .2em var(--navy); }
+.lt.red > .f { background-image: linear-gradient(#ffb36b 0%, #ff5a1f 45%, #d81e12 100%); }
+.lt.blue > .f { background-image: linear-gradient(#9fe0ff 0%, #2f8cff 50%, #1546c8 100%); }
+.lt.white > .f { background-image: linear-gradient(#fff, #fff 55%, #d9e6f2); }
+.lt.white::after { -webkit-text-stroke: .2em var(--ink); }
+
+/* ---- 落ちてきて、まんなかで跳ねる ---- */
+.drop { transform-origin: 50% 100%; animation: drop 1.6s both; }
+@keyframes drop {
+  0%   { transform: translateY(-130vh) scale(.96, 1.08); animation-timing-function: cubic-bezier(.5, 0, 1, .5); }
+  42%  { transform: translateY(0) scale(1.2, .76); animation-timing-function: cubic-bezier(.2, .7, .4, 1); }
+  57%  { transform: translateY(-13vh) scale(.94, 1.08); animation-timing-function: cubic-bezier(.6, 0, .8, .4); }
+  69%  { transform: translateY(0) scale(1.1, .88); animation-timing-function: cubic-bezier(.2, .7, .4, 1); }
+  78%  { transform: translateY(-4.5vh) scale(.98, 1.03); animation-timing-function: cubic-bezier(.6, 0, .8, .4); }
+  86%  { transform: translateY(0) scale(1.04, .95); animation-timing-function: ease-out; }
+  93%  { transform: translateY(0) scale(.99, 1.01); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+.bob { animation: bob 2.6s ease-in-out infinite; }
+@keyframes bob { 50% { transform: translateY(-1.2vh) rotate(-.6deg); } }
+.shake { animation: shake .35s; }
+@keyframes shake { 20% { transform: translate(-6px, 5px); } 40% { transform: translate(5px, -4px); } 60% { transform: translate(-3px, 3px); } 80% { transform: translate(2px, -1px); } }
+.pop { animation: pop .5s cubic-bezier(.3, 1.8, .5, 1) both; }
+@keyframes pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* ---- 背景：回る光の筋 ---- */
+.rays { position: absolute; left: 50%; top: 50%; width: 260vmax; height: 260vmax; margin: -130vmax 0 0 -130vmax; animation: spin 60s linear infinite;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, .09) 0 7deg, transparent 7deg 15deg); }
+@keyframes spin { to { transform: rotate(360deg); } }
+.vign { position: absolute; inset: 0; background: radial-gradient(circle at 50% 45%, transparent 30%, rgba(0, 0, 20, .55) 100%); pointer-events: none; }
+.dust { position: absolute; width: 14px; height: 14px; border-radius: 50%; background: #fff; pointer-events: none; animation: dust .7s ease-out forwards; }
+@keyframes dust { to { transform: translate(var(--dx), var(--dy)) scale(.2); opacity: 0; } }
+.star { position: absolute; color: #fff36a; font-size: 26px; pointer-events: none; animation: twinkle 2.2s ease-in-out infinite; text-shadow: 0 0 8px #fff; }
+@keyframes twinkle { 0%, 100% { opacity: .15; transform: scale(.6) rotate(0deg); } 50% { opacity: 1; transform: scale(1.1) rotate(40deg); } }
+
+/* ---- 最初の「クリックではじめる」（音を鳴らすために必要） ---- */
+#gate { background: #000; align-items: center; justify-content: center; cursor: pointer; z-index: 50; }
+#gate.on { display: flex; }
+#gate .lt { font-size: clamp(22px, 4vw, 40px); }
+#gate small { display: block; margin-top: 22px; color: #8c93a8; font-size: 13px; text-align: center; }
+
+/* ---- タイトル ---- */
+#title { background: radial-gradient(circle at 50% 42%, #3fa4ff 0%, #1a5fd0 45%, #0d2a78 100%); cursor: pointer; }
+#title .center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+#title .logo { width: min(78vw, 760px); max-height: 62vh; object-fit: contain; filter: drop-shadow(0 14px 0 rgba(0, 0, 40, .35)); }
+#title .press { margin-top: 4vh; font-size: clamp(22px, 3.6vw, 40px); opacity: 0; }
+#title .press.on { opacity: 1; animation: pop .45s cubic-bezier(.3, 1.8, .5, 1), blink 1.4s 1s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: .35; } }
+.shadow { width: min(50vw, 480px); height: 3vh; margin-top: -1.5vh; border-radius: 50%; background: rgba(0, 0, 30, .35); transform: scale(0); }
+.shadow.on { animation: shadowIn 1.6s both; }
+@keyframes shadowIn { 0% { transform: scale(.2); opacity: 0; } 42% { transform: scale(1.15); opacity: 1; } 57% { transform: scale(.8); } 69% { transform: scale(1.05); } 78% { transform: scale(.93); } 100% { transform: scale(1); opacity: 1; } }
+
+/* ---- 団をえらぶ ---- */
+#select { background: #0d1a44; }
+#select .head { position: absolute; top: 3.5vh; left: 0; right: 0; text-align: center; z-index: 5; pointer-events: none; }
+#select .head .lt { font-size: clamp(24px, 4.2vw, 50px); }
+.halves { position: absolute; inset: 0; display: flex; }
+.team { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; transition: flex .35s cubic-bezier(.3, 1.4, .5, 1), filter .3s; }
+.team.kuroneko { background: radial-gradient(circle at 50% 55%, #4a4f60 0%, #23252f 55%, #101116 100%); clip-path: polygon(0 0, 100% 0, 88% 100%, 0 100%); margin-right: -6vw; }
+.team.shimainu { background: radial-gradient(circle at 50% 55%, #e9f7ff 0%, #a6dcff 50%, #5db2ef 100%); clip-path: polygon(12% 0, 100% 0, 100% 100%, 0 100%); margin-left: -6vw; }
+.team .pat { position: absolute; inset: -10%; opacity: .12; font-size: 46px; line-height: 90px; letter-spacing: 40px; word-break: break-all; transform: rotate(-12deg); pointer-events: none; animation: slide 14s linear infinite; }
+.team.kuroneko .pat { color: #fff; }
+.team.shimainu .pat { color: #1546c8; opacity: .15; }
+@keyframes slide { to { transform: rotate(-12deg) translateX(-180px); } }
+.team .logoBox { position: relative; z-index: 2; }
+.team img.tlogo { width: min(40vw, 520px); max-height: 52vh; object-fit: contain; display: block; filter: drop-shadow(0 10px 0 rgba(0, 0, 0, .3)); transition: transform .3s; }
+.team .pick { position: relative; z-index: 2; margin-top: 2.5vh; font-size: clamp(18px, 2.4vw, 30px); opacity: 0; transition: opacity .2s; }
+.team.cur { flex: 1.35; }
+.team.cur .pick { opacity: 1; animation: blink 1.2s ease-in-out infinite; }
+.team.cur img.tlogo { transform: scale(1.06); }
+.halves.chosen .team:not(.cur), .halves.picking .team:not(.cur) { filter: brightness(.45) saturate(.6); }
+.team .mascot { position: absolute; z-index: 1; bottom: -2vh; width: min(22vw, 260px); opacity: .9; filter: drop-shadow(0 6px 0 rgba(0, 0, 0, .4)); transition: transform .35s cubic-bezier(.3, 1.6, .5, 1); transform: translateY(40%); }
+.team.kuroneko .mascot { left: 2vw; }
+.team.cur .mascot { transform: translateY(8%); }
+.hint { position: absolute; bottom: 2.2vh; left: 0; right: 0; text-align: center; z-index: 5; font-size: 14px; color: #fff; text-shadow: 0 2px 0 #000, 0 0 6px #000; pointer-events: none; }
+.hint b { display: inline-block; padding: 1px 7px; margin: 0 2px; border-radius: 5px; background: #fff; color: var(--navy); text-shadow: none; }
+
+/* ---- かくにんの窓・入団 ---- */
+.modal { position: fixed; inset: 0; z-index: 30; display: none; align-items: center; justify-content: center; background: rgba(0, 0, 20, .55); }
+.modal.on { display: flex; }
+.card { position: relative; padding: 34px 42px 28px; border-radius: 26px; background: linear-gradient(#fffef4, #ffeeb5); border: 6px solid var(--navy); box-shadow: 0 0 0 6px #fff, 0 16px 0 rgba(0, 0, 0, .35); text-align: center; color: var(--navy); }
+.card .q { font-size: clamp(22px, 3vw, 34px); margin-bottom: 26px; }
+.btns { display: flex; gap: 18px; justify-content: center; }
+.btn { font-family: 'Dela Gothic One', sans-serif; font-size: 22px; padding: 10px 30px; border-radius: 40px; border: 4px solid var(--navy); background: #fff; color: var(--navy); cursor: pointer; box-shadow: 0 5px 0 var(--navy); transition: transform .1s; }
+.btn.cur { background: linear-gradient(#fff7a0, #ffd21f 50%, #ff9a0a); transform: translateY(-3px) scale(1.06); }
+.btn:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--navy); }
+#join { background: transparent; flex-direction: column; }
+#join .bg { position: absolute; inset: 0; z-index: -1; }
+#join.kuroneko .bg { background: radial-gradient(circle at 50% 45%, #50566a, #15161d 75%); }
+#join.shimainu .bg { background: radial-gradient(circle at 50% 45%, #f2fbff, #6cbdf5 75%); }
+#join img { width: min(70vw, 640px); max-height: 60vh; object-fit: contain; filter: drop-shadow(0 12px 0 rgba(0, 0, 0, .3)); }
+#join .msg { margin-top: 3vh; font-size: clamp(26px, 4.4vw, 52px); }
+#join .sub { margin-top: 1.6vh; font-size: 15px; color: #fff; text-shadow: 0 2px 0 #000; opacity: 0; }
+#join .sub.on { opacity: 1; transition: opacity .4s; }
+#join .btns { margin-top: 3vh; opacity: 0; pointer-events: none; }
+#join .btns.on { opacity: 1; pointer-events: auto; transition: opacity .4s; }
+#join .rays { opacity: .6; }
+#join.shimainu .rays { background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, .35) 0 7deg, transparent 7deg 15deg); }
+
+/* ---- 画面の切りかえ ---- */
+#wipe { position: fixed; inset: 0; z-index: 40; pointer-events: none; background: var(--yel); clip-path: circle(0 at 50% 50%); }
+#wipe.in { transition: clip-path .38s ease-in; clip-path: circle(80vmax at 50% 50%); }
+#wipe.out { transition: clip-path .38s ease-out; clip-path: circle(0 at 50% 50%); }
+
+/* ---- デバッグ ---- */
+#dbg { position: fixed; right: 10px; top: 10px; z-index: 60; width: 220px; padding: 10px 12px; border-radius: 12px; background: rgba(10, 12, 24, .82); font: 12px/1.5 system-ui, sans-serif; color: #dfe6ff; }
+#dbg.min > :not(.dh) { display: none; }
+#dbg .dh { display: flex; justify-content: space-between; align-items: center; font-weight: 700; cursor: pointer; }
+#dbg button { font: inherit; margin: 3px 3px 0 0; padding: 3px 8px; border-radius: 6px; border: 1px solid #4a5480; background: #232a48; color: #fff; cursor: pointer; }
+#dbg button:hover { background: #33407a; }
+#dbg .row { margin-top: 6px; }
+#dbg input[type=range] { width: 100%; }
+#dbg code { color: #9fe28c; }
+@media (max-width: 720px) {
+  .halves { flex-direction: column; }
+  .team.kuroneko, .team.shimainu { clip-path: none; margin: 0; }
+  .team img.tlogo { width: min(70vw, 420px); max-height: 30vh; }
+  .team .mascot { display: none; }
+  #dbg { width: 170px; }
+}
+</style>
+</head>
+<body>
+<div id="gate" class="screen on">
+  <div><span class="lt" data-t="▶ クリックではじめる"><span class="f">▶ クリックではじめる</span></span><small>音が出ます</small></div>
+</div>
+
+<div id="title" class="screen">
+  <div class="rays"></div>
+  <div id="stars"></div>
+  <div class="center" id="tCenter">
+    <div id="tLogoWrap"><img class="logo bob" id="tLogo" src="img/fwb-logo.png" alt="風情ウォッチバスターズ"></div>
+    <div class="shadow" id="tShadow"></div>
+    <div class="press"><span class="lt" data-t="クリックでスタート"><span class="f">クリックでスタート</span></span></div>
+  </div>
+  <div class="vign"></div>
+</div>
+
+<div id="select" class="screen">
+  <div class="halves" id="halves">
+    <div class="team kuroneko" data-team="kuroneko">
+      <div class="pat">🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾</div>
+      <img class="mascot" src="img/fwb-kuroneko.png" alt="">
+      <div class="logoBox"><img class="tlogo" src="img/fwb-logo-kuroneko.png" alt="風情ウォッチバスターズ 黒猫団"></div>
+      <div class="pick"><span class="lt white" data-t="黒猫団にする！"><span class="f">黒猫団にする！</span></span></div>
+    </div>
+    <div class="team shimainu" data-team="shimainu">
+      <div class="pat">🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴🦴</div>
+      <div class="logoBox"><img class="tlogo" src="img/fwb-logo-shimainu.png" alt="風情ウォッチバスターズ 島犬隊"></div>
+      <div class="pick"><span class="lt blue" data-t="島犬隊にする！"><span class="f">島犬隊にする！</span></span></div>
+    </div>
+  </div>
+  <div class="head"><span class="lt red" data-t="どっちに入る？"><span class="f">どっちに入る？</span></span></div>
+  <div class="hint"><b>←</b><b>→</b> えらぶ　<b>Enter</b> けってい　<b>Esc</b> タイトルへ</div>
+</div>
+
+<div id="confirm" class="modal">
+  <div class="card pop">
+    <div class="q" id="cQ"></div>
+    <div class="btns"><button class="btn cur" data-a="yes">はい</button><button class="btn" data-a="no">いいえ</button></div>
+  </div>
+</div>
+
+<div id="join" class="modal">
+  <div class="bg"><div class="rays"></div></div>
+  <div id="jWrap"><img id="jLogo" alt=""></div>
+  <div class="shadow" id="jShadow"></div>
+  <div class="msg" id="jMsg"></div>
+  <div class="sub" id="jSub">この先は作っているところです</div>
+  <div class="btns" id="jBtns"><button class="btn cur" data-a="title">タイトルへ</button><button class="btn" data-a="again">えらびなおす</button></div>
+</div>
+
+<div id="wipe"></div>
+
+<div id="dbg">
+  <div class="dh" id="dbgH"><span>デバッグ</span><span id="dbgT">－</span></div>
+  <div class="row">画面：<code id="dScr">gate</code>　団：<code id="dTeam">なし</code></div>
+  <div class="row"><button data-d="drop">落下をもう一回</button><button data-d="title">タイトル</button><button data-d="select">団えらび</button><button data-d="join-k">黒猫団 入団</button><button data-d="join-s">島犬隊 入団</button><button data-d="clear">セーブ消去</button></div>
+  <div class="row">落ちる速さ <code id="dSpdV">1.00</code>×<input type="range" id="dSpd" min="0.25" max="2" step="0.05" value="1"></div>
+  <div class="row"><label><input type="checkbox" id="dMute"> 音を消す</label></div>
+</div>
+
+<script>
+// =====================================================================
+//  風情ウォッチバスターズ（作り直し版）デバッグ：タイトル → 団をえらぶ
+// =====================================================================
+const $ = (id) => document.getElementById(id);
+const lt = (text, cls = '') => `<span class="lt ${cls}" data-t="${text}"><span class="f">${text}</span></span>`;
+const TEAMS = {
+  kuroneko: { name: '黒猫団', logo: 'img/fwb-logo-kuroneko.png', cls: 'white' },
+  shimainu: { name: '島犬隊', logo: 'img/fwb-logo-shimainu.png', cls: 'blue' },
+};
+const SAVE_KEY = 'fwb2.team';
+const load = () => { try { return localStorage.getItem(SAVE_KEY); } catch (e) { return null; } };
+const store = (v) => { try { v ? localStorage.setItem(SAVE_KEY, v) : localStorage.removeItem(SAVE_KEY); } catch (e) { } };
+let speed = 1, muted = false;
+
+// ---- 音（BGM・効果音は前の版のものを使う。着地の「ドン」は合成） ----
+const AC = window.AudioContext ? new AudioContext() : null;
+const buf = {};
+async function loadSe(name, url) { if (!AC) return; try { const r = await fetch(url); buf[name] = await AC.decodeAudioData(await r.arrayBuffer()); } catch (e) { } }
+function se(name, vol = .6) { if (!AC || muted || !buf[name]) return; const s = AC.createBufferSource(), g = AC.createGain(); s.buffer = buf[name]; g.gain.value = vol; s.connect(g).connect(AC.destination); s.start(); }
+function thud(power = 1) {      // ドン（低い音＋ノイズ）
+  if (!AC || muted) return;
+  const t = AC.currentTime, o = AC.createOscillator(), g = AC.createGain();
+  o.type = 'sine'; o.frequency.setValueAtTime(150 * (.8 + power * .2), t); o.frequency.exponentialRampToValueAtTime(42, t + .25);
+  g.gain.setValueAtTime(.9 * power, t); g.gain.exponentialRampToValueAtTime(.001, t + .35);
+  o.connect(g).connect(AC.destination); o.start(t); o.stop(t + .4);
+  const n = AC.createBufferSource(), nb = AC.createBuffer(1, AC.sampleRate * .2, AC.sampleRate), d = nb.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length) ** 3;
+  const f = AC.createBiquadFilter(), ng = AC.createGain(); f.type = 'lowpass'; f.frequency.value = 900; ng.gain.value = .5 * power;
+  n.buffer = nb; n.connect(f).connect(ng).connect(AC.destination); n.start(t);
+}
+function boing(pitch = 1) {    // ぽよん（跳ねる音）
+  if (!AC || muted) return;
+  const t = AC.currentTime, o = AC.createOscillator(), g = AC.createGain();
+  o.type = 'triangle'; o.frequency.setValueAtTime(260 * pitch, t); o.frequency.exponentialRampToValueAtTime(620 * pitch, t + .12);
+  g.gain.setValueAtTime(.25, t); g.gain.exponentialRampToValueAtTime(.001, t + .2);
+  o.connect(g).connect(AC.destination); o.start(t); o.stop(t + .22);
+}
+const bgm = new Audio('bgm/fwb-hq.mp3'); bgm.loop = true; bgm.volume = .45;
+function playBgm() { if (!muted) bgm.play().catch(() => { }); }
+
+// ---- 落ちてきて跳ねる（音と土ぼこりも合わせる） ----
+const timers = [];
+const later = (ms, f) => timers.push(setTimeout(f, ms / speed));
+function clearTimers() { while (timers.length) clearTimeout(timers.pop()); }
+function dropIn(el, shadow, onLand, onDone) {
+  const D = 1600;
+  el.classList.remove('drop', 'bob'); void el.offsetWidth;
+  el.style.animationDuration = (D / speed) + 'ms'; el.classList.add('drop');
+  if (shadow) { shadow.classList.remove('on'); void shadow.offsetWidth; shadow.style.animationDuration = (D / speed) + 'ms'; shadow.classList.add('on'); }
+  later(D * .42, () => { thud(1); shake(); dust(el); onLand && onLand(); });
+  later(D * .69, () => { thud(.45); boing(1); });
+  later(D * .86, () => { boing(1.4); });
+  later(D, () => { el.classList.remove('drop'); el.style.animationDuration = ''; onDone && onDone(); });
+}
+function shake() { const b = document.body; b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); }
+function dust(el) {
+  const r = el.getBoundingClientRect(), y = r.bottom - 10;
+  for (let i = 0; i < 18; i++) {
+    const d = document.createElement('div'); d.className = 'dust';
+    const s = i % 2 ? 1 : -1, x = r.left + r.width / 2 + s * (r.width * (.15 + Math.random() * .3));
+    d.style.left = x + 'px'; d.style.top = y + 'px';
+    d.style.setProperty('--dx', (s * (40 + Math.random() * 120)) + 'px'); d.style.setProperty('--dy', (-20 - Math.random() * 70) + 'px');
+    const k = 8 + Math.random() * 16; d.style.width = d.style.height = k + 'px';
+    document.body.appendChild(d); setTimeout(() => d.remove(), 800);
+  }
+}
+
+// ---- 画面の切りかえ ----
+let scr = 'gate';
+function show(id) {
+  for (const s of document.querySelectorAll('.screen')) s.classList.toggle('on', s.id === id);
+  scr = id; $('dScr').textContent = id;
+}
+function wipe(fn) {
+  const w = $('wipe'); w.className = ''; void w.offsetWidth; w.className = 'in';
+  setTimeout(() => { fn(); w.className = 'out'; }, 400);
+}
+
+// ---- タイトル ----
+function startTitle() {
+  clearTimers(); closeModals(); show('title');
+  $('title').querySelector('.press').classList.remove('on');
+  titleReady = false;
+  dropIn($('tLogoWrap'), $('tShadow'), null, () => {
+    $('tLogo').classList.add('bob');
+    $('title').querySelector('.press').classList.add('on');
+    titleReady = true;
+  });
+}
+let titleReady = false;
+(() => {   // きらきら
+  const box = $('stars');
+  for (let i = 0; i < 16; i++) { const s = document.createElement('div'); s.className = 'star'; s.textContent = '✦'; s.style.left = (Math.random() * 96) + '%'; s.style.top = (Math.random() * 90) + '%'; s.style.animationDelay = (-Math.random() * 2.2) + 's'; s.style.fontSize = (14 + Math.random() * 22) + 'px'; box.appendChild(s); }
+})();
+$('title').addEventListener('click', () => { if (titleReady) goSelect(); });
+
+// ---- 団をえらぶ ----
+let cur = 'kuroneko';
+const teamEls = [...document.querySelectorAll('.team')];
+function setCur(t, sound = true) {
+  if (cur !== t && sound) se('move', .5);
+  cur = t; teamEls.forEach(e => e.classList.toggle('cur', e.dataset.team === t));
+}
+function goSelect() {
+  se('ok', .6); closeModals();
+  wipe(() => {
+    clearTimers(); show('select'); $('halves').className = 'halves';
+    setCur(load() || 'kuroneko', false);
+    teamEls.forEach((e, i) => {
+      const box = e.querySelector('.logoBox'); box.style.visibility = 'hidden';
+      later(150 + i * 380, () => { box.style.visibility = ''; dropIn(box, null); });
+    });
+  });
+}
+teamEls.forEach(e => {
+  e.addEventListener('mouseenter', () => { if (scr === 'select' && !modalOn()) setCur(e.dataset.team); });
+  e.addEventListener('click', () => { if (scr === 'select' && !modalOn()) { setCur(e.dataset.team, false); askConfirm(); } });
+});
+
+// ---- かくにん ----
+const modalOn = () => $('confirm').classList.contains('on') || $('join').classList.contains('on');
+function closeModals() { $('confirm').classList.remove('on'); $('join').classList.remove('on'); }
+let cSel = 0;
+function setBtn(box, i) { const b = [...box.querySelectorAll('.btn')]; cSel = (i + b.length) % b.length; b.forEach((x, k) => x.classList.toggle('cur', k === cSel)); }
+function askConfirm() {
+  se('menu', .55);
+  const T = TEAMS[cur];
+  $('cQ').innerHTML = `${lt(T.name, T.cls)} に入る？`;
+  $('halves').classList.add('picking');
+  const m = $('confirm'); m.classList.add('on'); const c = m.querySelector('.card'); c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop');
+  setBtn(m, 0);
+}
+function answer(yes) {
+  $('confirm').classList.remove('on'); $('halves').classList.remove('picking');
+  if (yes) { se('ok', .7); join(cur); } else se('back', .6);
+}
+$('confirm').querySelectorAll('.btn').forEach((b, i) => { b.addEventListener('mouseenter', () => setBtn($('confirm'), i)); b.addEventListener('click', () => answer(b.dataset.a === 'yes')); });
+
+// ---- 入団！ ----
+function join(t) {
+  store(t); $('dTeam').textContent = TEAMS[t].name;
+  const T = TEAMS[t], j = $('join');
+  clearTimers(); j.className = 'modal on ' + t;
+  $('jLogo').src = T.logo; $('jMsg').innerHTML = ''; $('jSub').classList.remove('on'); $('jBtns').classList.remove('on');
+  dropIn($('jWrap'), $('jShadow'), () => {
+    $('jMsg').innerHTML = `<span class="pop" style="display:inline-block">${lt(T.name + 'に入団！', t === 'kuroneko' ? 'red' : 'blue')}</span>`;
+  }, () => { $('jSub').classList.add('on'); $('jBtns').classList.add('on'); setBtn($('join'), 0); });
+}
+function joinAct(a) { if (a === 'title') { se('back', .6); wipe(startTitle); } else { se('back', .6); closeModals(); goSelect(); } }
+$('jBtns').querySelectorAll('.btn').forEach((b, i) => { b.addEventListener('mouseenter', () => setBtn($('join'), i)); b.addEventListener('click', () => joinAct(b.dataset.a)); });
+
+// ---- キーボード ----
+addEventListener('keydown', (e) => {
+  const k = e.key;
+  if (scr === 'gate') { if (k === 'Enter' || k === ' ') begin(); return; }
+  if (scr === 'title') { if ((k === 'Enter' || k === ' ') && titleReady) goSelect(); return; }
+  if ($('confirm').classList.contains('on')) {
+    if (k === 'ArrowLeft' || k === 'ArrowRight' || k === 'a' || k === 'd') { setBtn($('confirm'), cSel + 1); se('move', .45); }
+    else if (k === 'Enter' || k === ' ') answer(cSel === 0);
+    else if (k === 'Escape') answer(false);
+    return;
+  }
+  if ($('join').classList.contains('on')) {
+    if (!$('jBtns').classList.contains('on')) return;
+    if (k === 'ArrowLeft' || k === 'ArrowRight' || k === 'a' || k === 'd') { setBtn($('join'), cSel + 1); se('move', .45); }
+    else if (k === 'Enter' || k === ' ') joinAct(cSel === 0 ? 'title' : 'again');
+    return;
+  }
+  if (scr === 'select') {
+    if (k === 'ArrowLeft' || k === 'a' || k === 'A') setCur('kuroneko');
+    else if (k === 'ArrowRight' || k === 'd' || k === 'D') setCur('shimainu');
+    else if (k === 'Enter' || k === ' ') askConfirm();
+    else if (k === 'Escape') { se('back', .6); wipe(startTitle); }
+  }
+});
+
+// ---- はじめる ----
+let begun = false;
+function begin() {
+  if (begun) return; begun = true;
+  if (AC && AC.state === 'suspended') AC.resume();
+  playBgm();
+  startTitle();
+}
+$('gate').addEventListener('click', begin);
+Promise.all([['move', 'se/fwb-move.mp3'], ['ok', 'se/fwb-ok.mp3'], ['back', 'se/fwb-back.mp3'], ['menu', 'se/fwb-menu.mp3']].map(([n, u]) => loadSe(n, u)));
+{ const t = load(); $('dTeam').textContent = t && TEAMS[t] ? TEAMS[t].name : 'なし'; }
+
+// ---- デバッグパネル ----
+$('dbgH').addEventListener('click', () => { const d = $('dbg'); d.classList.toggle('min'); $('dbgT').textContent = d.classList.contains('min') ? '＋' : '－'; });
+$('dbg').querySelectorAll('button[data-d]').forEach(b => b.addEventListener('click', (e) => {
+  e.stopPropagation(); begun = true; if (AC && AC.state === 'suspended') AC.resume();
+  const a = b.dataset.d;
+  if (a === 'drop') { if (scr === 'select') goSelect(); else if ($('join').classList.contains('on')) join(load() || 'kuroneko'); else startTitle(); }
+  else if (a === 'title') startTitle();
+  else if (a === 'select') goSelect();
+  else if (a === 'join-k') { show('select'); setCur('kuroneko', false); join('kuroneko'); }
+  else if (a === 'join-s') { show('select'); setCur('shimainu', false); join('shimainu'); }
+  else if (a === 'clear') { store(null); $('dTeam').textContent = 'なし'; }
+}));
+$('dSpd').addEventListener('input', (e) => { speed = +e.target.value; $('dSpdV').textContent = speed.toFixed(2); });
+$('dMute').addEventListener('change', (e) => { muted = e.target.checked; if (muted) bgm.pause(); else if (begun) playBgm(); });
+window.__fwb = { startTitle, goSelect, join, show, get scr() { return scr; } };
+</script>
+</body>
+</html>
