@@ -172,6 +172,7 @@ body.playing #dbg { top: auto; bottom: 8px; right: auto; left: 8px; }
     <option value="naming">なまえをきめる</option>
     <option value="play">キャラを動かす</option>
     <option value="hq">本部（3D）</option>
+    <option value="schoolyard">校庭マップ（歩く）</option>
   </select>
   <button data-d="drop">落下もう一回</button><button data-d="wipe">にっきを全部消す</button></div>
 
@@ -412,6 +413,7 @@ function jumpTo(v) {
   else if (v === 'naming') { DM.d = loadDiary(); openNaming(Math.max(0, DM.d.findIndex(x => !x))); }
   else if (v === 'play') openPlay();
   else if (v === 'hq') openPlay('debug-hq.html');
+  else if (v === 'schoolyard') openPlay('debug-map.html?map=schoolyard');
 }
 $('dJump').addEventListener('change', (e) => { jumpTo(e.target.value); e.target.blur(); });
 $('dJump').addEventListener('pointerdown', (e) => e.stopPropagation());

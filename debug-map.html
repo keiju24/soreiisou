@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>マップ デバッグ</title>
+<style>
+  :root { --panel:rgba(18,20,24,.86); --line:#3a3f48; --hi:#9fe28c; }
+  html, body { margin:0; height:100%; overflow:hidden; background:#9cc8ee; font-family:system-ui, 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif; }
+  canvas { display:block; width:100%; height:100%; }
+  #panel { position:fixed; left:12px; top:12px; width:270px; background:var(--panel); color:#e8ecf2; border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:12px; line-height:1.65; }
+  #panel h1 { margin:0 0 6px; font-size:14px; display:flex; justify-content:space-between; }
+  #panel h1 small { color:#9aa3ae; font-weight:400; }
+  #panel label { display:flex; align-items:center; gap:6px; }
+  #panel select { flex:1; font:inherit; padding:2px 4px; border-radius:6px; border:1px solid var(--line); background:#232a38; color:#fff; }
+  #panel .g { display:grid; grid-template-columns:64px 1fr; }
+  #panel .g b { color:#9aa3ae; font-weight:400; }
+  #panel code { color:var(--hi); }
+  #panel button { font:inherit; padding:3px 10px; margin:4px 4px 0 0; border-radius:6px; border:1px solid var(--line); background:#232a38; color:#fff; cursor:pointer; }
+  #panel button.on { background:#3f5f2e; border-color:var(--hi); }
+  #hit { color:#ffd166 !important; }
+  #keys { position:fixed; right:12px; bottom:12px; background:var(--panel); color:#e8ecf2; border:1px solid var(--line); border-radius:10px; padding:8px 12px; font-size:12px; line-height:1.7; }
+  kbd { display:inline-block; padding:0 5px; border:1px solid #6b7280; border-radius:4px; background:#2a303b; font-family:inherit; }
+  #loading { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; font-size:18px; color:#234; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="loading">マップを読みこみ中…</div>
+<div id="panel">
+  <h1>マップ デバッグ <small id="vMap">-</small></h1>
+  <label>キャラ <select id="charSel"></select></label>
+  <div class="g" style="margin-top:6px">
+    <b>位置</b><code id="vPos">-</code>
+    <b>状態</b><code id="vState">-</code>
+    <b>ぶつかり</b><code id="hit">-</code>
+    <b>FPS</b><code id="vFps">-</code>
+  </div>
+  <button id="tCol">当たり判定を見る</button><button id="tFar">遠くから見る</button><button id="tReset">はじめの場所へ</button>
+</div>
+<div id="keys">
+  <kbd>WASD</kbd>/<kbd>矢印</kbd> 歩く　<kbd>Shift</kbd> 走る　<kbd>Space</kbd> ジャンプ<br>
+  <kbd>J</kbd> こうげき　<kbd>K</kbd> こうげき2　右ドラッグ 視点　ホイール ズーム
+</div>
+<script type="importmap">{ "imports": { "playcanvas": "./lib/playcanvas.min.mjs" } }</script>
+<script type="module">
+// マップ（Blender で作った models/<名前>.glb）をキャラで歩くページ。?map=schoolyard のように名前をわたす（なければ schoolyard）。
+// 当たり判定は models/<名前>.col.json：box＝[x0, x1, z0, z1, 高さ, メモ]、circle＝[x, z, 半径, 高さ, メモ]、bounds＝歩ける範囲、start＝はじめの場所
+import { Application, Entity, Color, Vec3, Asset, FILLMODE_FILL_WINDOW, RESOLUTION_AUTO, TONEMAP_ACES, GAMMA_SRGB, SHADOW_PCF3_32F } from 'playcanvas';
+const $ = (id) => document.getElementById(id);
+const MAP = new URLSearchParams(location.search).get('map') || 'schoolyard';
+$('vMap').textContent = `models/${MAP}.glb`;
+const canvas = $('c');
+const app = new Application(canvas, { graphicsDeviceOptions: { antialias: true } });
+app.setCanvasFillMode(FILLMODE_FILL_WINDOW); app.setCanvasResolution(RESOLUTION_AUTO);
+app.graphicsDevice.maxPixelRatio = Math.min(2, devicePixelRatio || 1);
+addEventListener('resize', () => app.resizeCanvas());
+app.scene.ambientLight = new Color(.55, .58, .64);
+app.start();
+const sun = new Entity(); sun.addComponent('light', { type: 'directional', color: new Color(1, .96, .9), intensity: 1.6, castShadows: true, shadowDistance: 45, shadowResolution: 2048, shadowBias: .3, normalOffsetBias: .05, shadowType: SHADOW_PCF3_32F });
+sun.setLocalEulerAngles(50, 30, 0); app.root.addChild(sun);
+const fill = new Entity(); fill.addComponent('light', { type: 'directional', color: new Color(.8, .88, 1), intensity: .45 }); fill.setLocalEulerAngles(35, -150, 0); app.root.addChild(fill);
+const camE = new Entity(); camE.addComponent('camera', { clearColor: new Color(.61, .78, .93), fov: 45, nearClip: .2, farClip: 400, toneMapping: TONEMAP_ACES, gammaCorrection: GAMMA_SRGB });
+app.root.addChild(camE);
+
+// ---- マップと当たり判定 ----
+let COL = { box: [], circle: [], bounds: null, start: [0, 0, 0] };
+const mapAsset = new Asset(MAP, 'container', { url: `models/${MAP}.glb` });
+app.assets.add(mapAsset);
+const ready = { map: false, col: false };
+mapAsset.ready(() => { const e = mapAsset.resource.instantiateRenderEntity({ castShadows: true, receiveShadows: true }); app.root.addChild(e); ready.map = true; done(); });
+mapAsset.on('error', (e) => { $('loading').textContent = '読みこみ失敗：' + e; });
+app.assets.load(mapAsset);
+fetch(`models/${MAP}.col.json`).then(r => r.json()).then(j => { COL = Object.assign(COL, j); ready.col = true; P.pos.set(COL.start[0], COL.start[1], COL.start[2]); done(); }).catch(e => { ready.col = true; done(); });
+function done() { if (ready.map && ready.col) { const l = $('loading'); if (l) l.remove(); } }
+
+// ---- キャラ（debug-kuroneko.html と同じモデルとアニメ）----
+const MODELS = [{ name: 'インポニャン', url: 'models/imponyan.glb' }, { name: 'シマさん', url: 'models/shima.glb' }];
+const LOOP = { idle: true, walk: true, run: true, fall: true, jump: false, attack: false, attack2: false };
+MODELS.forEach((m, i) => { const o = document.createElement('option'); o.value = i; o.textContent = m.name; $('charSel').appendChild(o); });
+const P = { pos: new Vec3(), vy: 0, face: Math.PI, grounded: true, clip: '', atk: null, atkT: 0 };
+let hero = null, anim = null, clipLen = {}, loadNo = 0;
+function play(n, fade = .15) { if (!anim || (P.clip === n && LOOP[n])) return; P.clip = n; anim.baseLayer.transition(n, fade); }
+function loadChar(i) {
+  const M = MODELS[i], no = ++loadNo, a = new Asset(M.url, 'container', { url: M.url }); app.assets.add(a);
+  a.ready(() => {
+    if (no !== loadNo) return;
+    if (hero) hero.destroy();
+    hero = a.resource.instantiateRenderEntity({ castShadows: true }); app.root.addChild(hero);
+    hero.findComponents('render').forEach(r => r.meshInstances.forEach(mi => { const m = mi.material; if (m.__matte) return; m.__matte = 1; if (m.glossInvert) m.gloss = Math.max(m.gloss, .78); else m.gloss = Math.min(m.gloss, .22); m.specularityFactor = .3; m.update(); }));
+    hero.addComponent('anim', { activate: true });
+    clipLen = {};
+    for (const x of a.resource.animations) { const tr = x.resource, nm = tr.name.replace(/^.*\|/, ''); hero.anim.assignAnimation(nm, tr, undefined, 1, LOOP[nm] !== false); clipLen[nm] = tr.duration; }
+    anim = hero.anim; P.clip = ''; play('idle', 0);
+  });
+  app.assets.load(a);
+}
+$('charSel').onchange = (e) => { loadChar(+e.target.value); e.target.blur(); };
+loadChar(0);
+
+// ---- 入力・カメラ ----
+const keys = new Set();
+addEventListener('keydown', (e) => { if (e.target.tagName === 'SELECT') return; keys.add(e.code); if (e.code === 'Space') { e.preventDefault(); P.wantJump = true; } if (e.code === 'KeyJ') P.wantAtk = 'attack'; if (e.code === 'KeyK') P.wantAtk = 'attack2'; });
+addEventListener('keyup', (e) => keys.delete(e.code));
+const cam = { yaw: 0, pitch: 38, dist: 11, far: false };
+let drag = null;
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+canvas.addEventListener('pointerdown', (e) => { if (e.button === 2) drag = { x: e.clientX, y: e.clientY }; else P.wantAtk = 'attack'; });
+addEventListener('pointerup', () => drag = null);
+addEventListener('pointermove', (e) => { if (!drag) return; cam.yaw -= (e.clientX - drag.x) * .3; cam.pitch = Math.max(5, Math.min(85, cam.pitch + (e.clientY - drag.y) * .25)); drag = { x: e.clientX, y: e.clientY }; });
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); cam.dist = Math.max(3, Math.min(90, cam.dist * Math.exp(e.deltaY * .001))); }, { passive: false });
+const tog = (id, fn) => { $(id).onclick = () => { $(id).classList.toggle('on'); fn($(id).classList.contains('on')); }; };
+let showCol = false;
+tog('tCol', (v) => showCol = v);
+tog('tFar', (v) => { cam.far = v; });
+$('tReset').onclick = () => { P.pos.set(COL.start[0], COL.start[1], COL.start[2]); P.vy = 0; };
+
+// ---- 当たり判定：丸いキャラ（半径 R）を 箱・丸・歩ける範囲 から押し出す ----
+const R = .35;
+let lastHit = '';
+function collide(p) {
+  lastHit = '';
+  for (let it = 0; it < 3; it++) {
+    for (const [x0, x1, z0, z1, h, note] of COL.box) {
+      if (p.y > h - .05) continue;                           // 上に乗っている（ジャンプで低い物の上に）
+      const cx = Math.max(x0, Math.min(p.x, x1)), cz = Math.max(z0, Math.min(p.z, z1)), dx = p.x - cx, dz = p.z - cz, d = Math.hypot(dx, dz);
+      if (d >= R) continue;
+      lastHit = note || 'かべ';
+      if (d > 1e-5) { p.x += dx / d * (R - d); p.z += dz / d * (R - d); }
+      else { const pen = [p.x - x0, x1 - p.x, p.z - z0, z1 - p.z], m = Math.min(...pen), k = pen.indexOf(m); if (k === 0) p.x = x0 - R; else if (k === 1) p.x = x1 + R; else if (k === 2) p.z = z0 - R; else p.z = z1 + R; }
+    }
+    for (const [x, z, r, h, note] of COL.circle) {
+      if (p.y > h - .05) continue;
+      const dx = p.x - x, dz = p.z - z, d = Math.hypot(dx, dz), m = r + R;
+      if (d >= m) continue;
+      lastHit = note || 'もの';
+      if (d > 1e-5) { p.x = x + dx / d * m; p.z = z + dz / d * m; } else p.x = x + m;
+    }
+  }
+  if (COL.bounds) {
+    const [a, b, c, d] = COL.bounds, q = p.clone();
+    p.x = Math.max(a + R, Math.min(b - R, p.x)); p.z = Math.max(c + R, Math.min(d - R, p.z));
+    if (q.x !== p.x || q.z !== p.z) lastHit = lastHit || 'マップのはし';
+  }
+}
+// 上に乗れる高さ（低い箱・丸の上）
+function groundAt(p) {
+  let g = 0;
+  for (const [x0, x1, z0, z1, h] of COL.box) if (h < 1.5 && p.y >= h - .3 && p.x > x0 && p.x < x1 && p.z > z0 && p.z < z1) g = Math.max(g, h);
+  return g;
+}
+
+// ---- 毎フレーム ----
+let fpsT = 0, fpsN = 0;
+const angTo = (a, b) => { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
+app.on('update', (rdt) => {
+  const dt = Math.min(.05, rdt);
+  fpsT += rdt; fpsN++; if (fpsT > .5) { $('vFps').textContent = (fpsN / fpsT).toFixed(0); fpsT = 0; fpsN = 0; }
+  // 入力 → カメラから見た向きで動く
+  let ix = 0, iz = 0;
+  if (keys.has('KeyW') || keys.has('ArrowUp')) iz -= 1; if (keys.has('KeyS') || keys.has('ArrowDown')) iz += 1;
+  if (keys.has('KeyA') || keys.has('ArrowLeft')) ix -= 1; if (keys.has('KeyD') || keys.has('ArrowRight')) ix += 1;
+  const run = keys.has('ShiftLeft') || keys.has('ShiftRight'), moving = (ix || iz) && !P.atk;
+  const ya = cam.yaw * Math.PI / 180;
+  if (moving) {
+    const l = Math.hypot(ix, iz); ix /= l; iz /= l;
+    const mx = ix * Math.cos(ya) + iz * Math.sin(ya), mz = -ix * Math.sin(ya) + iz * Math.cos(ya), sp = run ? 6.5 : 3.2;
+    P.pos.x += mx * sp * dt; P.pos.z += mz * sp * dt;
+    const want = Math.atan2(mx, mz); P.face += angTo(P.face, want) * Math.min(1, dt * 12);
+  }
+  // ジャンプ・重力
+  const g = groundAt(P.pos);
+  if (P.wantJump && P.grounded && !P.atk) { P.vy = 7.5; P.grounded = false; play('jump', .08); }
+  P.wantJump = false;
+  P.vy -= 22 * dt; P.pos.y += P.vy * dt;
+  if (P.pos.y <= g) { if (!P.grounded && P.vy < -1) P.clip = ''; P.pos.y = g; P.vy = 0; P.grounded = true; } else if (P.pos.y > g + .05) P.grounded = false;
+  collide(P.pos);
+  // 攻撃
+  if (P.wantAtk && !P.atk && P.grounded) { P.atk = P.wantAtk; P.atkT = 0; P.clip = ''; play(P.atk, .06); }
+  P.wantAtk = null;
+  if (P.atk) { P.atkT += dt; if (P.atkT >= (clipLen[P.atk] || .7) - .05) { P.atk = null; P.clip = ''; } }
+  else if (!P.grounded) { if (P.vy < -2) play('fall'); }
+  else play(moving ? (run ? 'run' : 'walk') : 'idle');
+  if (hero) { hero.setLocalPosition(P.pos); hero.setLocalEulerAngles(0, P.face * 180 / Math.PI, 0); }
+  // カメラ：キャラのうしろ上から（遠くから見る：校庭ぜんたい）
+  const pit = cam.pitch * Math.PI / 180, dist = cam.far ? 62 : cam.dist;
+  const tx = cam.far ? 0 : P.pos.x, tz = cam.far ? 0 : P.pos.z, ty = cam.far ? 0 : P.pos.y + 1.2, pp = cam.far ? 50 * Math.PI / 180 : pit;
+  camE.setPosition(tx + Math.sin(ya) * Math.cos(pp) * dist, ty + Math.sin(pp) * dist, tz + Math.cos(ya) * Math.cos(pp) * dist);
+  camE.lookAt(tx, ty, tz);
+  $('vPos').textContent = `${P.pos.x.toFixed(1)}, ${P.pos.y.toFixed(1)}, ${P.pos.z.toFixed(1)}`;
+  $('vState').textContent = P.atk || P.clip || '-';
+  $('hit').textContent = lastHit || '-';
+  // 当たり判定を線で見せる
+  if (showCol) {
+    const c1 = new Color(1, .3, .2), c2 = new Color(1, .85, .2), y = .05;
+    for (const [x0, x1, z0, z1, h] of COL.box) for (const yy of [y, Math.min(h, 3)]) { const a = new Vec3(x0, yy, z0), b = new Vec3(x1, yy, z0), c = new Vec3(x1, yy, z1), d = new Vec3(x0, yy, z1); app.drawLine(a, b, c1); app.drawLine(b, c, c1); app.drawLine(c, d, c1); app.drawLine(d, a, c1); }
+    for (const [x, z, r] of COL.circle) for (let k = 0; k < 12; k++) { const a0 = k / 12 * Math.PI * 2, a1 = (k + 1) / 12 * Math.PI * 2; app.drawLine(new Vec3(x + Math.cos(a0) * r, y, z + Math.sin(a0) * r), new Vec3(x + Math.cos(a1) * r, y, z + Math.sin(a1) * r), c2); }
+    if (COL.bounds) { const [a, b, c, d] = COL.bounds, cc = new Color(.3, .8, 1); app.drawLine(new Vec3(a, .1, c), new Vec3(b, .1, c), cc); app.drawLine(new Vec3(b, .1, c), new Vec3(b, .1, d), cc); app.drawLine(new Vec3(b, .1, d), new Vec3(a, .1, d), cc); app.drawLine(new Vec3(a, .1, d), new Vec3(a, .1, c), cc); }
+  }
+});
+window.__dbg = { app, P, get COL() { return COL; }, cam };
+</script>
+</body>
+</html>
