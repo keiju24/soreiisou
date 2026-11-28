@@ -57,6 +57,7 @@
   #banner span { display: inline-block; padding: 8px 40px; font: 52px 'FWB', sans-serif; color: #ffe04a; -webkit-text-stroke: 8px #2a1a00; paint-order: stroke fill; background: linear-gradient(90deg, transparent, rgba(255, 120, 20, .7) 20%, rgba(255, 120, 20, .7) 80%, transparent); transform: skewX(-8deg); }
   #banner.on { animation: banner 1.4s ease-out forwards; }
   @keyframes banner { 0% { opacity: 0; transform: translateX(-60px) scale(1.4); } 12% { opacity: 1; transform: translateX(0) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateX(40px); } }
+  #flash { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(circle, rgba(255,255,240,.0) 30%, rgba(255,250,210,1) 100%); opacity: 0; }
   #toast { position: fixed; left: 50%; top: 12%; transform: translateX(-50%); padding: 8px 18px; border-radius: 10px; background: rgba(0, 0, 0, .7); color: #fff; font: 18px 'FWB', sans-serif; opacity: 0; transition: opacity .2s; pointer-events: none; }
   #toast.on { opacity: 1; }
   #keys { position: fixed; left: 12px; bottom: 12px; background: var(--panel); color: #e8ecf2; border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; font: 12px/1.7 system-ui, sans-serif; }
@@ -103,6 +104,7 @@
 </div>
 <div id="nums"></div>
 <div id="banner"><span id="bannerTxt"></span></div>
+<div id="flash"></div>
 <div id="toast"></div>
 <div id="skills"></div>
 <div id="keys"><kbd>WASD</kbd> 走る　<kbd>Shift</kbd> ダッシュ　<kbd>Q</kbd> 歩く　<kbd>J</kbd>/左クリック A　<kbd>K</kbd> X　<kbd>L</kbd> Y　<kbd>U</kbd> 必殺技　<kbd>T</kbd> 技セット　右ドラッグ 視点</div>
@@ -290,6 +292,14 @@ const TEX = {
   lines: canvasTex(256, (g, s) => { g.translate(128, 128); for (let i = 0; i < 28; i++) { const a = i / 28 * Math.PI * 2 + Math.random() * .1, r0 = 50 + Math.random() * 20; g.beginPath(); g.moveTo(Math.cos(a - .02) * 126, Math.sin(a - .02) * 126); g.lineTo(Math.cos(a) * r0, Math.sin(a) * r0); g.lineTo(Math.cos(a + .02) * 126, Math.sin(a + .02) * 126); g.fillStyle = 'rgba(255,255,255,.95)'; g.fill(); } }),
   speed: canvasTex(128, (g, s) => { for (let i = 0; i < 7; i++) { const y = 14 + i * 16 + Math.random() * 6, x0 = Math.random() * 30; g.beginPath(); g.moveTo(x0, y); g.lineTo(128, y - 2); g.lineTo(128, y + 2); g.closePath(); g.fillStyle = 'rgba(255,255,255,.9)'; g.fill(); } }),
   paw: canvasTex(128, (g, s) => { g.fillStyle = 'rgba(255,255,255,.95)'; g.beginPath(); g.ellipse(64, 76, 30, 26, 0, 0, 7); g.fill(); for (const [x, y] of [[30, 40], [52, 26], [76, 26], [98, 40]]) { g.beginPath(); g.ellipse(x, y, 12, 14, 0, 0, 7); g.fill(); } g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(255,220,90,.55)'; g.fillRect(0, 0, 128, 128); }),
+  scratch: canvasTex(512, (g, s) => {   // ひっかき：3本の 太い爪あと（白い芯・黄色・オレンジのふち・黒い線）
+    for (let k = 0; k < 3; k++) {
+      const off = (k - 1) * 120, path = () => { g.beginPath(); g.moveTo(60 + off, 70); g.quadraticCurveTo(250 + off * .3, 230, 440 + off, 440); g.quadraticCurveTo(230 + off * .3, 270, 60 + off, 70); };
+      g.save(); g.translate(0, 0);
+      for (const [w, c] of [[76, 'rgba(40,20,0,.95)'], [62, '#ff7a10'], [44, '#ffd23a'], [22, '#fff']]) { path(); g.lineWidth = w; g.lineJoin = 'round'; g.lineCap = 'round'; g.strokeStyle = c; g.stroke(); }
+      path(); g.fillStyle = '#fff'; g.fill(); g.restore();
+    }
+  }),
   tele: canvasTex(256, (g, s) => { g.beginPath(); g.arc(128, 128, 118, 0, 7); g.fillStyle = 'rgba(255,60,40,.28)'; g.fill(); g.lineWidth = 10; g.strokeStyle = 'rgba(255,80,60,.95)'; g.stroke(); }),
 };
 const pools = {};
@@ -298,7 +308,8 @@ function fxGet(tex, add = false) {
   let f = P.find(x => !x.on);
   if (!f) {
     const m = new StandardMaterial(); m.useLighting = false; m.emissiveMap = TEX[tex]; m.emissive = new Color(1, 1, 1); m.diffuse = new Color(0, 0, 0);
-    m.opacityMap = TEX[tex]; m.opacityMapChannel = 'a'; m.blendType = add ? BLEND_ADDITIVEALPHA : BLEND_NORMAL; m.depthWrite = false; m.cull = CULLFACE_NONE; m.update();
+    m.opacityMap = TEX[tex]; m.opacityMapChannel = 'a'; m.blendType = add ? BLEND_ADDITIVEALPHA : BLEND_NORMAL; m.depthWrite = false; m.cull = CULLFACE_NONE;
+    m.update();
     const e = new Entity(); e.addComponent('render', { type: 'plane', material: m, castShadows: false, receiveShadows: false }); app.root.addChild(e);
     f = { e, m, on: false }; P.push(f);
   }
@@ -521,13 +532,37 @@ function hitEnemy(en, o) {
   strong ? SFX.hitHeavy() : SFX.hit();
   if (en.hp <= 0) { popNum('たおした！', hp0.clone().add(new Vec3(0, 1.4, 0)), 'info'); setTimeout(() => { en.hp = en.hpMax; popNum('ふっかつ', en.pos.clone().add(new Vec3(0, 2.4, 0)), 'heal'); }, 2500); }
 }
-const hitFxNormal = (at) => fx('star', at, { life: FX.hit.time, s0: FX.hit.size * .5, s1: FX.hit.size * 1.1, a0: FX.hit.alpha, spin: 3 });
-const hitFxStep2 = (at) => { hitFxNormal(at); burst(at, 8, 3.5); };
-const hitFxStrong = (at) => { fx('starO', at, { life: FX.hitStrong.time, s0: FX.hitStrong.size * .5, s1: FX.hitStrong.size * 1.3, a0: FX.hitStrong.alpha, spin: 2 }); burst(at, 14, 5.5); };
+function screenFlash(a = FX.flash ? FX.flash.alpha : .25) { const el = $('flash'); el.style.transition = 'none'; el.style.opacity = a; requestAnimationFrame(() => { el.style.transition = 'opacity .22s'; el.style.opacity = 0; }); }
+const hitFxNormal = (at) => {
+  fx('star', at, { life: FX.hit.time, s0: FX.hit.size * .5, s1: FX.hit.size * 1.2, a0: FX.hit.alpha, spin: 3 });
+  fx('glow', at, { life: FX.hit.time * .8, s0: FX.hit.size * .8, s1: FX.hit.size * 1.8, a0: 1, add: true, color: [1, .95, .6] });
+  fx('ring', at, { life: FX.hit.time, s0: FX.hit.size * .3, s1: FX.hit.size * 1.6, a0: .9 });
+  burst(at, 8, 4);
+};
+const hitFxStep2 = (at) => { hitFxNormal(at); burst(at, 16, 5.5, { s: .26 }); };
+const hitFxStrong = (at) => {
+  fx('starO', at, { life: FX.hitStrong.time, s0: FX.hitStrong.size * .5, s1: FX.hitStrong.size * 1.35, a0: FX.hitStrong.alpha, spin: 2 });
+  fx('glow', at, { life: FX.hitStrong.time, s0: FX.hitStrong.size, s1: FX.hitStrong.size * 2.4, a0: 1, add: true, color: [1, .8, .3] });
+  fx('shock', at, { life: FX.hitStrong.time, s0: .4, s1: FX.hitStrong.size * 2.2, a0: 1, add: true, color: [1, .7, .25] });
+  fx('ring', new Vec3(at.x, .06, at.z), { life: FX.hitStrong.time * 1.2, s0: .5, s1: FX.hitStrong.size * 2.6, a0: 1, mode: 'flat' });
+  burst(at, 28, 7.5, { s: .32 }); screenFlash();
+};
+// 三段こうげきの ひっかき（かなり大きめ。1段目と2段目は 向きが逆、3段目は ×の形で 1.5倍）
+function scratch(step) {
+  const E = FX.scratch || { time: .26, size: 2.6, alpha: 1 }, f = fwd(), c = P.pos.clone().add(f.clone().mulScalar(1.1)).add(new Vec3(0, 1.0, 0));
+  // 敵にかくれないよう カメラのほうへ少しよせる（キャラよりは奥なので、キャラは かくれない）
+  const toCam = camE.getPosition().clone().sub(c); toCam.y = 0; const dc = toCam.length(); if (dc > .01) c.add(toCam.mulScalar(Math.min(.45, dc * .3) / dc));
+  const one = (rot, mul) => {
+    fx('scratch', c, { life: E.time, s0: E.size * mul * .75, s1: E.size * mul * 1.05, a0: E.alpha, a1: .25, rot, ease: 'out' });
+  };
+  if (step === 0) one(-.5, 1); else if (step === 1) one(.5 + Math.PI / 2, 1.05); else { one(-.5, 1.5); one(.5 + Math.PI / 2, 1.5); }
+  burst(c, step === 2 ? 18 : 8, step === 2 ? 6 : 4, { s: .28, color: [1, .9, .5] });
+}
 function trail(side, big, color) {
   const f = fwd(), yaw = P.face + (side === 'L' ? Math.PI : 0), E = big ? FX.trailStrong : FX.trail;
   const p = P.pos.clone().add(f.clone().mulScalar(.45)).add(new Vec3(0, .55, 0));
   fx('arc', p, { life: E.time, s0: E.size * .8, s1: E.size * 1.15, a0: E.alpha, mode: 'yaw', yaw: yaw + (side === 'L' ? .2 : -.2), tilt: -18, color: color || [1, 1, 1] });
+  fx('arc', p, { life: E.time * .8, s0: E.size, s1: E.size * 1.35, a0: .6, mode: 'yaw', yaw: yaw + (side === 'L' ? .2 : -.2), tilt: -18, add: true, color: [1, .85, .4] });
 }
 // ---- やられ ----
 let hitstop = 0;
@@ -550,7 +585,7 @@ function interrupt() {   // 被弾・戦闘不能：攻撃判定・エフェク�
 
 // ---- 毎フレームのプレイヤー ----
 function playerUpdate(dt) {
-  P.t += dt;
+  P.t += dt; P.__dt = dt;
   const dIn = inputDir();
   // 技のボタン
   for (const s of ['A', 'X', 'Y', 'SP']) if (slotPressed(s)) trySlot(s);
@@ -570,7 +605,7 @@ function playerUpdate(dt) {
     case 'Attack1': case 'Attack2': case 'Attack3': {
       const st = P.atk, f = fwd();
       rootMove(st.move, st.moveFrom, st.moveTo, f);
-      if (!P.fired && P.t >= st.hitAt - .03) { P.fired = true; trail(st.fist, P.step === 2, P.step === 2 ? [1, .8, .5] : null); SFX[st.sfx](); if (P.step === 2) fx('shock', fistPos(st.fist), { life: FX.trailStrong.time, s0: .4, s1: 1.4, a0: .9, add: true, color: [1, .7, .3] }); }
+      if (!P.fired && P.t >= st.hitAt - .03) { P.fired = true; trail(st.fist, P.step === 2, P.step === 2 ? [1, .8, .5] : null); scratch(P.step); SFX[st.sfx](); if (P.step === 2) fx('shock', fistPos(st.fist), { life: FX.trailStrong.time, s0: .4, s1: 1.4, a0: .9, add: true, color: [1, .7, .3] }); }
       if (P.t >= st.hitAt && P.t <= st.hitAt + st.hitDur) strike({ hits: P.hits, fist: st.fist, radius: st.hitRadius, power: st.power, stop: st.stop, shake: st.shake, knock: st.knock, yokai: st.yokai, hitFx: P.step === 2 ? hitFxStrong : P.step === 1 ? hitFxStep2 : hitFxNormal });
       if (slotPressed('A') && P.t >= st.time - st.comboWindow) P.buffered = true;          // 受付（先行入力も保存ずみ）
       if (P.t >= st.time) {
@@ -581,13 +616,13 @@ function playerUpdate(dt) {
     }
     case 'ChargeStart': case 'ChargeLoop': {
       P.charge = Math.min(S.maxCharge, P.charge + dt); const k = P.charge / S.maxCharge;
-      if (dIn) { moveBy(dIn.clone().mulScalar(G.move.run * S.chargeMove * dt)); P.face += angTo(P.face, Math.atan2(dIn.x, dIn.z)) * Math.min(1, dt * G.move.turn); }
+      chargeMoveAnim(dIn, S, S.anim.loop);
       chargeSound(true, k);
       for (const f of active) if (f.tag === 'fglow') { f.s0 = f.s1 = .4 + k * .9; f.a0 = f.a1 = .6 + k * .4; }
       if (Math.random() < dt * (8 + k * 20)) { const fp = fistPos('R'), a = Math.random() * 6.28, o = new Vec3(Math.cos(a) * .9, Math.random() * .8 - .2, Math.sin(a) * .9); fx('spark', fp.clone().add(o), { life: .3, s0: .16, s1: .05, vel: o.clone().mulScalar(-3.2), add: true, tag: 'suck', ease: 'lin' }); }
       if (Math.random() < dt * k * 14) fx('spark', P.pos.clone().add(new Vec3((Math.random() - .5) * 1.4, Math.random() * 1.6, (Math.random() - .5) * 1.4)), { life: .4, s0: .12 + k * .1, s1: .02, vel: new Vec3(0, 1.2, 0), add: true, tag: 'suck', color: [1, .9, .5] });
       if (!P.chargeMaxed && P.charge >= S.maxCharge) { P.chargeMaxed = true; SFX.chargeMax(); fx('glow', fistPos('R'), { life: .25, s0: 1.4, s1: 2.6, a0: 1, add: true }); fx('ring', P.pos.clone().add(new Vec3(0, .05, 0)), { life: .45, s0: .6, s1: 2.6, a0: 1, mode: 'flat' }); }
-      if (P.state === 'ChargeStart' && P.t >= S.startTime) { P.state = 'ChargeLoop'; playClip(S.anim.loop, .08); }
+      if (P.state === 'ChargeStart' && (P.t >= S.startTime || dIn)) { P.state = 'ChargeLoop'; if (!dIn) playClip(S.anim.loop, .08); }
       if (!slotDown(P.slot)) {   // はなした → 発動
         chargeSound(false); fistGlow(false); P.chargePow = S.power + (S.maxPower - S.power) * k; P.chargeK = k; P.hits = new Set(); P.fired = false; assist();
         setState('ChargeAttack', S.anim.attack, .04, clipSpeed(S.anim.attack, S.attackTime));
@@ -598,7 +633,7 @@ function playerUpdate(dt) {
       const f = fwd(), k = P.chargeK; rootMove(S.move, S.moveFrom, S.moveTo, f);
       if (!P.fired && P.t >= S.hitAt - .02) {
         P.fired = true; SFX.punchHeavy();
-        const fp = fistPos('R'); fx('shock', fp.clone().add(f.clone().mulScalar(.4)), { life: FX.trailStrong.time + .05, s0: .5, s1: 1.2 + k * 1.4, a0: 1, add: true, color: [1, .8, .3] });
+        const fp = fistPos('R'); fx('shock', fp.clone().add(f.clone().mulScalar(.4)), { life: FX.trailStrong.time + .08, s0: .5, s1: 1.8 + k * 2.4, a0: 1, add: true, color: [1, .8, .3] }); fx('glow', fp, { life: .25, s0: 1 + k, s1: 2.2 + k * 1.6, a0: 1, add: true, color: [1, .9, .4] });
         fx('arc', P.pos.clone().add(f.clone().mulScalar(.6)).add(new Vec3(0, .55, 0)), { life: FX.trailStrong.time, s0: 1 + k * .6, s1: 1.4 + k * .8, mode: 'yaw', yaw: P.face, tilt: -18, color: [1, .75, .35] });
         fx('dust', P.pos.clone().add(new Vec3(0, .15, 0)), { life: FX.dust.time, s0: FX.dust.size * .7, s1: FX.dust.size * 1.6, a0: FX.dust.alpha });
       }
@@ -612,8 +647,8 @@ function playerUpdate(dt) {
       if (!P.fired && P.t >= S.hitAt - .02) {
         P.fired = true; SFX.punchHeavy();
         const fp = fistPos('R');
-        fx('lines', fp, { life: .22, s0: 2.2, s1: 2.6, a0: .95 });
-        fx('shock', fp.clone().add(f.clone().mulScalar(.6)), { life: .3, s0: .6, s1: 2.4, a0: 1, add: true, color: [1, .85, .35] });
+        fx('lines', fp, { life: .26, s0: 3.2, s1: 3.8, a0: 1 }); fx('glow', fp, { life: .25, s0: 1.2, s1: 2.6, a0: 1, add: true, color: [1, .9, .4] });
+        fx('shock', fp.clone().add(f.clone().mulScalar(.6)), { life: .34, s0: .6, s1: 3.4, a0: 1, add: true, color: [1, .85, .35] });
         fx('arc', P.pos.clone().add(f.clone().mulScalar(.6)).add(new Vec3(0, .55, 0)), { life: FX.trailStrong.time, s0: FX.trailStrong.size, s1: FX.trailStrong.size * 1.3, mode: 'yaw', yaw: P.face, tilt: -18, color: [1, .8, .4] });
       }
       if (P.t >= S.hitAt && P.t <= S.hitAt + S.hitDur) strike({ hits: P.hits, fist: 'R', radius: .7, range: S.range, angle: S.angle, power: S.power, stop: S.stop, shake: S.shake, knock: S.knock, yokai: S.yokai, hitFx: hitFxStrong });
@@ -622,7 +657,7 @@ function playerUpdate(dt) {
     }
     case 'FireCharge': {
       P.charge = Math.min(S.maxCharge, P.charge + dt); const k = P.charge / S.maxCharge;
-      if (dIn) { moveBy(dIn.clone().mulScalar(G.move.run * S.chargeMove * dt)); P.face += angTo(P.face, Math.atan2(dIn.x, dIn.z)) * Math.min(1, dt * G.move.turn); }
+      chargeMoveAnim(dIn, S, S.anim.loop);
       chargeSound(true, k * .7);
       if (!P.handFire) P.handFire = fx('flame', P.pos, { life: 99, s0: .3, s1: .3, a0: 1, a1: 1, tag: 'handfire', follow: () => fistPos('R').add(fistPos('L')).mulScalar(.5).add(fwd().mulScalar(.15)) });
       P.handFire.s0 = P.handFire.s1 = .25 + k * .45;
@@ -650,11 +685,24 @@ function playerUpdate(dt) {
         const i = P.hitIdx++, last = i === Sp.hits - 1, side = last ? 'R' : (i % 2 ? 'L' : 'R');
         P.hits = new Set();
         trail(side, last, i % 2 ? [1, .95, .5] : [1, 1, 1]);
-        for (let g = 0; g < 3; g++) fx('paw', P.pos.clone().add(f.clone().mulScalar(.9 + Math.random() * .8)).add(new Vec3((Math.random() - .5) * 1.2, .5 + Math.random() * .9, (Math.random() - .5) * .4)), { life: .14, s0: .35, s1: .55, a0: .7 });
-        fx('shock', P.pos.clone().add(f.clone().mulScalar(1.3)).add(new Vec3(0, .7, 0)), { life: .15, s0: .3, s1: .9, a0: .8, add: true });
+        const half = Sp.angle / 2 / 57.3;
+        for (let g = 0; g < 6; g++) {     // 拳の残像（範囲いっぱいに ちらばる）
+          const a = P.face + (Math.random() * 2 - 1) * half, r = .8 + Math.random() * (Sp.range - .6);
+          fx('paw', P.pos.clone().add(new Vec3(Math.sin(a) * r, .5 + Math.random() * 1.0, Math.cos(a) * r)), { life: .16, s0: .45, s1: .8, a0: .8 });
+        }
+        for (let g = 0; g < 2; g++) { const a = P.face + (Math.random() * 2 - 1) * half, r = 1 + Math.random() * (Sp.range - 1); fx('shock', P.pos.clone().add(new Vec3(Math.sin(a) * r, .7, Math.cos(a) * r)), { life: .18, s0: .3, s1: 1.3, a0: .9, add: true, color: [1, .9, .5] }); }
+        fx('ring', P.pos.clone().add(new Vec3(0, .06, 0)), { life: .25, s0: .8, s1: Sp.range * 2.1, a0: .6, mode: 'flat' });
         SFX.punch();
         const any = strike({ hits: P.hits, fist: side, radius: .6, range: Sp.range, angle: Sp.angle, power: Sp.hitPower, stop: last ? Sp.finishStop : Sp.stop, shake: last ? Sp.shake : 0, knock: last ? 'knockback' : null, yokai: 0, hitFx: last ? hitFxStrong : hitFxNormal });
-        if (last) { SFX.finish(); const c = P.pos.clone().add(f.clone().mulScalar(1.2)).add(new Vec3(0, .7, 0)); fx('shock', c, { life: FX.specialFinish.time, s0: .6, s1: FX.specialFinish.size * 1.6, a0: 1, add: true, color: [1, .8, .3] }); fx('starO', c, { life: FX.specialFinish.time, s0: .8, s1: FX.specialFinish.size, a0: 1, spin: 1.5 }); burst(c, 22, 7, { s: .3 }); cam.shake = .25; cam.shakeT = .2; fxKill('aura'); }
+        if (last) {
+          SFX.finish(); const c = P.pos.clone().add(f.clone().mulScalar(1.2)).add(new Vec3(0, .7, 0)), E = FX.specialFinish;
+          fx('shock', c, { life: E.time, s0: .6, s1: E.size * 1.8, a0: 1, add: true, color: [1, .8, .3] });
+          fx('starO', c, { life: E.time, s0: .8, s1: E.size, a0: 1, spin: 1.5 });
+          fx('lines', c, { life: E.time * .6, s0: E.size * 1.2, s1: E.size * 1.5, a0: 1 });
+          fx('glow', c, { life: E.time, s0: E.size, s1: E.size * 2.2, a0: 1, add: true, color: [1, .75, .3] });
+          fx('ring', P.pos.clone().add(new Vec3(0, .06, 0)), { life: E.time, s0: 1, s1: Sp.range * 2.6, a0: 1, mode: 'flat' });
+          burst(c, 40, 9, { s: .36 }); cam.shake = .35; cam.shakeT = .25; screenFlash(.4); fxKill('aura');
+        }
       }
       if (P.t >= Sp.time) { P.skill = null; fxKill('aura'); setState('Idle', 'idle', .15); }
       break;
@@ -673,6 +721,15 @@ function playerUpdate(dt) {
     case 'GetUp': if (P.t >= clipLen.getup) { P.inv = false; setState('Idle', 'idle', .15); } break;
     case 'Dead': break;
   }
+}
+// ため中の移動：走る速さ（chargeMove 倍）で動いて、動いているあいだは 走るアニメ
+function chargeMoveAnim(dIn, S, loopClip) {
+  if (dIn) {
+    const dash = keys.has('ShiftLeft') || keys.has('ShiftRight');
+    moveBy(dIn.clone().mulScalar(G.move.run * (dash ? G.move.dashMul : 1) * S.chargeMove * P.__dt));
+    P.face += angTo(P.face, Math.atan2(dIn.x, dIn.z)) * Math.min(1, P.__dt * G.move.turn);
+    if (curClip !== 'run' && curClip !== 'dash' && P.state !== 'ChargeStart') playClip(dash ? 'dash' : 'run', .12);
+  } else if (curClip === 'run' || curClip === 'dash') playClip(loopClip, .12);
 }
 // ---- 火花の術の 炎の弾 ----
 const shots = [];
