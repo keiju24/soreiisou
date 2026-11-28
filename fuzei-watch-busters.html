@@ -36,7 +36,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--title-
 #title { background: var(--title-bg); flex-direction: column; align-items: center; justify-content: center; gap: 3vh; }
 /* ロゴとボタンをたてにならべて、画面のまんなかに */
 #tWrap { position: relative; display: flex; justify-content: center; pointer-events: none; }
-#title img { width: min(80vw, 600px); max-height: 50vh; object-fit: contain; }
+#title img { width: min(88vw, 780px); max-height: 58vh; object-fit: contain; }
 #tWrap, .menu { position: relative; z-index: 2; }
 /* ---- タイトルの背景：街のシルエット（横に流れる） ---- */
 #bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
@@ -48,7 +48,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--title-
 /* はじめから・つづきから：ふだんは紫、カーソルを合わせると黄色 */
 .menu { display: flex; flex-direction: column; align-items: center; gap: 12px; visibility: hidden; }
 .menu.on { visibility: visible; }
-.mbtn { position: relative; width: min(46vw, 230px); padding: .42em 0 .38em; border: 3px solid #0b0b0b; border-radius: 15px; font: inherit; font-size: clamp(18px, 2.2vw, 24px); color: #111; cursor: pointer;
+.mbtn { position: relative; width: min(64vw, 300px); padding: .42em 0 .38em; border: 3px solid #0b0b0b; border-radius: 15px; font: inherit; font-size: clamp(22px, 2.8vw, 31px); color: #111; cursor: pointer;
   background: #c393fd; box-shadow: inset 0 0 0 3px #fff, inset 0 0 8px 6px rgba(255, 255, 255, .7), 0 4px 0 #002a3e; -webkit-text-stroke: .14em #fff; paint-order: stroke fill; }
 .mbtn::after { content: ''; position: absolute; left: 8px; right: 8px; top: 6px; height: 42%; border-radius: 9px 9px 5px 5px; background: linear-gradient(rgba(255, 255, 255, .75), rgba(255, 255, 255, .2)); pointer-events: none; }
 .mbtn.cur { background: #ffd72c; }
@@ -113,8 +113,17 @@ function thud(p = 1) {
   g.gain.setValueAtTime(.8 * p, t); g.gain.exponentialRampToValueAtTime(.001, t + .3);
   o.connect(g).connect(AC.destination); o.start(t); o.stop(t + .32);
 }
-[['move', 'se/fwb-move.mp3'], ['ok', 'se/fwb-ok.mp3']].forEach(([n, u]) => loadSe(n, u));
-const bgm = new Audio('bgm/fwb-hq.mp3'); bgm.loop = true; bgm.volume = .45;
+[['move', 'se/fwb-move.mp3'], ['ok', 'se/fwb-ok.mp3'], ['back', 'se/fwb-back.mp3'], ['menu', 'se/fwb-menu.mp3'], ['title', 'bgm/fwb-title.mp3']].forEach(([n, u]) => loadSe(n, u));
+// タイトルの BGM：頭の無音は削ってある。おしりの静かなところ（87.08 秒〜）は飛ばして、すきまなくくり返す
+const BGM_LOOP_END = 87.08;
+let bgmSrc = null;
+function playBgm() {
+  if (!AC || bgmSrc) return;
+  if (!buf.title) { setTimeout(playBgm, 200); return; }   // まだ読みこみ中
+  const s = AC.createBufferSource(), g = AC.createGain();
+  s.buffer = buf.title; s.loop = true; s.loopStart = 0; s.loopEnd = Math.min(BGM_LOOP_END, buf.title.duration); g.gain.value = .5;
+  s.connect(g).connect(AC.destination); s.start(); bgmSrc = s;
+}
 
 function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); }
 
@@ -125,7 +134,7 @@ function setCur(t, sound = true) { if (t !== cur && sound) se('move', .5); cur =
 function pick(t) {
   if (AC && AC.state === 'suspended') AC.resume();
   se('ok', .7); store(t); cur = t;
-  bgm.play().catch(() => { });
+  playBgm();
   startTitle();
 }
 teams.forEach(e => {
@@ -143,7 +152,7 @@ function startTitle() {
   img.src = TEAMS[cur].logo; menu.classList.remove('on'); $('note').classList.remove('on');
   img.classList.remove('drop'); void img.offsetWidth; img.classList.add('drop');
   timers.push(setTimeout(() => thud(1), 1600 * .42), setTimeout(() => thud(.4), 1600 * .69), setTimeout(() => thud(.15), 1600 * .86));
-  timers.push(setTimeout(() => { $('cont').disabled = !hasSave(); setM(0); menu.classList.add('on'); ready = true; }, 1600));
+  timers.push(setTimeout(() => { $('cont').disabled = !hasSave(); setM(0); menu.classList.add('on'); se('menu', .55); ready = true; }, 1600));
 }
 // はじめから・つづきから（セーブがないときは、つづきからは押せない）
 const hasSave = () => { try { return !!localStorage.getItem('fwb2.save'); } catch (e) { return false; } };
@@ -168,7 +177,7 @@ addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft' || e.key === 'a') setCur('kuroneko');
     else if (e.key === 'ArrowRight' || e.key === 'd') setCur('shimainu');
     else if (e.key === 'Enter' || e.key === ' ') pick(cur);
-  } else if (e.key === 'Escape') goSelect();
+  } else if (e.key === 'Escape') { se('back', .6); goSelect(); }
   else if (ready && (e.key === 'ArrowUp' || e.key === 'w')) setM(mi - 1 < 0 ? 1 : mi - 1, true);
   else if (ready && (e.key === 'ArrowDown' || e.key === 's')) setM((mi + 1) % 2, true);
   else if (ready && (e.key === 'Enter' || e.key === ' ')) choose(mi);
