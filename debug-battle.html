@@ -138,7 +138,8 @@ const $ = (id) => document.getElementById(id);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const sm = (t) => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
 const angTo = (a, b) => { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
-const MAP = 'schoolyard', CHAR = 'imponyan';
+const MAP = new URLSearchParams(location.search).get('map') || 'schoolyard', CHAR = 'imponyan';   // ?map=kazami で 風見ニュータウン（敵はおかない）
+import { setupField } from './lib/fwb-field.mjs';
 
 const canvas = $('c');
 const app = new Application(canvas, { graphicsDeviceOptions: { antialias: true } });
@@ -165,7 +166,8 @@ const [skillsJson, colJson, mapRes, heroRes] = await Promise.all([
 ]);
 D = skillsJson; Object.assign(COL, colJson);
 const G = D.global, SK = D.skills, CH = D.characters[CHAR], FX = D.effects;
-{ const m = mapRes.instantiateRenderEntity({ castShadows: true, receiveShadows: true }); app.root.addChild(m); }
+const mapE = mapRes.instantiateRenderEntity({ castShadows: true, receiveShadows: true }); app.root.addChild(mapE);
+const IS_FIELD = !!COL.field;
 
 // ---- キャラ ----
 const hero = heroRes.instantiateRenderEntity({ castShadows: true }); app.root.addChild(hero);
@@ -402,9 +404,11 @@ function hurtboxes(en) {
 }
 function playerHurtbox() { const h = D.player.hurtbox; return [{ a: new Vec3(P.pos.x + h.p0[0], P.pos.y + h.p0[1], P.pos.z + h.p0[2]), b: new Vec3(P.pos.x + h.p1[0], P.pos.y + h.p1[1], P.pos.z + h.p1[2]), r: h.r, name: 'player' }]; }
 const st = COL.start || [0, 0, 10];
-makeEnemy('dummy', st[0] - 2.5, st[2] - 4); makeEnemy('dummy', st[0] + 2.5, st[2] - 4); makeEnemy('dummy', st[0], st[2] - 6.5);
-makeEnemy('attacker', st[0] + 7, st[2] - 2);
-makeEnemy('boss', st[0] - 9, st[2] - 3);
+if (!IS_FIELD) {                  // フィールド（風見ニュータウン）には 敵を おかない
+  makeEnemy('dummy', st[0] - 2.5, st[2] - 4); makeEnemy('dummy', st[0] + 2.5, st[2] - 4); makeEnemy('dummy', st[0], st[2] - 6.5);
+  makeEnemy('attacker', st[0] + 7, st[2] - 2);
+  makeEnemy('boss', st[0] - 9, st[2] - 3);
+}
 let enemyAttacks = true;
 
 // =====================================================================
@@ -1153,6 +1157,15 @@ $('bHit').onclick = () => { showHit = !showHit; $('bHit').classList.toggle('on',
 // =====================================================================
 playClip('idle', 0);
 $('loading').remove();
+// フィールド：当たり判定（線つき・マスで しぼる）・ミニマップ・出口・半透明など。技や数値は そのまま
+let FIELD = null;
+if (IS_FIELD) {
+  FIELD = setupField({ app, mapEntity: mapE, col: COL, camera: camE, sun, fill, getPlayer: () => P });
+  collide = (p, r = PR) => FIELD.collide(p, r); blocked = (a, b) => FIELD.blocked(a, b);
+  const c = COL.camera || {}; cam.pitch = c.pitch || 45; cam.dist = c.dist || 13; camE.camera.fov = c.fov || 45; camE.camera.farClip = 600;
+  sun.light.shadowDistance = 55;
+  $('keys').insertAdjacentHTML('beforeend', '　<kbd>M</kbd> 地図');
+}
 let fpsT = 0, fpsN = 0;
 app.on('update', (rdt) => {
   const dt = Math.min(rdt, 1 / 20); now += dt;
@@ -1173,19 +1186,22 @@ app.on('update', (rdt) => {
     const zoomTarget = cam.zoomT > 0 ? .5 : 1; cam.zoomT = Math.max(0, (cam.zoomT || 0) - dt); cam.zoom += (zoomTarget - cam.zoom) * Math.min(1, dt * 6);
     const ya = cam.yaw * Math.PI / 180, pp = cam.pitch * Math.PI / 180, dist = cam.dist * cam.zoom;
     let sx = 0, sy = 0; if (cam.shakeT > 0) { cam.shakeT -= dt; sx = (Math.random() - .5) * cam.shake; sy = (Math.random() - .5) * cam.shake; }
-    const ty = P.pos.y + 1.0;
-    camE.setPosition(P.pos.x + Math.sin(ya) * Math.cos(pp) * dist + sx, ty + Math.sin(pp) * dist + sy, P.pos.z + Math.cos(ya) * Math.cos(pp) * dist);
-    camE.lookAt(P.pos.x + sx * .5, ty + sy * .5, P.pos.z);
+    if (!cam.t) cam.t = P.pos.clone();
+    if (FIELD) cam.t.lerp(cam.t, P.pos, Math.min(1, dt * 8)); else cam.t.copy(P.pos);     // フィールドでは なめらかに おいかける
+    const ty = cam.t.y + 1.0;
+    camE.setPosition(cam.t.x + Math.sin(ya) * Math.cos(pp) * dist + sx, ty + Math.sin(pp) * dist + sy, cam.t.z + Math.cos(ya) * Math.cos(pp) * dist);
+    camE.lookAt(cam.t.x + sx * .5, ty + sy * .5, cam.t.z);
   }
   fxUpdate(dt); numsUpdate(dt); iconsUpdate();
   $('vState').textContent = P.state; $('vClip').textContent = `${curClip} ×${animSpeed.toFixed(2)}`;
   $('vCombo').textContent = P.state.startsWith('Attack') ? `${P.step + 1}段目 ${P.t.toFixed(2)}s ${P.buffered ? '（次へ）' : ''}` : (cd.triple > 0 ? `CT ${cd.triple.toFixed(1)}s` : '-');
   $('vInv').textContent = P.inv ? '無敵' : '-';
   decalsUpdate(dt); lockUpdate(); if (enemyHitLast) enemyHitLast.t -= dt;
+  if (FIELD) FIELD.update(dt);
   drawDebug();
 });
 app.on('postupdate', (dt) => secondary(hitstop > 0 ? 0 : Math.min(dt, 1 / 20)));
-window.__dbg = { app, P, SK, G, U, cd, shapes, overlap, hurtboxes, worldEvents, runTests, findTarget, get yokai() { return yokai; }, set yokai(v) { yokai = v; }, get hp() { return hp; }, enemies, techset, trySlot, keys, pressed, released, hurtPlayer, clipLen };
+window.__dbg = { get FIELD() { return FIELD; }, cam, app, P, SK, G, U, cd, shapes, overlap, hurtboxes, worldEvents, runTests, findTarget, get yokai() { return yokai; }, set yokai(v) { yokai = v; }, get hp() { return hp; }, enemies, techset, trySlot, keys, pressed, released, hurtPlayer, clipLen };
 </script>
 </body>
 </html>
