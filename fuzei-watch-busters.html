@@ -48,12 +48,12 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--title-
 /* はじめから・つづきから：ふだんは紫、カーソルを合わせると黄色 */
 .menu { display: flex; flex-direction: column; align-items: center; gap: 12px; visibility: hidden; }
 .menu.on { visibility: visible; }
-.mbtn { position: relative; width: min(64vw, 300px); padding: .42em 0 .38em; border: 3px solid #0b0b0b; border-radius: 15px; font: inherit; font-size: clamp(22px, 2.8vw, 31px); color: #111; cursor: pointer;
+.mbtn { position: relative; width: min(56vw, 250px); padding: .42em 0 .38em; transition: transform .12s cubic-bezier(.3, 1.6, .5, 1); border: 3px solid #0b0b0b; border-radius: 15px; font: inherit; font-size: clamp(22px, 2.8vw, 31px); color: #111; cursor: pointer;
   background: #c393fd; box-shadow: inset 0 0 0 3px #fff, inset 0 0 8px 6px rgba(255, 255, 255, .7), 0 4px 0 #002a3e; -webkit-text-stroke: .14em #fff; paint-order: stroke fill; }
 .mbtn::after { content: ''; position: absolute; left: 8px; right: 8px; top: 6px; height: 42%; border-radius: 9px 9px 5px 5px; background: linear-gradient(rgba(255, 255, 255, .75), rgba(255, 255, 255, .2)); pointer-events: none; }
-.mbtn.cur { background: #ffd72c; }
+.mbtn.cur { background: #ffd72c; transform: scale(1.1); }
 .mbtn:disabled { cursor: default; filter: grayscale(1); opacity: .6; }
-.mbtn:active:not(:disabled) { transform: translateY(3px); box-shadow: inset 0 0 0 3px #fff, inset 0 0 8px 6px rgba(255, 255, 255, .7), 0 1px 0 #002a3e; }
+.mbtn:active:not(:disabled) { transform: scale(1.1) translateY(3px); box-shadow: inset 0 0 0 3px #fff, inset 0 0 8px 6px rgba(255, 255, 255, .7), 0 1px 0 #002a3e; }
 #note { position: fixed; left: 0; right: 0; top: 3vh; text-align: center; font-size: 18px; color: #fff; -webkit-text-stroke: .2em #0b0b0b; paint-order: stroke fill; visibility: hidden; }
 #note.on { visibility: visible; }
 
@@ -113,7 +113,7 @@ function thud(p = 1) {
   g.gain.setValueAtTime(.8 * p, t); g.gain.exponentialRampToValueAtTime(.001, t + .3);
   o.connect(g).connect(AC.destination); o.start(t); o.stop(t + .32);
 }
-[['move', 'se/fwb-move.mp3'], ['ok', 'se/fwb-ok.mp3'], ['back', 'se/fwb-back.mp3'], ['menu', 'se/fwb-menu.mp3'], ['title', 'bgm/fwb-title.mp3']].forEach(([n, u]) => loadSe(n, u));
+[['move', 'se/fwb-move.mp3'], ['ok', 'se/fwb-ok.mp3'], ['back', 'se/fwb-back.mp3'], ['title', 'bgm/fwb-title.mp3']].forEach(([n, u]) => loadSe(n, u));
 // タイトルの BGM：頭の無音は削ってある。おしりの静かなところ（87.08 秒〜）は飛ばして、すきまなくくり返す
 const BGM_LOOP_END = 87.08;
 let bgmSrc = null;
@@ -155,7 +155,7 @@ function startTitle() {
   img.src = TEAMS[cur].logo; menu.classList.remove('on'); $('note').classList.remove('on');
   img.classList.remove('drop'); void img.offsetWidth; img.classList.add('drop');
   timers.push(setTimeout(() => thud(1), 1600 * .42), setTimeout(() => thud(.4), 1600 * .69), setTimeout(() => thud(.15), 1600 * .86));
-  timers.push(setTimeout(() => { $('cont').disabled = !hasSave(); setM(0); menu.classList.add('on'); se('menu', .55); ready = true; }, 1600));
+  timers.push(setTimeout(() => { $('cont').disabled = !hasSave(); setM(0); menu.classList.add('on'); ready = true; }, 1600));
 }
 // はじめから・つづきから（セーブがないときは、つづきからは押せない）
 const hasSave = () => { try { return !!localStorage.getItem('fwb2.save'); } catch (e) { return false; } };
