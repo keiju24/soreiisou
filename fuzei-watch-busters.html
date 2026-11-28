@@ -56,11 +56,11 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--title-
 #note.on { visibility: visible; }
 
 /* ---- にっきせんたく（セーブデータをえらぶ） ---- */
-#diary { flex-direction: column; align-items: center; background: #8b52e6 repeating-linear-gradient(0deg, rgba(255, 255, 255, .06) 0 2px, transparent 2px 6px); color: #111; }
-#diary .dhead { position: absolute; left: 0; top: 0; height: clamp(46px, 10.5vh, 92px); width: min(56vw, 760px); display: flex; align-items: center; padding-left: clamp(18px, 4vw, 64px);
+.dscr { flex-direction: column; align-items: center; background: #8b52e6 repeating-linear-gradient(0deg, rgba(255, 255, 255, .06) 0 2px, transparent 2px 6px); color: #111; }
+.dscr .dhead { position: absolute; left: 0; top: 0; height: clamp(46px, 10.5vh, 92px); width: min(56vw, 760px); display: flex; align-items: center; padding-left: clamp(18px, 4vw, 64px);
   background: linear-gradient(90deg, #ffe31a 0 58%, rgba(255, 227, 26, 0) 100%); }
-#diary .dhead canvas { position: absolute; left: 34%; top: 0; height: 100%; width: 66%; }
-#diary .dhead b { position: relative; z-index: 1; font-weight: normal; font-size: clamp(24px, 4vw, 50px); color: #23206b; letter-spacing: .02em; }
+.dscr .dhead canvas { position: absolute; left: 34%; top: 0; height: 100%; width: 66%; }
+.dscr .dhead b { position: relative; z-index: 1; font-weight: normal; font-size: clamp(24px, 4vw, 50px); color: #23206b; letter-spacing: .02em; }
 .slots { margin-top: clamp(60px, 15vh, 150px); width: min(70vw, 1130px); display: flex; flex-direction: column; gap: 2.2vh; }
 .slot { position: relative; display: flex; align-items: center; height: clamp(62px, 15.5vh, 140px); border: 4px solid #0b0b0b; border-radius: 18px; cursor: pointer;
   background: linear-gradient(#ecdcff 0%, #d4b6fd 35%, #c9a6fb 100%); box-shadow: inset 0 0 0 3px #fff, inset 0 0 10px 6px rgba(255, 255, 255, .55), 0 4px 0 rgba(30, 0, 70, .55); transition: transform .1s; }
@@ -87,6 +87,19 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--title-
 .dbtn.back:hover, .dbtn.back.cur { background: linear-gradient(#fff38a, #ffd900); }
 .dbtn.go.off { filter: grayscale(.8); opacity: .6; cursor: default; transform: none; }
 .dbtn svg { height: .95em; width: 1.3em; }
+
+/* ---- なまえをきめる（はじめから → にっき をえらんだあと） ---- */
+.nmbox { margin-top: clamp(80px, 22vh, 210px); width: min(70vw, 1130px); }
+.nmrow { display: flex; align-items: center; height: clamp(70px, 17vh, 150px); border: 4px solid #0b0b0b; border-radius: 18px;
+  background: linear-gradient(#fff38a 0%, #ffe94a 35%, #ffd900 100%); box-shadow: inset 0 0 0 3px #fff, inset 0 0 10px 6px rgba(255, 255, 255, .55), 0 4px 0 rgba(30, 0, 70, .55); }
+.nmrow .lab { width: 26%; height: 62%; display: flex; align-items: center; justify-content: center; border-right: 3px solid rgba(170, 130, 0, .35); font-size: clamp(16px, 2.6vw, 40px); -webkit-text-stroke: .14em #fff; paint-order: stroke fill; color: #111; }
+.nmrow .fld { position: relative; flex: 1; height: 100%; display: flex; align-items: center; padding: 0 5%; }
+.nmrow input { width: 100%; border: 0; outline: 0; background: transparent; font: inherit; font-size: clamp(20px, 3.4vw, 52px); color: #2b2440; caret-color: #1673e6; }
+.nmrow input::placeholder { color: rgba(43, 36, 64, .35); }
+.nmrow .bar { position: absolute; left: 5%; right: 5%; bottom: 18%; height: 7px; border-radius: 4px; background: #1673e6; }
+.nmrow .cnt { position: absolute; right: 5%; top: 12%; font-size: clamp(12px, 1.6vw, 22px); color: rgba(43, 36, 64, .6); }
+.nmteam { margin-top: 2.6vh; display: flex; align-items: center; justify-content: center; gap: 1em; font-size: clamp(14px, 2vw, 26px); color: #fff; -webkit-text-stroke: .18em #3a1a7a; paint-order: stroke fill; }
+.nmteam img { height: clamp(40px, 8vh, 80px); }
 
 /* 上から落ちてきて、まんなかで跳ねる */
 .drop { transform-origin: 50% 100%; animation: drop 1.6s both; }
@@ -128,12 +141,23 @@ body.playing #dbg { top: auto; bottom: 8px; right: auto; left: 8px; }
   <div id="note">この先は作っているところです</div>
 </div>
 
-<div id="diary" class="screen">
+<div id="diary" class="screen dscr">
   <div class="dhead"><canvas id="dDots"></canvas><b>にっきせんたく</b></div>
   <div class="slots" id="slots"></div>
   <div class="dhelp"><span class="q">?</span><span id="dHelp"></span></div>
   <button class="dbtn back" id="dBack"><svg viewBox="0 0 40 30"><path d="M14 4 L3 14 L14 24 L14 18 L24 18 Q30 18 30 12 Q30 7 24 7 L18 7" fill="none" stroke="#fff" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/><path d="M14 4 L3 14 L14 24 L14 18 L24 18 Q30 18 30 12 Q30 7 24 7 L18 7" fill="none" stroke="#9b6cf0" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/></svg>もどる</button>
   <button class="dbtn go" id="dGo">けってい</button>
+</div>
+
+<div id="naming" class="screen dscr">
+  <div class="dhead"><canvas id="nDots"></canvas><b>なまえをきめる</b></div>
+  <div class="nmbox">
+    <div class="nmrow"><div class="lab">なまえ</div><div class="fld"><input id="nmIn" maxlength="8" placeholder="なまえを入れてね" autocomplete="off" spellcheck="false"><span class="cnt" id="nmCnt">0/8</span><span class="bar"></span></div></div>
+    <div class="nmteam" id="nmTeam"></div>
+  </div>
+  <div class="dhelp"><span class="q">?</span><span id="nHelp"></span></div>
+  <button class="dbtn back" id="nBack"><svg viewBox="0 0 40 30"><path d="M14 4 L3 14 L14 24 L14 18 L24 18 Q30 18 30 12 Q30 7 24 7 L18 7" fill="none" stroke="#fff" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/><path d="M14 4 L3 14 L14 24 L14 18 L24 18 Q30 18 30 12 Q30 7 24 7 L18 7" fill="none" stroke="#9b6cf0" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/></svg>もどる</button>
+  <button class="dbtn go" id="nGo">けってい</button>
 </div>
 
 <div id="play" class="screen"><iframe id="playFrame" title="キャラを動かす"></iframe></div>
@@ -145,6 +169,7 @@ body.playing #dbg { top: auto; bottom: 8px; right: auto; left: 8px; }
     <option value="title">タイトル</option>
     <option value="diary-new">にっきせんたく（はじめから）</option>
     <option value="diary-cont">にっきせんたく（つづきから）</option>
+    <option value="naming">なまえをきめる</option>
     <option value="play">キャラを動かす</option>
   </select>
   <button data-d="drop">落下もう一回</button><button data-d="wipe">にっきを全部消す</button></div>
@@ -293,7 +318,7 @@ function decide() {
   const i = DM.sel, x = DM.d[i];
   if (DM.mode === 'new' && x && DM.confirm !== i) { se('move', .6); DM.confirm = i; updateHelp(); return; }   // 上書きは2回押しで
   se('ok', .7);
-  if (DM.mode === 'new') { DM.d[i] = { name: '新人隊員', team: cur, time: 0, story: 0, at: Date.now() }; saveDiary(DM.d); renderDiary(); }
+  if (DM.mode === 'new') { openNaming(i); return; }      // はじめから：つぎは なまえをきめる
   DM.done = true;
   updateHelp(`にっき ${i + 1} で はじめます（この先は作っているところです）`);
 }
@@ -301,6 +326,7 @@ function diaryBack() { se('back', .6); startTitle(); }
 $('dGo').addEventListener('click', decide);
 $('dBack').addEventListener('click', diaryBack);
 addEventListener('keydown', (e) => {
+  if ($('naming').classList.contains('on')) return namingKey(e);
   if (!$('diary').classList.contains('on')) return;     // キーボードは にっきせんたく から
   const k = e.key;
   if (k === 'ArrowUp' || k === 'w') { e.preventDefault(); selSlot((DM.sel + 2) % 3, true); }
@@ -308,9 +334,51 @@ addEventListener('keydown', (e) => {
   else if (k === 'Enter' || k === ' ') { e.preventDefault(); decide(); }
   else if (k === 'Escape' || k === 'Backspace') { e.preventDefault(); diaryBack(); }
 });
+// ---- なまえをきめる ----
+//  はじめから → にっき をえらぶ → ここ。8文字まで（ひらがな・カタカナ・漢字・英数字なんでも）。からっぽでは けってい できない
+//  Enter けってい・Esc もどる（文字を入れているとちゅう＝変換中の Enter / Esc は 変換のほうに使う）
+const NM = { slot: 0, done: false };
+const NAME_MAX = 8;
+const nmText = () => $('nmIn').value.trim();
+function openNaming(slot) {
+  NM.slot = slot; NM.done = false;
+  show('naming'); drawDots('nDots');
+  const T = TEAMS[cur];
+  $('nmTeam').innerHTML = `<img src="${T.logo}" alt="">${T.name}の あたらしい たいいん`;
+  $('nmIn').value = ''; $('nmIn').disabled = false;
+  nmUpdate();
+  setTimeout(() => $('nmIn').focus(), 50);
+}
+function nmUpdate(msg) {
+  const n = [...$('nmIn').value].length;
+  $('nmCnt').textContent = `${n}/${NAME_MAX}`;
+  $('nGo').classList.toggle('off', !nmText() || NM.done);
+  $('nHelp').innerHTML = msg || (nmText() ? `この${RB('名前', 'なまえ')}で はじめます` : `あなたの${RB('名前', 'なまえ')}を 入れてください`);
+}
+function nmDecide() {
+  if (NM.done) return;
+  const name = nmText();
+  if (!name) { se('back', .4); $('nmIn').focus(); return; }
+  se('ok', .7);
+  DM.d[NM.slot] = { name, team: cur, time: 0, story: 0, at: Date.now() }; saveDiary(DM.d);
+  NM.done = true; $('nmIn').disabled = true;
+  nmUpdate(`「${esc(name)}」で にっき ${NM.slot + 1} を はじめます（この先は作っているところです）`);
+}
+function nmBack() { se('back', .6); openDiary('new'); DM.sel = NM.slot; renderDiary(); }
+function namingKey(e) {
+  if (e.isComposing || e.keyCode === 229) return;          // 変換中
+  if (e.key === 'Enter') { e.preventDefault(); nmDecide(); }
+  else if (e.key === 'Escape') { e.preventDefault(); nmBack(); }
+}
+$('nmIn').addEventListener('input', () => {
+  const a = [...$('nmIn').value]; if (a.length > NAME_MAX) $('nmIn').value = a.slice(0, NAME_MAX).join('');   // 絵文字なども 1 文字に数える
+  nmUpdate();
+});
+$('nGo').addEventListener('click', nmDecide);
+$('nBack').addEventListener('click', nmBack);
 // 見出しの右の、だんだん小さくなる黄色いひし形
-function drawDots() {
-  const c = $('dDots'), r = c.getBoundingClientRect(), W = c.width = Math.round(r.width), H = c.height = Math.round(r.height), g = c.getContext('2d');
+function drawDots(id = 'dDots') {
+  const c = $(id), r = c.getBoundingClientRect(), W = c.width = Math.round(r.width), H = c.height = Math.round(r.height), g = c.getContext('2d');
   g.clearRect(0, 0, W, H); g.fillStyle = '#ffe31a';
   const st = H / 3.6;
   for (let x = 0; x < W; x += st) for (let y = 0; y < H; y += st) {
@@ -340,6 +408,7 @@ function jumpTo(v) {
   else if (v === 'title') startTitle();
   else if (v === 'diary-new') openDiary('new');
   else if (v === 'diary-cont') openDiary('cont');
+  else if (v === 'naming') { DM.d = loadDiary(); openNaming(Math.max(0, DM.d.findIndex(x => !x))); }
   else if (v === 'play') openPlay();
 }
 $('dJump').addEventListener('change', (e) => { jumpTo(e.target.value); e.target.blur(); });
