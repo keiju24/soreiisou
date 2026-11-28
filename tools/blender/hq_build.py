@@ -25,6 +25,7 @@ ST = dict(x0=1.4, x1=7.8, z0=-RD, z1=-10.5, n=16)
 S2 = dict(xa=2.2, xb=8.6, z0=-10.3, z1=-8.5, n=16)
 RY = FH * 2
 POLE = (15.6, -5.6)          # すべり棒（2F → 1F）
+CEIL_LIGHTS = False          # 天井から下がる蛍光灯（上から見るゲームのカメラだと 宙にういて見えるので 出さない）
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 scn = bpy.context.scene
@@ -480,7 +481,7 @@ def build1F():
         cyl(M['orange'], x, .02, z, .18, .04, 'y', 4); bar(M['orange'], (x, .02, z), (x, .65, z), .1); bar(M['white'], (x, .3, z), (x, .4, z), .07)
     for k in range(2): cyl(C('#2f5a8a', .5, .3), 21.1, .45, -11.2 + k * .65, .29, .9, 'y', 20); cyl(M['dark'], 21.1, .91, -11.2 + k * .65, .29, .02, 'y', 20)
     # 天井から下がる蛍光灯（そこだけ）
-    for (x, z) in [(4.7, -4.0), (12.2, -6.5), (19.3, -6.0)]:
+    for (x, z) in ([(4.7, -4.0), (12.2, -6.5), (19.3, -6.0)] if CEIL_LIGHTS else []):
         box(M['white'], x - .9, x + .9, 3.9, 3.98, z - .12, z + .12); box(M['lampW'], x - .85, x + .85, 3.88, 3.9, z - .08, z + .08)
         for dx in (-.7, .7): bar(M['steel'], (x + dx, 3.98, z), (x + dx, WH, z), .01)
 
@@ -624,7 +625,7 @@ def build2F():
     CUR[0] = 'F2'
     bar(M['chrome'], (px, FH - SL, pz), (px, FH + 2.6, pz), .06, 20)     # 2F のぶん（天井へ）
     # 蛍光灯
-    for (x, z) in [(5.0, -5.0), (12.5, -6.0), (18.5, -6.0)]:
+    for (x, z) in ([(5.0, -5.0), (12.5, -6.0), (18.5, -6.0)] if CEIL_LIGHTS else []):
         box(M['white'], x - .9, x + .9, y + 3.9, y + 3.98, z - .12, z + .12); box(M['lampW'], x - .85, x + .85, y + 3.88, y + 3.9, z - .08, z + .08)
         for dx in (-.7, .7): bar(M['steel'], (x + dx, y + 3.98, z), (x + dx, y + WH, z), .01)
 
