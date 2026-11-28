@@ -49,39 +49,16 @@
   - BGM：`bgm/fwb-hq.mp3`（本部）、`bgm/fwb-sortie.mp3`（出動ムービー）
   - 効果音：`se/fwb-menu.mp3`・`se/fwb-move.mp3`・`se/fwb-ok.mp3`・`se/fwb-back.mp3`・`se/fwb-door-open.mp3`・`se/fwb-door-close.mp3`（ほか `se/` の効果音も）
   - ガシャ設定：`data/fwb-gacha.json`（仕様は `docs/fwb-gacha.md`）
-  - 黒ねこの 3D モデルとデバッグページ（下の「黒ねこ 3D デバッグ」）
+  - キャラを動かすデバッグページ（下の「キャラ 3D デバッグ」）
 
-## シマさん（3D モデルの隊員）
+## キャラ 3D デバッグ（`debug-kuroneko.html`）
 
-参考画像（正面・横・後ろ）をもとに Blender で 3D 化した隊員。大きな頭・ひたいの青い炎と光る目・ほおのうずまき、白いずんぐりした体（おなかの水色のうずまき・腰の赤いうずまき・青いしっぽ）、緑のうずまき柄の風呂敷を背負い、胸の前で結び目をにぎっている。
-
-- ゲームでの設定：レンジャー、レア度★2（ガシャの中当たりで仲間になる）、ミスティ族・水属性。わざ：うずまき投げ／青火のにらみ／ふろしき花火／風情うずまき大砲。進化すると「大風呂敷シマさん」（必殺技：風情うずまき大砲・極）。
-- インポニャン（黒ねこ）と同じく `GLB` に登録していて、ゲームの手足の動き（歩き・攻撃）を `leg.L/R`・`arm.L/R`・`head` の骨にうつし、しっぽ（`tail`）は自分でゆれる。
-- glb は前が +Z（Blender の -Y）。ゲームの隊員と同じ向きなので、`makeGlbChar` ではモデルを回さない。
-- 顔の画像（メニュー・メダル用）は `window.FACES.SHIMA`（モデルの頭をレンダリングしたもの）。
-- モデル：`models/shima.glb`（Idle / Walk のアニメも入っているが、ゲームでは使っていない）、元データ `models/shima.blend`（輪郭線つき）
-- 作り直し：`tools/blender/shima_build.py` を Blender の Python で実行（`pip install bpy` の bpy でも可）
-
-```
-python tools/blender/shima_build.py models/shima.glb
-```
-
-## 黒ねこ 3D デバッグ（`debug-kuroneko.html`）
-
-参考画像（正面・横・後ろ）の黒ねこを Blender で 3D 化したモデルの動作確認ページ。
-
+Blender で作ったキャラのモデルを動かして確かめるページ。いまのモデルはインポニャンだけ。
 
 - 操作：WASD/矢印で歩く、Shift で走る、Space でジャンプ、J/左クリックでねこパンチ、K でしっぽ回転、1〜7 でアニメ直接再生、右ドラッグで視点、ホイールでズーム
 - パネル：状態・アニメ時間・速度・接地・座標・FPS、再生速度/歩く速さ/走る速さ/ジャンプ力のスライダー、骨・当たり判定の表示、ターンテーブル
-- モデル：`models/kuroneko.glb`（アニメ：idle / walk / run / jump / fall / attack / attack2）、元データ `models/kuroneko.blend`
-- 作り直し：`tools/blender/kuroneko_build.py` を Blender の Python で実行（`pip install bpy` の bpy でも可）
-
-```
-python tools/blender/kuroneko_build.py models/kuroneko.glb
-```
-
-- モデルはパネル上の「モデル」メニューで切りかえる：黒ねこ（`models/kuroneko.glb`）・インポニャン（`models/imponyan.glb`）。`?model=1` で、はじめからインポニャン。ページ内の一覧 `MODELS` に足せば増やせる（同じ名前のアニメ 7 つが入った glb）。
-- インポニャン：もらった動かないモデル `models/src/imponyan_static.glb` に、`tools/blender/imponyan_build.py` で骨とアニメ 7 つを入れて書き出す（見た目はそのまま、大きさだけ 1.3 倍）。
+- モデル：`models/imponyan.glb`（アニメ：idle / walk / run / jump / fall / attack / attack2）、元データ `models/imponyan.blend`。ページ内の一覧 `MODELS` に足すと、パネルに「モデル」メニューが出て切りかえられる（同じ名前のアニメ 7 つが入った glb）。
+- インポニャン：もらった動かないモデル `models/src/imponyan_static.glb` に、`tools/blender/imponyan_build.py` で骨とアニメ 7 つを入れて書き出す（見た目はそのまま、大きさだけ 1.3 倍。白い腹巻は体に固定して、足をふっても裂けないようにしている）。
 
 ```
 python tools/blender/imponyan_build.py models/imponyan.glb

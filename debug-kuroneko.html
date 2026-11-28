@@ -32,7 +32,7 @@
 <canvas id="c"></canvas>
 <div id="loading">モデルを読みこみ中…</div>
 <div id="panel">
-  <h1>キャラ デバッグ <small id="vModel">models/kuroneko.glb</small></h1>
+  <h1>キャラ デバッグ <small id="vModel">models/imponyan.glb</small></h1>
   <label class="msel">モデル <select id="modelSel"></select></label>
   <div class="grid">
     <b>状態</b><span id="vState">-</span>
@@ -140,7 +140,6 @@ CLIPS.forEach((n, i) => { const b = document.createElement('button'); b.textCont
 
 // ---- モデル：メニューから切りかえる（どれも同じ名前のアニメ 7 つ入り） ----
 const MODELS = [
-  { name: '黒ねこ', url: 'models/kuroneko.glb' },
   { name: 'インポニャン', url: 'models/imponyan.glb' },
 ];
 MODELS.forEach((m, i) => { const o = document.createElement('option'); o.value = i; o.textContent = m.name; $('modelSel').appendChild(o); });
