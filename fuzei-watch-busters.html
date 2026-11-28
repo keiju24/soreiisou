@@ -33,11 +33,11 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--title-
 #select .head { position: fixed; top: 4vh; left: 0; right: 0; text-align: center; pointer-events: none; }
 
 /* タイトル */
-#title { background: var(--title-bg); }
-/* ロゴは画面のまんなか、ボタンはその下 */
-#tWrap { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); display: flex; justify-content: center; pointer-events: none; }
+#title { background: var(--title-bg); flex-direction: column; align-items: center; justify-content: center; gap: 3vh; }
+/* ロゴとボタンをたてにならべて、画面のまんなかに */
+#tWrap { position: relative; display: flex; justify-content: center; pointer-events: none; }
 #title img { width: min(80vw, 600px); max-height: 50vh; object-fit: contain; }
-#tWrap, .menu { z-index: 2; }
+#tWrap, .menu { position: relative; z-index: 2; }
 /* ---- タイトルの背景：街のシルエット（横に流れる） ---- */
 #bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 #bg svg { position: absolute; display: block; }
@@ -46,7 +46,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--title-
 .city.near { animation-duration: 70s; }
 @keyframes scroll { to { transform: translateX(-50%); } }
 /* はじめから・つづきから：ふだんは紫、カーソルを合わせると黄色 */
-.menu { position: absolute; left: 0; right: 0; bottom: 5vh; display: flex; flex-direction: column; align-items: center; gap: 12px; visibility: hidden; }
+.menu { display: flex; flex-direction: column; align-items: center; gap: 12px; visibility: hidden; }
 .menu.on { visibility: visible; }
 .mbtn { position: relative; width: min(46vw, 230px); padding: .42em 0 .38em; border: 3px solid #0b0b0b; border-radius: 15px; font: inherit; font-size: clamp(18px, 2.2vw, 24px); color: #111; cursor: pointer;
   background: #c393fd; box-shadow: inset 0 0 0 3px #fff, inset 0 0 8px 6px rgba(255, 255, 255, .7), 0 4px 0 #002a3e; -webkit-text-stroke: .14em #fff; paint-order: stroke fill; }
