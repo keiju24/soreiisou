@@ -3,7 +3,9 @@
 #   使い方：python tools/blender/imponyan_build.py models/imponyan.glb   （pip の bpy でも、Blender の Python でもよい）
 # ・見た目（形・色）はもらったモデルのまま。大きさだけ黒ねこにそろえて 1.3 倍（背の高さ 約 1.8）
 # ・パーツの名前で骨をきめる：耳・髪・顔・口 → head、そで・手 → arm、しっぽ・炎・うずまき → tail、つま先 → leg
-#   つなぎ（体と足がひとつのメッシュ）は、高さと左右で 体 と 足 に分けて、さかいめはなめらかにまぜる
+#   つなぎ（体と足がひとつのメッシュ）は、高さと左右で 体 と 足 に分けて、さかいめはなめらかにまぜる。
+#   白い腹巻（z .213〜.336）は ぜんぶ 体 にして、足をふっても裂けないようにする（足は腹巻より下の z .20 → .11 でまぜる）。
+#   またの真ん中（x≈0）は 左右の足を半分ずつ
 # ・左右：「Left」はモデルの ＋x がわ。骨の名前も .L＝＋x、.R＝−x
 import bpy, bmesh, sys, os, math
 from mathutils import Vector
@@ -34,7 +36,7 @@ bone('body', P(0, 0, .26), P(0, 0, .58))
 bone('head', P(0, 0, .58), P(0, 0, 1.25), 'body')
 for s, side in ((1, 'L'), (-1, 'R')):
     bone('arm.' + side, P(s * .10, 0, .54), P(s * .28, -.01, .33), 'body')
-    bone('leg.' + side, P(s * .11, 0, .27), P(s * .12, 0, .02), 'body')
+    bone('leg.' + side, P(s * .10, 0, .20), P(s * .12, 0, .02), 'body')
     bone('tail.' + side, P(s * .02, .14, .2), P(s * .45, .31, .45), 'body')
 bpy.ops.object.mode_set(mode='OBJECT')
 
@@ -51,9 +53,13 @@ for o in meshes:
     if 'romper' in nm.lower():       # つなぎ：足は高さと左右で、上は体
         vb = o.vertex_groups.new(name='body'); vl = o.vertex_groups.new(name='leg.L'); vr = o.vertex_groups.new(name='leg.R')
         for v in o.data.vertices:
-            z = v.co.z / S; k = min(1, max(0, (.30 - z) / .12)); k = k * k * (3 - 2 * k)   # z .30 → .18 で 体 → 足
+            sm = lambda t: (lambda c: c * c * (3 - 2 * c))(min(1, max(0, t)))
+            z, x = v.co.z / S, v.co.x / S
+            k = sm((.20 - z) / .09)                 # z .20 → .11 で 体 → 足（腹巻は .213 より上なので 体 のまま）
+            side = sm((x + .035) / .07)             # x −.035 → ＋.035 で 右足 → 左足
             if k < 1: vb.add([v.index], 1 - k, 'REPLACE')
-            if k > 0: (vl if v.co.x >= 0 else vr).add([v.index], k, 'REPLACE')
+            if k * side > 0: vl.add([v.index], k * side, 'REPLACE')
+            if k * (1 - side) > 0: vr.add([v.index], k * (1 - side), 'REPLACE')
     else:
         o.vertex_groups.new(name=owner(nm)).add([v.index for v in o.data.vertices], 1.0, 'REPLACE')
     print(f'{nm:45s} -> {owner(nm) if "romper" not in nm.lower() else "body/leg"}')
