@@ -80,4 +80,9 @@ python tools/blender/shima_build.py models/shima.glb
 python tools/blender/kuroneko_build.py models/kuroneko.glb
 ```
 
-- モデルは `MODELS`（ページ内の一覧）に足すと、パネル上の「モデル」メニューで切りかえられる（同じ名前のアニメ 7 つが入った glb。1つだけのときはメニューを出さない）。
+- モデルはパネル上の「モデル」メニューで切りかえる：黒ねこ（`models/kuroneko.glb`）・インポニャン（`models/imponyan.glb`）。`?model=1` で、はじめからインポニャン。ページ内の一覧 `MODELS` に足せば増やせる（同じ名前のアニメ 7 つが入った glb）。
+- インポニャン：もらった動かないモデル `models/src/imponyan_static.glb` に、`tools/blender/imponyan_build.py` で骨とアニメ 7 つを入れて書き出す（見た目はそのまま、大きさだけ 1.3 倍）。
+
+```
+python tools/blender/imponyan_build.py models/imponyan.glb
+```
