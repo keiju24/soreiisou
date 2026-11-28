@@ -88,7 +88,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--title-
 <div id="title" class="screen">
   <div id="bg"></div>
   <div id="tWrap"><img id="tLogo" alt="風情ウォッチバスターズ"></div>
-  <div class="menu" id="menu"><button class="mbtn cur" data-m="new">はじめから</button><button class="mbtn" data-m="cont">つづきから</button></div>
+  <div class="menu" id="menu"><button class="mbtn" data-m="new">はじめから</button><button class="mbtn" data-m="cont">つづきから</button></div>
   <div id="note">この先は作っているところです</div>
 </div>
 
@@ -113,7 +113,7 @@ function thud(p = 1) {
   g.gain.setValueAtTime(.8 * p, t); g.gain.exponentialRampToValueAtTime(.001, t + .3);
   o.connect(g).connect(AC.destination); o.start(t); o.stop(t + .32);
 }
-[['move', 'se/fwb-move.mp3'], ['ok', 'se/fwb-ok.mp3'], ['back', 'se/fwb-back.mp3'], ['title', 'bgm/fwb-title.mp3']].forEach(([n, u]) => loadSe(n, u));
+[['move', 'se/fwb-move.mp3'], ['ok', 'se/fwb-ok.mp3'], ['title', 'bgm/fwb-title.mp3']].forEach(([n, u]) => loadSe(n, u));
 // タイトルの BGM：頭の無音は削ってある。おしりの静かなところ（87.08 秒〜）は飛ばして、すきまなくくり返す
 const BGM_LOOP_END = 87.08;
 let bgmSrc = null;
@@ -126,14 +126,16 @@ function playBgm() {
 }
 // ブラウザはクリックかキーを押すまで音を出せないので、最初の操作で BGM を鳴らしはじめる（どの画面でも）
 function unlockAudio() { if (AC && AC.state === 'suspended') AC.resume(); playBgm(); }
-addEventListener('pointerdown', unlockAudio); addEventListener('keydown', unlockAudio);
+addEventListener('pointerdown', unlockAudio);
 
 function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); }
 
 // ---- 団をえらぶ ----
 let cur = saved && TEAMS[saved] ? saved : 'kuroneko', timers = [];
 const teams = [...document.querySelectorAll('.team')];
-function setCur(t, sound = true) { if (t !== cur && sound) se('move', .5); cur = t; teams.forEach(e => e.classList.toggle('cur', e.dataset.team === t)); }
+// マウスを合わせた団だけ光らせる（はじめは どちらも ふつう）
+let hov = null;
+function setCur(t, sound = true) { if (t && t !== hov && sound) se('move', .5); hov = t; teams.forEach(e => e.classList.toggle('cur', e.dataset.team === t)); }
 function pick(t) {
   if (AC && AC.state === 'suspended') AC.resume();
   se('ok', .7); store(t); cur = t;
@@ -142,9 +144,10 @@ function pick(t) {
 }
 teams.forEach(e => {
   e.addEventListener('mouseenter', () => { if ($('select').classList.contains('on')) setCur(e.dataset.team); });
+  e.addEventListener('mouseleave', () => setCur(null));
   e.addEventListener('click', () => { if ($('select').classList.contains('on')) pick(e.dataset.team); });
 });
-function goSelect() { timers.forEach(clearTimeout); timers = []; show('select'); setCur(cur, false); }
+function goSelect() { timers.forEach(clearTimeout); timers = []; show('select'); setCur(null); }
 
 // ---- タイトル：えらんだ団のロゴが落ちてきて跳ねる ----
 let ready = false;
@@ -155,16 +158,15 @@ function startTitle() {
   img.src = TEAMS[cur].logo; menu.classList.remove('on'); $('note').classList.remove('on');
   img.classList.remove('drop'); void img.offsetWidth; img.classList.add('drop');
   timers.push(setTimeout(() => thud(1), 1600 * .42), setTimeout(() => thud(.4), 1600 * .69), setTimeout(() => thud(.15), 1600 * .86));
-  timers.push(setTimeout(() => { $('cont').disabled = !hasSave(); setM(0); menu.classList.add('on'); ready = true; }, 1600));
+  timers.push(setTimeout(() => { $('cont').disabled = !hasSave(); setM(-1); menu.classList.add('on'); ready = true; }, 1600));
 }
 // はじめから・つづきから（セーブがないときは、つづきからは押せない）
 const hasSave = () => { try { return !!localStorage.getItem('fwb2.save'); } catch (e) { return false; } };
 const mbtns = [...document.querySelectorAll('.mbtn')]; mbtns[1].id = 'cont';
-let mi = 0;
+// マウスを合わせたボタンだけ黄色＆大きく（はじめは どちらも紫。-1 は どれも合わせていない）
+let mi = -1;
 function setM(i, sound) {
-  const ok = mbtns.map((b, k) => k).filter(k => !mbtns[k].disabled); if (!ok.length) return;
-  if (!ok.includes(i)) i = ok[0];
-  if (i !== mi && sound) se('move', .5);
+  if (i >= 0 && i !== mi && sound) se('move', .5);
   mi = i; mbtns.forEach((b, k) => b.classList.toggle('cur', k === i));
 }
 function choose(i) {
@@ -173,24 +175,14 @@ function choose(i) {
   if (mbtns[i].dataset.m === 'new') { try { localStorage.setItem('fwb2.save', JSON.stringify({ team: cur, at: Date.now() })); } catch (e) { } }
   $('note').classList.add('on');   // ここから先（本部など）は作っているところ
 }
-mbtns.forEach((b, i) => { b.addEventListener('mouseenter', () => { if (ready && !b.disabled) setM(i, true); }); b.addEventListener('click', () => choose(i)); });
+mbtns.forEach((b, i) => { b.addEventListener('mouseenter', () => { if (ready && !b.disabled) setM(i, true); }); b.addEventListener('mouseleave', () => setM(-1)); b.addEventListener('click', () => choose(i)); });
 
-addEventListener('keydown', (e) => {
-  if ($('select').classList.contains('on')) {
-    if (e.key === 'ArrowLeft' || e.key === 'a') setCur('kuroneko');
-    else if (e.key === 'ArrowRight' || e.key === 'd') setCur('shimainu');
-    else if (e.key === 'Enter' || e.key === ' ') pick(cur);
-  } else if (e.key === 'Escape') { se('back', .6); goSelect(); }
-  else if (ready && (e.key === 'ArrowUp' || e.key === 'w')) setM(mi - 1 < 0 ? 1 : mi - 1, true);
-  else if (ready && (e.key === 'ArrowDown' || e.key === 's')) setM((mi + 1) % 2, true);
-  else if (ready && (e.key === 'Enter' || e.key === ' ')) choose(mi);
-});
-
+// 操作はマウスだけ（キーボードでは動かさない）
 document.querySelectorAll('#dbg button').forEach(b => b.addEventListener('click', (e) => {
   e.stopPropagation();
   if (b.dataset.d === 'drop') startTitle(); else goSelect();
 }));
-setCur(cur, false);
+setCur(null);
 // ---- タイトルの背景を組み立てる ----
 (() => {
   const NS = 'http://www.w3.org/2000/svg', bg = $('bg');
