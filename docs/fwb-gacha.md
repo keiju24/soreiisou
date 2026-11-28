@@ -3,7 +3,7 @@
 投入した朕銭の量で「大当たり確率」が変わるガシャです。
 朕銭を温存して低い確率で回すか、たくさん投入して確実に狙うか、を選べます。
 
-- 本体：`fuzei-watch-busters.html`（JavaScript / PlayCanvas）
+- 本体：作り直し中（前の版の `fuzei-watch-busters.html` は消しました。この設定と仕様は新しい版でも使います）
 - 設定：`data/fwb-gacha.json`（確率・ラインナップ・カプセルの色）
 - 場所：本部の屋上の機械（Enter で調べると画面が開く）
 
