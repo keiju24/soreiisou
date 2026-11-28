@@ -102,6 +102,11 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--title-
 
 /* デバッグ */
 #dbg { position: fixed; right: 8px; top: 8px; z-index: 9; padding: 6px 8px; border-radius: 8px; background: rgba(0, 0, 0, .6); font: 12px system-ui, sans-serif; }
+#dbg select { font: inherit; margin: 2px; padding: 2px 4px; border: 1px solid #888; border-radius: 5px; background: #333; color: #fff; cursor: pointer; }
+/* キャラを動かすデバッグ（debug-kuroneko.html をそのまま中に出す） */
+#play { background: #000; }
+#play iframe { width: 100%; height: 100%; border: 0; display: block; }
+body.playing #dbg { top: auto; bottom: 8px; right: auto; left: 8px; }
 #dbg button { font: inherit; margin: 2px; padding: 2px 8px; border: 1px solid #888; border-radius: 5px; background: #333; color: #fff; cursor: pointer; }
 @media (max-width: 720px) {
   #select { flex-direction: column; }
@@ -131,7 +136,18 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--title-
   <button class="dbtn go" id="dGo">けってい</button>
 </div>
 
-<div id="dbg">デバッグ <button data-d="drop">落下もう一回</button><button data-d="select">団えらびへ</button><button data-d="wipe">にっきを全部消す</button></div>
+<div id="play" class="screen"><iframe id="playFrame" title="キャラを動かす"></iframe></div>
+
+<div id="dbg">デバッグ
+  <select id="dJump" title="画面へとぶ">
+    <option value="">画面へとぶ…</option>
+    <option value="select">団えらび</option>
+    <option value="title">タイトル</option>
+    <option value="diary-new">にっきせんたく（はじめから）</option>
+    <option value="diary-cont">にっきせんたく（つづきから）</option>
+    <option value="play">キャラを動かす</option>
+  </select>
+  <button data-d="drop">落下もう一回</button><button data-d="wipe">にっきを全部消す</button></div>
 
 <script>
 // 風情ウォッチバスターズ（作り直し版・デバッグ）：団をえらぶ → タイトル
@@ -167,7 +183,13 @@ function playBgm() {
 function unlockAudio() { if (AC && AC.state === 'suspended') AC.resume(); playBgm(); }
 addEventListener('pointerdown', unlockAudio);
 
-function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); }
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
+  document.body.classList.toggle('playing', id === 'play');
+  // キャラを動かす画面をはなれたら、中の 3D を止める（読みこみなおしは次に開いたとき）
+  const f = $('playFrame'); if (f && id !== 'play' && f.getAttribute('src')) f.removeAttribute('src');
+  const j = $('dJump'); if (j) j.value = '';
+}
 
 // ---- 団をえらぶ ----
 let cur = saved && TEAMS[saved] ? saved : 'kuroneko', timers = [];
@@ -302,8 +324,26 @@ function drawDots() {
 // 団えらび・タイトルの操作はマウスだけ（キーボードでは動かさない）
 document.querySelectorAll('#dbg button').forEach(b => b.addEventListener('click', (e) => {
   e.stopPropagation();
-  if (b.dataset.d === 'drop') startTitle(); else if (b.dataset.d === 'wipe') { saveDiary([null, null, null]); if ($('diary').classList.contains('on')) openDiary(DM.mode); } else goSelect();
+  if (b.dataset.d === 'drop') startTitle(); else if (b.dataset.d === 'wipe') { saveDiary([null, null, null]); if ($('diary').classList.contains('on')) openDiary(DM.mode); }
 }));
+// ---- デバッグ：ドロップダウンから各画面へとぶ ----
+function openPlay() {
+  timers.forEach(clearTimeout); timers = [];
+  show('play');
+  const f = $('playFrame'); f.src = 'debug-kuroneko.html';
+  f.onload = () => { try { f.contentWindow.focus(); } catch (e) { } };   // そのままキーボードで動かせるように
+}
+function jumpTo(v) {
+  if (!v) return;
+  timers.forEach(clearTimeout); timers = [];
+  if (v === 'select') goSelect();
+  else if (v === 'title') startTitle();
+  else if (v === 'diary-new') openDiary('new');
+  else if (v === 'diary-cont') openDiary('cont');
+  else if (v === 'play') openPlay();
+}
+$('dJump').addEventListener('change', (e) => { jumpTo(e.target.value); e.target.blur(); });
+$('dJump').addEventListener('pointerdown', (e) => e.stopPropagation());
 setCur(null);
 // ---- タイトルの背景を組み立てる ----
 (() => {
