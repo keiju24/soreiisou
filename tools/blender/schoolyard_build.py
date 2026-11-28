@@ -144,15 +144,27 @@ for k in range(14):
 for yy in (.12, .85, 1.6): box(M['steel'], -2.75, 2.75, yy - .04, yy + .04, Z1 - .06, Z1 + .06)
 for x in (-2.4, 2.4): cyl(M['rubber'], x, .1, Z1, .08, .06, 'x', 10)
 box(M['steel'], -2.8, 2.8, 0, .02, Z1 - .1, Z1 + .1)
-# 奥：花だんと 植えこみ（ここが 校舎がわの さかい）
+# 奥：花だんと 植えこみ（ここが 校舎がわの さかい）。昇降口の前（EX ± 3.8）は あけて タイルをしき、くさりで とおせんぼ
+EX = -8.0      # 昇降口の まん中
+GA, GB = EX - 3.8, EX + 3.8
 box(C('#c9c4b8', .85), X0, X1, 0, .12, Z0 - 2.2, Z0 - 1.0, tile=2)                 # 校舎の前の通路
-box(M['conc2'], X0, X1, 0, .35, Z0 - .9, Z0 - .75); box(M['conc2'], X0, X1, 0, .35, Z0 + .05, Z0 + .2)
-box(M['soil'], X0, X1, 0, .3, Z0 - .75, Z0 + .05)
-for x in np.arange(X0 + .6, X1 - .4, .55):
-    c = [M['flower_r'], M['flower_y'], M['flower_w'], M['pink']][int((x * 7) % 4)]
-    ball(M['leaf2'], float(x), .42, Z0 - .35 + (rnd.random() - .5) * .3, .22, .16, .2, 8)
-    ball(c, float(x) + .05, .55, Z0 - .35 + (rnd.random() - .5) * .3, .09, .07, .09, 6)
-for x in np.arange(X0 + 1, X1, 2.2): ball(M['hedge'], float(x), .55, Z0 - 1.6, 1.0, .55, .45, 10)
+for (a, b) in [(X0, GA), (GB, X1)]:
+    box(M['conc2'], a, b, 0, .35, Z0 - .9, Z0 - .75); box(M['conc2'], a, b, 0, .35, Z0 + .05, Z0 + .2)
+    box(M['soil'], a, b, 0, .3, Z0 - .75, Z0 + .05)
+    for x in np.arange(a + .6, b - .4, .55):
+        c = [M['flower_r'], M['flower_y'], M['flower_w'], M['pink']][int((x * 7) % 4)]
+        ball(M['leaf2'], float(x), .42, Z0 - .35 + (rnd.random() - .5) * .3, .22, .16, .2, 8)
+        ball(c, float(x) + .05, .55, Z0 - .35 + (rnd.random() - .5) * .3, .09, .07, .09, 6)
+    for x in np.arange(a + 1, b - .6, 2.2): ball(M['hedge'], float(x), .55, Z0 - 1.6, 1.0, .55, .45, 10)
+box(G['tile'], GA, GB, 0, .03, Z0 - 2.2, Z0 + .2, tile=1.2)                          # 昇降口の前のタイル
+for x in (GA + .15, GB - .15):
+    cyl(M['white'], x, .4, Z0 + .1, .1, .8, 'y', 12); ball(M['white'], x, .82, Z0 + .1, .1, .06, .1, 10)
+k = 12
+for i in range(k):                                                                     # たれた くさり
+    t0, t1 = i / k, (i + 1) / k
+    xa, xb = GA + .15 + (GB - GA - .3) * t0, GA + .15 + (GB - GA - .3) * t1
+    ya, yb = .7 - .25 * math.sin(math.pi * t0), .7 - .25 * math.sin(math.pi * t1)
+    bar(M['red'] if i % 2 else M['white'], (xa, ya, Z0 + .1), (xb, yb, Z0 + .1), .025, 6)
 colbox(X0 - 3, X1 + 3, Z0 - 3, Z0 + .25, 3, '花だん・校舎がわ')
 
 # =====================================================================
@@ -167,7 +179,6 @@ box(M['conc'], BX0 - .15, BX1 + .15, FLH * 3 + .4, FLH * 3 + .9, BZ - 9.15, BZ +
 for x in np.arange(BX0 + .2, BX1, 2.0): bar(M['fence'], (float(x), FLH * 3 + .9, BZ - .05), (float(x), FLH * 3 + 2.0, BZ - .05), .025, 6)
 bar(M['fence'], (BX0 + .2, FLH * 3 + 2.0, BZ - .05), (BX1 - .2, FLH * 3 + 2.0, BZ - .05), .03, 6)
 # 窓（各階）。ところどころカーテン
-EX = -8.0      # 昇降口の まん中
 for fl in range(3):
     y0 = fl * FLH + 1.0; y1 = y0 + 2.1
     x = BX0 + 1.2
